@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - IAGROMOZ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'agro-green': '#22c55e',
+                        'agro-light': '#4ade80',
+                        'agro-dark': '#15803d',
+                        'agro-accent': '#16a34a',
+                        'agro-bright': '#22c55e'
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.8s ease-out',
+                        'fade-in': 'fadeIn 1s ease-out',
+                        'pulse-slow': 'pulse 3s ease-in-out infinite',
+                        'bounce-slow': 'bounce 2s infinite'
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(100px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 25%, #d1fae5 50%, #a7f3d0 75%, #6ee7b7 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #059669, #10b981, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #059669, #10b981, #34d399);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.6s;
+        }
+        
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #059669, #10b981);
+            border-color: #10b981;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        .organic-blob {
+            border-radius: 60% 40% 40% 20%;
+            animation: float 8s ease-in-out infinite;
+            filter: blur(1px);
+            opacity: 0.7;
+        }
+        
+        .form-input {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid #e2e8f0;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .form-input:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15), 0 8px 25px rgba(0, 0, 0, 0.1);
+            outline: none;
+            transform: translateY(-2px);
+        }
+        
+        .form-input.error {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        .form-input.success {
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .step-indicator {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .step-indicator.active {
+            background: linear-gradient(135deg, #059669, #10b981, #34d399);
+            color: white;
+            transform: scale(1.15);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+        
+        .step-indicator.completed {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+        
+        .step-content {
+            display: none;
+            animation: slideInUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .step-content.active {
+            display: block;
+        }
+        
+        @keyframes slideInUp {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .progress-bar {
+            transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: linear-gradient(90deg, #059669, #10b981, #34d399);
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+        }
+        
+        .floating-label {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0 8px;
+            color: #64748b;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+        
+        .form-input:focus + .floating-label,
+        .form-input:not(:placeholder-shown) + .floating-label {
+            top: 0;
+            font-size: 12px;
+            color: #10b981;
+            font-weight: 600;
+            transform: translateY(-50%) scale(0.95);
+        }
+        
+        .checkbox-custom {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .checkbox-custom:hover {
+            border-color: #10b981;
+            transform: scale(1.05);
+        }
+        
+        .checkbox-custom:checked {
+            background: linear-gradient(135deg, #059669, #10b981);
+            border-color: #10b981;
+            transform: scale(1.05);
+        }
+        
+        .checkbox-custom:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .radio-custom {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border: 2px solid #cbd5e1;
+            border-radius: 50%;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .radio-custom:hover {
+            border-color: #10b981;
+            transform: scale(1.05);
+        }
+        
+        .radio-custom:checked {
+            border-color: #10b981;
+            transform: scale(1.05);
+        }
+        
+        .radio-custom:checked::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(135deg, #059669, #10b981);
+            border-radius: 50%;
+        }
+        
+        .upload-area {
+            border: 3px dashed #cbd5e1;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.08);
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
+        }
+        
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .section-card:hover {
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+        }
+        
+        .icon-gradient {
+            background: linear-gradient(135deg, #059669, #10b981, #34d399);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #1f2937, #374151, #4b5563);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+        }
+        
+        .step-header {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-green-50 to-emerald-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-green-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                       <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+        <img src="kki/log.img.png" alt="Logo" class="w-full h-full object-cover">
+         <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold gradient-text">IAGROMOZ</h1>
+                        <span class="text-xs text-agro-light font-medium">Agricultura Inteligente</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <a href="#" class="text-agro-green hover:text-agro-accent transition-colors font-medium">
+                        ← Voltar ao Site
+                    </a>
+                    <span class="text-gray-400">|</span>
+                    <a href="#" class="text-agro-green hover:text-agro-accent transition-colors font-medium">
+                        Já tem conta? Entrar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="py-12 relative overflow-hidden">
+        <!-- Floating Elements -->
+        <div class="absolute top-20 left-10 w-20 h-20 bg-agro-accent/20 rounded-full organic-blob"></div>
+        <div class="absolute top-40 right-20 w-32 h-32 bg-agro-bright/15 rounded-full organic-blob" style="animation-delay: -2s;"></div>
+        <div class="absolute bottom-20 left-1/4 w-16 h-16 bg-agro-green/20 rounded-full organic-blob" style="animation-delay: -4s;"></div>
+        
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <!-- Header Section -->
+            <div class="text-center mb-12 animate-fade-in">
+                <h2 class="text-4xl md:text-5xl font-bold text-agro-dark mb-4">
+                    Junte-se ao <span class="gradient-text">IAGROMOZ</span>
+                </h2>
+                <p class="text-xl text-agro-light max-w-2xl mx-auto">
+                    Cadastre-se gratuitamente e comece a vender seus produtos para milhares de consumidores
+                </p>
+            </div>
+
+            <!-- Progress Indicator -->
+            <div class="mb-12">
+                <div class="flex items-center justify-center space-x-4 mb-6">
+                    <div class="step-indicator active w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 border-agro-green bg-agro-green text-white">
+                        1
+                    </div>
+                    <div class="w-16 h-1 bg-gray-200 rounded">
+                        <div class="progress-bar h-full bg-agro-green rounded" style="width: 0%"></div>
+                    </div>
+                    <div class="step-indicator w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 border-gray-300 bg-white text-gray-400">
+                        2
+                    </div>
+                    <div class="w-16 h-1 bg-gray-200 rounded">
+                        <div class="progress-bar h-full bg-agro-green rounded" style="width: 0%"></div>
+                    </div>
+                    <div class="step-indicator w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 border-gray-300 bg-white text-gray-400">
+                        3
+                    </div>
+                </div>
+                <div class="flex justify-center space-x-20 text-sm font-medium">
+                    <span class="text-agro-green">Dados Pessoais</span>
+                    <span class="text-gray-400">Propriedade</span>
+                    <span class="text-gray-400">Finalização</span>
+                </div>
+            </div>
+
+            <!-- Registration Form -->
+            <div class="glass-effect rounded-3xl shadow-2xl p-8 md:p-12 animate-slide-up">
+                <form id="registrationForm">
+                    <!-- Step 1: Personal Data -->
+                    <div class="step-content active" id="step1">
+                        <div class="step-header rounded-2xl p-6 mb-8 text-center">
+                            <div class="w-20 h-20 icon-gradient rounded-2xl mx-auto mb-4 flex items-center justify-center glow-effect">
+                                <span class="text-3xl text-white">👤</span>
+                            </div>
+                            <h3 class="text-3xl font-bold text-gradient mb-3">Dados Pessoais</h3>
+                            <p class="text-slate-600 text-lg">Vamos começar com suas informações básicas</p>
+                        </div>
+
+                        <div class="section-card rounded-2xl p-6 mb-8">
+                            <h4 class="text-xl font-semibold text-slate-700 mb-6 flex items-center">
+                                <span class="w-8 h-8 bg-gradient-to-r from-emerald-500 to-green-500 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">ℹ️</span>
+                                </span>
+                                Informações Básicas
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="relative">
+                                    <input type="text" id="firstName" placeholder=" " class="form-input w-full px-5 py-4 rounded-xl" required>
+                                    <label class="floating-label">Nome *</label>
+                                </div>
+                                <div class="relative">
+                                    <input type="text" id="lastName" placeholder=" " class="form-input w-full px-5 py-4 rounded-xl" required>
+                                    <label class="floating-label">Sobrenome *</label>
+                                </div>
+                                <div class="relative">
+                                    <input type="email" id="email" placeholder=" " class="form-input w-full px-5 py-4 rounded-xl" required>
+                                    <label class="floating-label">Email *</label>
+                                </div>
+                                <div class="relative">
+                                    <input type="tel" id="phone" placeholder=" " class="form-input w-full px-5 py-4 rounded-xl" required>
+                                    <label class="floating-label">Telefone *</label>
+                                </div>
+
+                                <div class="relative">
+                                    <input type="date" id="birthDate" class="form-input w-full px-5 py-4 rounded-xl" required>
+                                    <label class="floating-label">Data de Nascimento *</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-card rounded-2xl p-6 mb-8">
+                            <h4 class="text-xl font-semibold text-slate-700 mb-6 flex items-center">
+                                <span class="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">👥</span>
+                                </span>
+                                Gênero
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <label class="flex items-center space-x-3 cursor-pointer p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-400 transition-all card-hover">
+                                    <input type="radio" name="gender" value="masculino" class="radio-custom">
+                                    <span class="text-slate-700 font-medium">Masculino</span>
+                                </label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-400 transition-all card-hover">
+                                    <input type="radio" name="gender" value="feminino" class="radio-custom">
+                                    <span class="text-slate-700 font-medium">Feminino</span>
+                                </label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-400 transition-all card-hover">
+                                    <input type="radio" name="gender" value="outro" class="radio-custom">
+                                    <span class="text-slate-700 font-medium">Outro</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="section-card rounded-2xl p-6 mb-8">
+                            <h4 class="text-xl font-semibold text-slate-700 mb-6 flex items-center">
+                                <span class="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">📍</span>
+                                </span>
+                                Endereço
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="relative">
+                                    <select id="province" class="form-input w-full px-5 py-4 rounded-xl" required>
+                                        <option value="">Selecione a Província</option>
+                                        <option value="maputo">Maputo</option>
+                                        <option value="gaza">Gaza</option>
+                                        <option value="inhambane">Inhambane</option>
+                                        <option value="sofala">Sofala</option>
+                                        <option value="manica">Manica</option>
+                                        <option value="tete">Tete</option>
+                                        <option value="zambézia">Zambézia</option>
+                                        <option value="nampula">Nampula</option>
+                                        <option value="cabo-delgado">Cabo Delgado</option>
+                                        <option value="niassa">Niassa</option>
+                                    </select>
+                                </div>
+                                <div class="relative">
+                                    <input type="text" id="city" placeholder=" " class="form-input w-full px-5 py-4 rounded-xl" required>
+                                    <label class="floating-label">Cidade/Distrito *</label>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="section-card rounded-2xl p-6 mb-8">
+                            <h4 class="text-xl font-semibold text-slate-700 mb-6 flex items-center">
+                                <span class="w-8 h-8 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">🔒</span>
+                                </span>
+                                Segurança
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                                <div class="relative">
+                                    <input type="password" id="password" placeholder=" " class="form-input w-full px-5 py-4 rounded-xl" required>
+                                    <label class="floating-label">Senha *</label>
+                                </div>
+                                <div class="relative">
+                                    <input type="password" id="confirmPassword" placeholder=" " class="form-input w-full px-5 py-4 rounded-xl" required>
+                                    <label class="floating-label">Confirmar Senha *</label>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                <p class="text-sm font-medium text-slate-700 mb-2">📋 Requisitos da senha:</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                        <span>Pelo menos 8 caracteres</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                        <span>Uma letra maiúscula</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                        <span>Uma letra minúscula</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                                        <span>Um número</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end mt-8">
+                            <button type="button" onclick="nextStep()" class="btn-primary text-white px-10 py-4 rounded-2xl font-semibold text-lg shadow-lg">
+                                Próximo Passo →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Property Information -->
+                    <div class="step-content" id="step2">
+                        <div class="step-header rounded-2xl p-6 mb-8 text-center">
+                            <div class="w-20 h-20 icon-gradient rounded-2xl mx-auto mb-4 flex items-center justify-center glow-effect">
+                                <span class="text-3xl text-white">🏡</span>
+                            </div>
+                            <h3 class="text-3xl font-bold text-gradient mb-3">Informações da Propriedade</h3>
+                            <p class="text-slate-600 text-lg">Conte-nos sobre sua propriedade agrícola</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="relative">
+                                <input type="text" id="farmName" placeholder=" " class="form-input w-full px-4 py-4 rounded-xl bg-white" required>
+                                <label class="floating-label">Nome da Propriedade *</label>
+                            </div>
+                            <div class="relative">
+                                <input type="number" id="farmSize" placeholder=" " class="form-input w-full px-4 py-4 rounded-xl bg-white" required>
+                                <label class="floating-label">Tamanho (hectares) *</label>
+                            </div>
+                            <div class="relative md:col-span-2">
+                                <input type="text" id="farmAddress" placeholder=" " class="form-input w-full px-4 py-4 rounded-xl bg-white" required>
+                                <label class="floating-label">Localização da Propriedade *</label>
+                            </div>
+                        </div>
+
+                        <div class="mt-8">
+                            <label class="block text-sm font-medium text-gray-700 mb-3">Tipo de Propriedade</label>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="radio" name="farmType" value="familiar" class="radio-custom">
+                                    <span class="text-gray-700">Familiar</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="radio" name="farmType" value="comercial" class="radio-custom">
+                                    <span class="text-gray-700">Comercial</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="radio" name="farmType" value="cooperativa" class="radio-custom">
+                                    <span class="text-gray-700">Cooperativa</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="radio" name="farmType" value="organica" class="radio-custom">
+                                    <span class="text-gray-700">Orgânica</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mt-8">
+                            <label class="block text-sm font-medium text-gray-700 mb-3">Produtos que Cultiva (selecione todos que se aplicam)</label>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="checkbox" name="products" value="mapira" class="checkbox-custom">
+                                    <span class="text-gray-700">🌾 Mapira</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="checkbox" name="products" value="manga" class="checkbox-custom">
+                                    <span class="text-gray-700">🥭 Manga</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="checkbox" name="products" value="milho" class="checkbox-custom">
+                                    <span class="text-gray-700">🌽 Milho</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="checkbox" name="products" value="mandioca" class="checkbox-custom">
+                                    <span class="text-gray-700">🍠 Mandioca</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="checkbox" name="products" value="coco" class="checkbox-custom">
+                                    <span class="text-gray-700">🥥 Coco</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:border-agro-green transition-colors">
+                                    <input type="checkbox" name="products" value="caju" class="checkbox-custom">
+                                    <span class="text-gray-700">🥜 Cajú</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mt-8">
+                            <label class="block text-sm font-medium text-gray-700 mb-3">Experiência na Agricultura</label>
+                            <select id="experience" class="form-input w-full px-4 py-4 rounded-xl bg-white" required>
+                                <option value="">Selecione sua experiência</option>
+                                <option value="iniciante">Iniciante (menos de 2 anos)</option>
+                                <option value="intermediario">Intermediário (2-5 anos)</option>
+                                <option value="experiente">Experiente (5-10 anos)</option>
+                                <option value="muito-experiente">Muito Experiente (mais de 10 anos)</option>
+                            </select>
+                        </div>
+
+                        <div class="mt-8">
+                            <label class="block text-sm font-medium text-gray-700 mb-3">Descrição da Propriedade</label>
+                            <textarea id="farmDescription" rows="4" class="form-input w-full px-4 py-4 rounded-xl bg-white resize-none" placeholder="Conte-nos mais sobre sua propriedade, métodos de cultivo, certificações, etc."></textarea>
+                        </div>
+
+                        <div class="flex justify-between mt-8">
+                            <button type="button" onclick="prevStep()" class="btn-secondary text-slate-700 px-10 py-4 rounded-2xl font-semibold text-lg">
+                                ← Voltar
+                            </button>
+                            <button type="button" onclick="nextStep()" class="btn-primary text-white px-10 py-4 rounded-2xl font-semibold text-lg shadow-lg">
+                                Próximo Passo →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Final Details -->
+                    <div class="step-content" id="step3">
+                        <div class="step-header rounded-2xl p-6 mb-8 text-center">
+                            <div class="w-20 h-20 icon-gradient rounded-2xl mx-auto mb-4 flex items-center justify-center glow-effect">
+                                <span class="text-3xl text-white">📋</span>
+                            </div>
+                            <h3 class="text-3xl font-bold text-gradient mb-3">Finalização</h3>
+                            <p class="text-slate-600 text-lg">Últimos detalhes para completar seu cadastro</p>
+                        </div>
+
+                        <div class="space-y-8">
+                            <!-- Document Upload -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">Documentos (Opcional)</label>
+                                <div class="upload-area p-8 rounded-xl text-center cursor-pointer" onclick="document.getElementById('documents').click()">
+                                    <div class="text-4xl mb-4">📄</div>
+                                    <p class="text-gray-600 mb-2">Clique para enviar documentos</p>
+                                    <p class="text-sm text-gray-500">BI, Certificados, Licenças (PDF, JPG, PNG - máx. 5MB)</p>
+                                    <input type="file" id="documents" multiple accept=".pdf,.jpg,.jpeg,.png" class="hidden">
+                                </div>
+                                <div id="uploadedFiles" class="mt-4 space-y-2"></div>
+                            </div>
+
+                            <!-- Profile Photo -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">Foto de Perfil (Opcional)</label>
+                                <div class="flex items-center space-x-6">
+                                    <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                                        <img id="profilePreview" class="w-full h-full object-cover hidden">
+                                        <span id="profilePlaceholder" class="text-3xl text-gray-400">👤</span>
+                                    </div>
+                                    <div>
+                                        <button type="button" onclick="document.getElementById('profilePhoto').click()" class="btn-primary text-white px-6 py-3 rounded-xl font-semibold">
+                                            Escolher Foto
+                                        </button>
+                                        <input type="file" id="profilePhoto" accept="image/*" class="hidden">
+                                        <p class="text-sm text-gray-500 mt-2">JPG, PNG - máx. 2MB</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Notifications Preferences -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-4">Preferências de Notificação</label>
+                                <div class="space-y-3">
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <input type="checkbox" name="notifications" value="email" class="checkbox-custom" checked>
+                                        <span class="text-gray-700">📧 Receber notificações por email</span>
+                                    </label>
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <input type="checkbox" name="notifications" value="sms" class="checkbox-custom">
+                                        <span class="text-gray-700">📱 Receber notificações por SMS</span>
+                                    </label>
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <input type="checkbox" name="notifications" value="marketing" class="checkbox-custom" checked>
+                                        <span class="text-gray-700">📢 Receber ofertas e promoções</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Terms and Conditions -->
+                            <div class="bg-gray-50 p-6 rounded-xl">
+                                <div class="space-y-4">
+                                    <label class="flex items-start space-x-3 cursor-pointer">
+                                        <input type="checkbox" id="termsAccept" class="checkbox-custom mt-1" required>
+                                        <span class="text-gray-700">
+                                            Eu li e aceito os <a href="#" class="text-agro-green hover:underline font-medium">Termos de Uso</a> e a <a href="#" class="text-agro-green hover:underline font-medium">Política de Privacidade</a> do IAGROMOZ
+                                        </span>
+                                    </label>
+                                    <label class="flex items-start space-x-3 cursor-pointer">
+                                        <input type="checkbox" id="dataConsent" class="checkbox-custom mt-1" required>
+                                        <span class="text-gray-700">
+                                            Autorizo o uso dos meus dados para fins comerciais e de marketing, conforme descrito na Política de Privacidade
+                                        </span>
+                                    </label>
+                                    <label class="flex items-start space-x-3 cursor-pointer">
+                                        <input type="checkbox" id="ageConfirm" class="checkbox-custom mt-1" required>
+                                        <span class="text-gray-700">
+                                            Confirmo que tenho mais de 18 anos e capacidade legal para celebrar este contrato
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between mt-8">
+                            <button type="button" onclick="prevStep()" class="btn-secondary text-slate-700 px-10 py-4 rounded-2xl font-semibold text-lg">
+                                ← Voltar
+                            </button>
+                            <button type="submit" class="btn-primary text-white px-12 py-4 rounded-2xl font-bold text-lg shadow-xl">
+                                🚀 Finalizar Cadastro
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-effect rounded-3xl p-10 max-w-lg w-full text-center animate-slide-up shadow-2xl">
+            <div class="w-24 h-24 icon-gradient rounded-2xl mx-auto mb-6 flex items-center justify-center glow-effect">
+                <span class="text-4xl text-white">🎉</span>
+            </div>
+            <h3 class="text-3xl font-bold text-gradient mb-4">Cadastro Realizado!</h3>
+            <p class="text-slate-600 text-lg mb-8 leading-relaxed">
+                Parabéns! Seu cadastro foi realizado com sucesso. Você receberá um email de confirmação em breve e poderá começar a vender seus produtos.
+            </p>
+            <div class="space-y-4">
+                <button onclick="closeModal()" class="btn-primary text-white px-10 py-4 rounded-2xl font-semibold w-full text-lg shadow-lg">
+                    🚀 Ir para Dashboard
+                </button>
+                <button onclick="closeModal()" class="btn-secondary text-slate-700 px-10 py-4 rounded-2xl font-semibold w-full text-lg">
+                    ← Voltar ao Site
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 3;
+
+        // Form validation patterns
+        const validationRules = {
+            email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            phone: /^[0-9+\-\s()]{9,}$/,
+            password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
+        };
+
+        // Step navigation
+        function nextStep() {
+            if (validateCurrentStep()) {
+                if (currentStep < totalSteps) {
+                    currentStep++;
+                    updateStepDisplay();
+                    updateProgressBar();
+                }
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateStepDisplay();
+                updateProgressBar();
+            }
+        }
+
+        function updateStepDisplay() {
+            // Hide all steps
+            document.querySelectorAll('.step-content').forEach(step => {
+                step.classList.remove('active');
+            });
+            
+            // Show current step
+            document.getElementById(`step${currentStep}`).classList.add('active');
+            
+            // Update step indicators
+            document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
+                indicator.classList.remove('active', 'completed');
+                if (index + 1 === currentStep) {
+                    indicator.classList.add('active');
+                } else if (index + 1 < currentStep) {
+                    indicator.classList.add('completed');
+                }
+            });
+        }
+
+        function updateProgressBar() {
+            const progressBars = document.querySelectorAll('.progress-bar');
+            progressBars.forEach((bar, index) => {
+                if (index < currentStep - 1) {
+                    bar.style.width = '100%';
+                } else {
+                    bar.style.width = '0%';
+                }
+            });
+        }
+
+        // Form validation
+        function validateCurrentStep() {
+            let isValid = true;
+            const currentStepElement = document.getElementById(`step${currentStep}`);
+            const requiredFields = currentStepElement.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                if (!validateField(field)) {
+                    isValid = false;
+                }
+            });
+            
+            // Additional validations for step 1
+            if (currentStep === 1) {
+                const password = document.getElementById('password');
+                const confirmPassword = document.getElementById('confirmPassword');
+                
+                if (password.value !== confirmPassword.value) {
+                    showFieldError(confirmPassword, 'As senhas não coincidem');
+                    isValid = false;
+                }
+            }
+            
+            return isValid;
+        }
+
+        function validateField(field) {
+            const value = field.value.trim();
+            let isValid = true;
+            
+            // Check if required field is empty
+            if (field.hasAttribute('required') && !value) {
+                showFieldError(field, 'Este campo é obrigatório');
+                return false;
+            }
+            
+            // Specific validations
+            if (field.type === 'email' && value && !validationRules.email.test(value)) {
+                showFieldError(field, 'Email inválido');
+                isValid = false;
+            }
+            
+            if (field.type === 'tel' && value && !validationRules.phone.test(value)) {
+                showFieldError(field, 'Telefone inválido');
+                isValid = false;
+            }
+            
+            if (field.id === 'password' && value && !validationRules.password.test(value)) {
+                showFieldError(field, 'Senha deve ter 8+ caracteres, maiúscula, minúscula e número');
+                isValid = false;
+            }
+            
+            if (isValid) {
+                showFieldSuccess(field);
+            }
+            
+            return isValid;
+        }
+
+        function showFieldError(field, message) {
+            field.classList.remove('success');
+            field.classList.add('error');
+            
+            // Remove existing error message
+            const existingError = field.parentNode.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // Add error message
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message text-red-500 text-sm mt-1';
+            errorDiv.textContent = message;
+            field.parentNode.appendChild(errorDiv);
+        }
+
+        function showFieldSuccess(field) {
+            field.classList.remove('error');
+            field.classList.add('success');
+            
+            // Remove error message
+            const existingError = field.parentNode.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+        }
+
+        // Real-time validation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listeners to all form inputs
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('blur', () => validateField(input));
+                input.addEventListener('input', () => {
+                    if (input.classList.contains('error')) {
+                        validateField(input);
+                    }
+                });
+            });
+            
+            // File upload handlers
+            document.getElementById('documents').addEventListener('change', handleDocumentUpload);
+            document.getElementById('profilePhoto').addEventListener('change', handleProfilePhotoUpload);
+            
+            // Form submission
+            document.getElementById('registrationForm').addEventListener('submit', handleFormSubmission);
+        });
+
+        function handleDocumentUpload(event) {
+            const files = event.target.files;
+            const uploadedFilesDiv = document.getElementById('uploadedFiles');
+            uploadedFilesDiv.innerHTML = '';
+            
+            Array.from(files).forEach(file => {
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                    alert(`Arquivo ${file.name} é muito grande. Máximo 5MB.`);
+                    return;
+                }
+                
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'flex items-center justify-between bg-green-50 p-3 rounded-lg';
+                fileDiv.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="text-green-600">📄</span>
+                        <span class="text-sm text-gray-700">${file.name}</span>
+                        <span class="text-xs text-gray-500">(${(file.size / 1024 / 1024).toFixed(1)}MB)</span>
+                    </div>
+                    <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700">
+                        ✕
+                    </button>
+                `;
+                uploadedFilesDiv.appendChild(fileDiv);
+            });
+        }
+
+        function handleProfilePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 2 * 1024 * 1024) { // 2MB limit
+                alert('Foto muito grande. Máximo 2MB.');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('profilePreview');
+                const placeholder = document.getElementById('profilePlaceholder');
+                
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleFormSubmission(event) {
+            event.preventDefault();
+            
+            if (!validateCurrentStep()) {
+                return;
+            }
+            
+            // Check final step requirements
+            const termsAccept = document.getElementById('termsAccept');
+            const dataConsent = document.getElementById('dataConsent');
+            const ageConfirm = document.getElementById('ageConfirm');
+            
+            if (!termsAccept.checked || !dataConsent.checked || !ageConfirm.checked) {
+                alert('Por favor, aceite todos os termos e condições para continuar.');
+                return;
+            }
+            
+            // Simulate form submission
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            submitButton.innerHTML = '🔄 Processando...';
+            submitButton.disabled = true;
+            
+            setTimeout(() => {
+                submitButton.innerHTML = '🚀 Finalizar Cadastro';
+                submitButton.disabled = false;
+                showSuccessModal();
+            }, 2000);
+        }
+
+        function showSuccessModal() {
+            document.getElementById('successModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('successModal').classList.add('hidden');
+            // Here you would typically redirect to dashboard or homepage
+            alert('Redirecionando para o dashboard...');
+        }
+
+        // Drag and drop for file upload
+        const uploadArea = document.querySelector('.upload-area');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            document.getElementById('documents').files = files;
+            handleDocumentUpload({ target: { files } });
+        });
+
+        // Auto-format phone number
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 9) {
+                value = value.replace(/(\d{2})(\d{1})(\d{3})(\d{3})/, '+258 $1 $2 $3 $4');
+            }
+            e.target.value = value;
+        });
+
+        // Province-based city suggestions
+        const citiesByProvince = {
+            'maputo': ['Maputo', 'Matola', 'Boane', 'Marracuene'],
+            'gaza': ['Xai-Xai', 'Chókwè', 'Chibuto', 'Bilene'],
+            'inhambane': ['Inhambane', 'Maxixe', 'Vilanculos', 'Massinga'],
+            'sofala': ['Beira', 'Dondo', 'Nhamatanda', 'Gorongosa'],
+            'manica': ['Chimoio', 'Catandica', 'Gondola', 'Manica'],
+            'tete': ['Tete', 'Moatize', 'Cahora Bassa', 'Angónia'],
+            'zambézia': ['Quelimane', 'Mocuba', 'Gurué', 'Milange'],
+            'nampula': ['Nampula', 'Nacala', 'Ilha de Moçambique', 'Angoche'],
+            'cabo-delgado': ['Pemba', 'Montepuez', 'Mueda', 'Palma'],
+            'niassa': ['Lichinga', 'Cuamba', 'Mandimba', 'Sanga']
+        };
+
+        document.getElementById('province').addEventListener('change', function() {
+            const cityInput = document.getElementById('city');
+            const province = this.value;
+            
+            if (province && citiesByProvince[province]) {
+                // Create datalist for city suggestions
+                let datalist = document.getElementById('cityList');
+                if (!datalist) {
+                    datalist = document.createElement('datalist');
+                    datalist.id = 'cityList';
+                    cityInput.parentNode.appendChild(datalist);
+                    cityInput.setAttribute('list', 'cityList');
+                }
+                
+                datalist.innerHTML = '';
+                citiesByProvince[province].forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city;
+                    datalist.appendChild(option);
+                });
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96362fbc03dc63c3',t:'MTc1MzIyMTM3MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

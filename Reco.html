@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recomendações de Culturas - iAgroBot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .hero-bg {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.05) 100%);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.3);
+        }
+        .cultura-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .cultura-card:hover {
+            border-color: #4CAF50;
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(76, 175, 80, 0.2);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .clima-badge {
+            background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+        }
+        .solo-badge {
+            background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%);
+        }
+        .epoca-badge {
+            background: linear-gradient(135deg, #F59E0B 0%, #FCD34D 100%);
+        }
+        .rentabilidade-badge {
+            background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+        }
+        .map-container {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px dashed #0ea5e9;
+        }
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .recommendation-score {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Cabeçalho -->
+    <header class="glass-effect shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo -->
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                        <img src="kki/log.img.png" alt="Logo" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">iAgroMOZ</h1>
+                        <p class="text-xs text-gray-500 font-medium">Recomendações Personalizadas</p>
+                            <path d="M35 60 L50 55 L65 60" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+                            <circle cx="40" cy="35" r="2" fill="rgba(255,255,255,0.4)"/>
+                            <circle cx="60" cy="35" r="2" fill="rgba(255,255,255,0.4)"/>
+                            <circle cx="50" cy="25" r="1.5" fill="rgba(255,255,255,0.5)"/>
+                            <path d="M40 35 L50 25 L60 35" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+                        </svg>
+                    </div>
+                   
+                </div>
+                
+                <!-- Controles -->
+                <div class="flex items-center space-x-3">
+                    <div id="statusLocation" class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
+                        <span class="text-sm text-gray-500">Aguardando localização...</span>
+                    </div>
+                    
+                    <button id="refreshBtn" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition" title="Atualizar recomendações">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Seção Principal -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Informações de Localização -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-3xl p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">📍 Sua Localização</h2>
+                    <button id="getLocationBtn" class="btn-primary text-white px-6 py-2 rounded-xl font-medium flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>Obter Localização</span>
+                    </button>
+                </div>
+
+                <div id="locationInfo" class="hidden">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Mapa Visual -->
+                        <div class="map-container rounded-2xl p-6 text-center">
+                            <div class="relative">
+                                <svg class="w-full h-48 text-blue-400" viewBox="0 0 400 200" fill="none">
+                                    <!-- Mapa do Brasil simplificado -->
+                                    <path d="M50 50 Q100 30, 150 50 Q200 40, 250 60 Q300 50, 350 70 L350 150 Q300 160, 250 150 Q200 160, 150 150 Q100 170, 50 150 Z" fill="currentColor" opacity="0.3"/>
+                                    <!-- Estados -->
+                                    <path d="M80 80 Q120 70, 160 80 L160 120 Q120 130, 80 120 Z" fill="currentColor" opacity="0.5"/>
+                                    <path d="M180 70 Q220 60, 260 70 L260 110 Q220 120, 180 110 Z" fill="currentColor" opacity="0.4"/>
+                                    <!-- Ponto de localização -->
+                                    <circle id="locationDot" cx="200" cy="100" r="8" fill="#ef4444" class="pulse-dot"/>
+                                    <circle cx="200" cy="100" r="15" fill="#ef4444" opacity="0.3" class="pulse-dot"/>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="bg-white rounded-lg p-3 shadow-lg">
+                                        <p class="text-sm font-medium text-gray-800" id="cityName">Sua Cidade</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dados Climáticos -->
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 rounded-xl p-4">
+                                <h4 class="font-semibold text-blue-800 mb-2">🌡️ Condições Climáticas</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Temperatura média:</span>
+                                        <span id="temperatura" class="font-medium">--°C</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Umidade:</span>
+                                        <span id="umidade" class="font-medium">--%</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Precipitação anual:</span>
+                                        <span id="precipitacao" class="font-medium">--mm</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-green-50 rounded-xl p-4">
+                                <h4 class="font-semibold text-green-800 mb-2">🌱 Características do Solo</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Tipo predominante:</span>
+                                        <span id="tipoSolo" class="font-medium">--</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">pH médio:</span>
+                                        <span id="phSolo" class="font-medium">--</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Drenagem:</span>
+                                        <span id="drenagem" class="font-medium">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingLocation" class="hidden text-center py-8">
+                    <div class="loading-spinner mx-auto mb-4"></div>
+                    <p class="text-gray-600">Obtendo sua localização e dados climáticos...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="errorLocation" class="hidden text-center py-8">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-red-600 font-medium">Não foi possível obter sua localização</p>
+                    <p class="text-gray-500 text-sm mt-2">Verifique as permissões do navegador e tente novamente</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recomendações de Culturas -->
+        <section id="recommendationsSection" class="hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">🌾 Culturas Recomendadas para sua Região</h2>
+                <div class="flex items-center space-x-2 text-sm text-gray-600">
+                    <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.9 1 3 1.9 3 3V7H1V9H3V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V9H21ZM5 3H14.17L19 7.83V19H5V3Z"/>
+                    </svg>
+                    <span>Baseado em dados climáticos e de solo</span>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="mb-6">
+                <div class="flex flex-wrap gap-3">
+                    <button class="filter-btn active px-4 py-2 rounded-full text-sm font-medium transition" data-filter="all">
+                        🌱 Todas
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition" data-filter="graos">
+                        🌾 Grãos
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition" data-filter="hortalicas">
+                        🥬 Hortaliças
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition" data-filter="frutas">
+                        🍎 Frutas
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition" data-filter="tuberculos">
+                        🍠 Tubérculos
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition" data-filter="alta-rentabilidade">
+                        💰 Alta Rentabilidade
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid de Culturas -->
+            <div id="culturasGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Cards serão inseridos dinamicamente -->
+            </div>
+        </section>
+
+        <!-- Loading das Recomendações -->
+        <div id="loadingRecommendations" class="hidden text-center py-16">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-gray-600">Analisando dados e gerando recomendações personalizadas...</p>
+        </div>
+    </main>
+
+    <!-- Modal de Detalhes da Cultura -->
+    <div id="culturaModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-96 overflow-y-auto">
+            <div id="modalContent">
+                <!-- Conteúdo será inserido dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let userLocation = null;
+        let currentRecommendations = [];
+
+        // Elementos do DOM
+        const getLocationBtn = document.getElementById('getLocationBtn');
+        const statusLocation = document.getElementById('statusLocation');
+        const locationInfo = document.getElementById('locationInfo');
+        const loadingLocation = document.getElementById('loadingLocation');
+        const errorLocation = document.getElementById('errorLocation');
+        const recommendationsSection = document.getElementById('recommendationsSection');
+        const loadingRecommendations = document.getElementById('loadingRecommendations');
+        const culturasGrid = document.getElementById('culturasGrid');
+        const culturaModal = document.getElementById('culturaModal');
+        const refreshBtn = document.getElementById('refreshBtn');
+
+        // Dados de exemplo para diferentes regiões de Moçambique
+        const regionData = {
+            'norte': {
+                temperatura: '26°C',
+                umidade: '75%',
+                precipitacao: '1200mm',
+                tipoSolo: 'Ferralsolo',
+                phSolo: '5.8',
+                drenagem: 'Boa'
+            },
+            'centro': {
+                temperatura: '24°C',
+                umidade: '65%',
+                precipitacao: '800mm',
+                tipoSolo: 'Vertissolo',
+                phSolo: '6.2',
+                drenagem: 'Moderada'
+            },
+            'sul': {
+                temperatura: '22°C',
+                umidade: '60%',
+                precipitacao: '600mm',
+                tipoSolo: 'Arenosolo',
+                phSolo: '6.5',
+                drenagem: 'Rápida'
+            },
+            'litoral': {
+                temperatura: '25°C',
+                umidade: '80%',
+                precipitacao: '1000mm',
+                tipoSolo: 'Fluvisolo',
+                phSolo: '6.0',
+                drenagem: 'Boa'
+            },
+            'planalto': {
+                temperatura: '20°C',
+                umidade: '70%',
+                precipitacao: '1400mm',
+                tipoSolo: 'Cambissolo',
+                phSolo: '5.5',
+                drenagem: 'Moderada'
+            }
+        };
+
+        // Base de dados de culturas para Moçambique
+        const culturasDatabase = {
+            'milho': {
+                nome: 'Milho',
+                emoji: '🌽',
+                categoria: 'graos',
+                score: 95,
+                ciclo: '120 dias',
+                produtividade: '3-6 ton/ha',
+                investimento: '15.000 MT/ha',
+                retorno: '35.000 MT/ha',
+                epoca: 'Nov-Jan',
+                clima: 'Tropical',
+                solo: 'Bem drenado, pH 6.0-6.8',
+                irrigacao: '500-800mm',
+                vantagens: ['Alimento básico nacional', 'Mercado garantido', 'Adaptado ao clima local'],
+                desafios: ['Pragas (lagarta-do-cartucho)', 'Secas periódicas', 'Armazenamento pós-colheita'],
+                dicas: ['Use variedades resistentes à seca', 'Plante no início das chuvas', 'Invista em silos adequados']
+            },
+            'amendoim': {
+                nome: 'Amendoim',
+                emoji: '🥜',
+                categoria: 'graos',
+                score: 88,
+                ciclo: '90-120 dias',
+                produtividade: '1.5-2.5 ton/ha',
+                investimento: '12.000 MT/ha',
+                retorno: '28.000 MT/ha',
+                epoca: 'Nov-Dez',
+                clima: 'Tropical seco',
+                solo: 'Arenoso, bem drenado',
+                irrigacao: '400-600mm',
+                vantagens: ['Exportação para África do Sul', 'Fixa nitrogênio', 'Resistente à seca'],
+                desafios: ['Aflatoxinas', 'Armazenamento adequado', 'Processamento'],
+                dicas: ['Colha no tempo certo', 'Seque adequadamente', 'Controle qualidade']
+            },
+            'mandioca': {
+                nome: 'Mandioca',
+                emoji: '🍠',
+                categoria: 'tuberculos',
+                score: 92,
+                ciclo: '8-12 meses',
+                produtividade: '15-25 ton/ha',
+                investimento: '8.000 MT/ha',
+                retorno: '22.000 MT/ha',
+                epoca: 'Out-Dez',
+                clima: 'Tropical',
+                solo: 'Diversos tipos, pH 5.5-6.5',
+                irrigacao: '600-1000mm',
+                vantagens: ['Alimento básico', 'Resistente à seca', 'Múltiplos usos'],
+                desafios: ['Pragas (mosca-branca)', 'Perecibilidade', 'Processamento'],
+                dicas: ['Use variedades melhoradas', 'Plante em curvas de nível', 'Processe rapidamente']
+            },
+            'tomate': {
+                nome: 'Tomate',
+                emoji: '🍅',
+                categoria: 'hortalicas',
+                score: 85,
+                ciclo: '90-120 dias',
+                produtividade: '30-50 ton/ha',
+                investimento: '25.000 MT/ha',
+                retorno: '65.000 MT/ha',
+                epoca: 'Abr-Jun, Set-Nov',
+                clima: 'Ameno, 18-25°C',
+                solo: 'Rico em matéria orgânica',
+                irrigacao: 'Gotejamento ideal',
+                vantagens: ['Alta rentabilidade', 'Mercado urbano', 'Ciclo médio'],
+                desafios: ['Doenças fúngicas', 'Manejo intensivo', 'Transporte'],
+                dicas: ['Use estufas simples', 'Controle pragas', 'Colha no ponto']
+            },
+            'cebola': {
+                nome: 'Cebola',
+                emoji: '🧅',
+                categoria: 'hortalicas',
+                score: 80,
+                ciclo: '120-150 dias',
+                produtividade: '20-30 ton/ha',
+                investimento: '18.000 MT/ha',
+                retorno: '45.000 MT/ha',
+                epoca: 'Mar-Mai',
+                clima: 'Ameno, 15-25°C',
+                solo: 'Bem drenado, rico em MO',
+                irrigacao: 'Regular, 400-600mm',
+                vantagens: ['Demanda constante', 'Boa conservação', 'Valor agregado'],
+                desafios: ['Sensível ao excesso de água', 'Pragas (trips)', 'Cura adequada'],
+                dicas: ['Escolha variedades adaptadas', 'Irrigação controlada', 'Cura ao sol']
+            },
+            'banana': {
+                nome: 'Banana',
+                emoji: '🍌',
+                categoria: 'frutas',
+                score: 90,
+                ciclo: '12-15 meses',
+                produtividade: '15-30 ton/ha/ano',
+                investimento: '20.000 MT/ha',
+                retorno: '40.000 MT/ha/ano',
+                epoca: 'Ano todo',
+                clima: 'Tropical, 26-30°C',
+                solo: 'Profundo, bem drenado',
+                irrigacao: '1200-1500mm/ano',
+                vantagens: ['Produção contínua', 'Mercado local forte', 'Cultura perene'],
+                desafios: ['Doenças (Sigatoka)', 'Ciclones', 'Transporte'],
+                dicas: ['Variedades resistentes', 'Quebra-ventos', 'Cooperativas de venda']
+            },
+            'manga': {
+                nome: 'Manga',
+                emoji: '🥭',
+                categoria: 'frutas',
+                score: 87,
+                ciclo: '3-5 anos (início produção)',
+                produtividade: '10-20 ton/ha',
+                investimento: '30.000 MT/ha',
+                retorno: '55.000 MT/ha',
+                epoca: 'Out-Jan (colheita)',
+                clima: 'Tropical seco',
+                solo: 'Bem drenado, pH 5.5-7.0',
+                irrigacao: '800-1200mm/ano',
+                vantagens: ['Exportação', 'Alto valor', 'Cultura perene'],
+                desafios: ['Longo período inicial', 'Pragas (mosca-da-fruta)', 'Sazonalidade'],
+                dicas: ['Variedades para exportação', 'Manejo pós-colheita', 'Certificações']
+            },
+            'caju': {
+                nome: 'Caju',
+                emoji: '🥜',
+                categoria: 'frutas',
+                score: 93,
+                ciclo: '3-4 anos (início produção)',
+                produtividade: '800-1200 kg/ha',
+                investimento: '25.000 MT/ha',
+                retorno: '45.000 MT/ha/ano',
+                epoca: 'Set-Dez (colheita)',
+                clima: 'Tropical costeiro',
+                solo: 'Arenoso, bem drenado',
+                irrigacao: '800-1200mm/ano',
+                vantagens: ['Tradição moçambicana', 'Exportação', 'Resistente à seca'],
+                desafios: ['Processamento da castanha', 'Pragas específicas', 'Mercado especializado'],
+                dicas: ['Foque na qualidade', 'Processamento local', 'Associações de produtores']
+            }
+        };
+
+        // Event Listeners
+        getLocationBtn.addEventListener('click', obterLocalizacao);
+        refreshBtn.addEventListener('click', atualizarRecomendacoes);
+
+        // Filtros
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-green-500', 'text-white');
+                    b.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+                });
+                this.classList.add('active', 'bg-green-500', 'text-white');
+                this.classList.remove('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+                
+                filtrarCulturas(this.dataset.filter);
+            });
+        });
+
+        // Inicializar filtros
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn.classList.contains('active')) {
+                btn.classList.add('bg-green-500', 'text-white');
+            } else {
+                btn.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+            }
+        });
+
+        // Função para obter localização (simulada para Moçambique)
+        function obterLocalizacao() {
+            mostrarCarregandoLocalizacao();
+
+            // Simular obtenção de localização após 2 segundos
+            setTimeout(() => {
+                // Coordenadas simuladas para diferentes regiões de Moçambique
+                const localizacoesSimuladas = [
+                    { latitude: -25.9692, longitude: 32.5732 }, // Maputo
+                    { latitude: -19.8187, longitude: 34.8553 }, // Beira
+                    { latitude: -15.1165, longitude: 39.2666 }, // Nampula
+                    { latitude: -16.1692, longitude: 33.5831 }, // Tete
+                    { latitude: -17.8292, longitude: 36.8881 }  // Quelimane
+                ];
+                
+                const localizacaoAleatoria = localizacoesSimuladas[Math.floor(Math.random() * localizacoesSimuladas.length)];
+                
+                userLocation = {
+                    latitude: localizacaoAleatoria.latitude,
+                    longitude: localizacaoAleatoria.longitude
+                };
+                
+                processarLocalizacao();
+            }, 2000);
+        }
+
+        // Mostrar carregamento da localização
+        function mostrarCarregandoLocalizacao() {
+            locationInfo.classList.add('hidden');
+            errorLocation.classList.add('hidden');
+            loadingLocation.classList.remove('hidden');
+            
+            statusLocation.innerHTML = `
+                <div class="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                <span class="text-sm text-yellow-600">Obtendo localização...</span>
+            `;
+        }
+
+        // Processar localização obtida
+        function processarLocalizacao() {
+            // Simular determinação da região baseada na localização
+            const regiao = determinarRegiao(userLocation.latitude, userLocation.longitude);
+            const cidade = determinarCidade(userLocation.latitude, userLocation.longitude);
+            
+            // Atualizar interface
+            atualizarInformacoesLocalizacao(regiao, cidade);
+            
+            // Gerar recomendações
+            setTimeout(() => {
+                gerarRecomendacoes(regiao);
+            }, 1000);
+        }
+
+        // Determinar região baseada em coordenadas (simplificado)
+        function determinarRegiao(lat, lng) {
+            // Lógica simplificada para determinar região de Moçambique
+            if (lat > -16) return 'norte';  // Cabo Delgado, Niassa, Nampula
+            if (lat < -24) return 'sul';    // Maputo, Gaza, Inhambane
+            if (lng > 35) return 'litoral'; // Costa do Oceano Índico
+            if (lat > -20 && lat < -16) return 'centro'; // Sofala, Manica, Zambézia, Tete
+            return 'planalto'; // Regiões de altitude
+        }
+
+        // Determinar cidade (simulado)
+        function determinarCidade(lat, lng) {
+            const cidades = [
+                'Maputo, Maputo', 'Matola, Maputo', 'Beira, Sofala',
+                'Nampula, Nampula', 'Chimoio, Manica', 'Nacala, Nampula',
+                'Quelimane, Zambézia', 'Tete, Tete', 'Xai-Xai, Gaza',
+                'Lichinga, Niassa', 'Pemba, Cabo Delgado', 'Inhambane, Inhambane'
+            ];
+            return cidades[Math.floor(Math.random() * cidades.length)];
+        }
+
+        // Atualizar informações de localização na interface
+        function atualizarInformacoesLocalizacao(regiao, cidade) {
+            const dados = regionData[regiao];
+            
+            document.getElementById('cityName').textContent = cidade;
+            document.getElementById('temperatura').textContent = dados.temperatura;
+            document.getElementById('umidade').textContent = dados.umidade;
+            document.getElementById('precipitacao').textContent = dados.precipitacao;
+            document.getElementById('tipoSolo').textContent = dados.tipoSolo;
+            document.getElementById('phSolo').textContent = dados.phSolo;
+            document.getElementById('drenagem').textContent = dados.drenagem;
+            
+            loadingLocation.classList.add('hidden');
+            locationInfo.classList.remove('hidden');
+            
+            statusLocation.innerHTML = `
+                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span class="text-sm text-green-600">Localização obtida</span>
+            `;
+        }
+
+        // Mostrar erro de localização
+        function mostrarErroLocalizacao(mensagem) {
+            loadingLocation.classList.add('hidden');
+            errorLocation.classList.remove('hidden');
+            errorLocation.querySelector('p').textContent = mensagem;
+            
+            statusLocation.innerHTML = `
+                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span class="text-sm text-red-600">Erro na localização</span>
+            `;
+        }
+
+        // Gerar recomendações baseadas na região
+        function gerarRecomendacoes(regiao) {
+            loadingRecommendations.classList.remove('hidden');
+            recommendationsSection.classList.add('hidden');
+            
+            setTimeout(() => {
+                // Selecionar culturas adequadas para a região
+                const culturasRecomendadas = selecionarCulturasPorRegiao(regiao);
+                currentRecommendations = culturasRecomendadas;
+                
+                renderizarCulturas(culturasRecomendadas);
+                
+                loadingRecommendations.classList.add('hidden');
+                recommendationsSection.classList.remove('hidden');
+            }, 2000);
+        }
+
+        // Selecionar culturas por região
+        function selecionarCulturasPorRegiao(regiao) {
+            const todasCulturas = Object.keys(culturasDatabase);
+            let culturasSelecionadas = [];
+            
+            // Lógica de seleção baseada na região de Moçambique
+            switch(regiao) {
+                case 'norte':
+                    culturasSelecionadas = ['caju', 'mandioca', 'milho', 'amendoim', 'banana'];
+                    break;
+                case 'centro':
+                    culturasSelecionadas = ['milho', 'mandioca', 'amendoim', 'tomate', 'cebola'];
+                    break;
+                case 'sul':
+                    culturasSelecionadas = ['milho', 'mandioca', 'tomate', 'cebola', 'amendoim'];
+                    break;
+                case 'litoral':
+                    culturasSelecionadas = ['caju', 'banana', 'manga', 'mandioca', 'milho'];
+                    break;
+                case 'planalto':
+                    culturasSelecionadas = ['milho', 'amendoim', 'mandioca', 'tomate', 'cebola'];
+                    break;
+                default:
+                    culturasSelecionadas = ['milho', 'mandioca', 'amendoim', 'tomate'];
+            }
+            
+            return culturasSelecionadas.map(id => ({
+                id,
+                ...culturasDatabase[id]
+            })).sort((a, b) => b.score - a.score);
+        }
+
+        // Renderizar culturas na interface
+        function renderizarCulturas(culturas) {
+            culturasGrid.innerHTML = '';
+            
+            culturas.forEach(cultura => {
+                const card = criarCardCultura(cultura);
+                culturasGrid.appendChild(card);
+            });
+        }
+
+        // Criar card de cultura
+        function criarCardCultura(cultura) {
+            const card = document.createElement('div');
+            card.className = 'cultura-card bg-white rounded-2xl p-6 shadow-lg cursor-pointer';
+            card.dataset.categoria = cultura.categoria;
+            
+            const rentabilidadeClass = cultura.score >= 90 ? 'rentabilidade-badge' : 'bg-gray-400';
+            
+            card.innerHTML = `
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="text-4xl">${cultura.emoji}</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">${cultura.nome}</h3>
+                            <p class="text-sm text-gray-500">${cultura.categoria.charAt(0).toUpperCase() + cultura.categoria.slice(1)}</p>
+                        </div>
+                    </div>
+                    <div class="recommendation-score text-white px-3 py-1 rounded-full text-sm font-bold">
+                        ${cultura.score}%
+                    </div>
+                </div>
+                
+                <div class="space-y-3 mb-4">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600">⏱️ Ciclo:</span>
+                        <span class="font-medium">${cultura.ciclo}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600">📈 Produtividade:</span>
+                        <span class="font-medium">${cultura.produtividade}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600">💰 Retorno:</span>
+                        <span class="font-medium text-green-600">${cultura.retorno}</span>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="clima-badge text-white px-2 py-1 rounded-full text-xs">🌡️ ${cultura.clima}</span>
+                    <span class="epoca-badge text-white px-2 py-1 rounded-full text-xs">📅 ${cultura.epoca}</span>
+                </div>
+                
+                <button class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-2 rounded-xl font-medium hover:from-green-600 hover:to-green-700 transition">
+                    Ver Detalhes Completos
+                </button>
+            `;
+            
+            card.addEventListener('click', () => mostrarDetalhesCultura(cultura));
+            
+            return card;
+        }
+
+        // Mostrar detalhes da cultura
+        function mostrarDetalhesCultura(cultura) {
+            const modalContent = document.getElementById('modalContent');
+            
+            modalContent.innerHTML = `
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-4">
+                            <div class="text-5xl">${cultura.emoji}</div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800">${cultura.nome}</h2>
+                                <p class="text-gray-600">Recomendação: ${cultura.score}% compatível</p>
+                            </div>
+                        </div>
+                        <button onclick="fecharModal()" class="text-gray-500 hover:text-gray-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 rounded-xl p-4">
+                                <h4 class="font-semibold text-blue-800 mb-3">📊 Dados de Produção</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Ciclo produtivo:</span>
+                                        <span class="font-medium">${cultura.ciclo}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Produtividade:</span>
+                                        <span class="font-medium">${cultura.produtividade}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Investimento:</span>
+                                        <span class="font-medium">${cultura.investimento}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Retorno esperado:</span>
+                                        <span class="font-medium text-green-600">${cultura.retorno}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-green-50 rounded-xl p-4">
+                                <h4 class="font-semibold text-green-800 mb-3">🌱 Condições Ideais</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Época de plantio:</span>
+                                        <p class="font-medium">${cultura.epoca}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Clima:</span>
+                                        <p class="font-medium">${cultura.clima}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Solo:</span>
+                                        <p class="font-medium">${cultura.solo}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Irrigação:</span>
+                                        <p class="font-medium">${cultura.irrigacao}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="bg-yellow-50 rounded-xl p-4">
+                                <h4 class="font-semibold text-yellow-800 mb-3">✅ Vantagens</h4>
+                                <ul class="space-y-1 text-sm">
+                                    ${cultura.vantagens.map(v => `<li class="flex items-start space-x-2"><span class="text-green-500 mt-1">•</span><span>${v}</span></li>`).join('')}
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-red-50 rounded-xl p-4">
+                                <h4 class="font-semibold text-red-800 mb-3">⚠️ Desafios</h4>
+                                <ul class="space-y-1 text-sm">
+                                    ${cultura.desafios.map(d => `<li class="flex items-start space-x-2"><span class="text-red-500 mt-1">•</span><span>${d}</span></li>`).join('')}
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-purple-50 rounded-xl p-4">
+                                <h4 class="font-semibold text-purple-800 mb-3">💡 Dicas Importantes</h4>
+                                <ul class="space-y-1 text-sm">
+                                    ${cultura.dicas.map(t => `<li class="flex items-start space-x-2"><span class="text-purple-500 mt-1">•</span><span>${t}</span></li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-medium hover:from-green-600 hover:to-green-700 transition">
+                            💾 Salvar nos Favoritos
+                        </button>
+                        <button class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition">
+                            📊 Calcular Viabilidade
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            culturaModal.classList.remove('hidden');
+            culturaModal.classList.add('flex');
+        }
+
+        // Fechar modal
+        function fecharModal() {
+            culturaModal.classList.add('hidden');
+            culturaModal.classList.remove('flex');
+        }
+
+        // Filtrar culturas
+        function filtrarCulturas(filtro) {
+            const cards = document.querySelectorAll('.cultura-card');
+            
+            cards.forEach(card => {
+                const categoria = card.dataset.categoria;
+                
+                if (filtro === 'all') {
+                    card.style.display = 'block';
+                } else if (filtro === 'alta-rentabilidade') {
+                    const score = parseInt(card.querySelector('.recommendation-score').textContent);
+                    card.style.display = score >= 90 ? 'block' : 'none';
+                } else {
+                    card.style.display = categoria === filtro ? 'block' : 'none';
+                }
+            });
+        }
+
+        // Atualizar recomendações
+        function atualizarRecomendacoes() {
+            if (userLocation) {
+                const regiao = determinarRegiao(userLocation.latitude, userLocation.longitude);
+                gerarRecomendacoes(regiao);
+            } else {
+                obterLocalizacao();
+            }
+        }
+
+        // Fechar modal ao clicar fora
+        culturaModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                fecharModal();
+            }
+        });
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tentar obter localização automaticamente
+            setTimeout(() => {
+                if (!userLocation) {
+                    // Mostrar dica para o usuário
+                    statusLocation.innerHTML = `
+                        <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm text-blue-600">Clique em "Obter Localização" para começar</span>
+                    `;
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
