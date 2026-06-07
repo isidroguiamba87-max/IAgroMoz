@@ -219,6 +219,46 @@ function Feed() {
     return null
   }
 
+  const fetchMissingFotos = async (postList) => {
+    if (!token) return
+
+    const missingIds = [...new Set(
+      postList
+        .filter(p => p.author_id && (
+          (!p.author_foto && !_userFotoCache[p.author_id]) ||
+          (!p.author_name && !_userNameCache[p.author_id])
+        ))
+        .map(p => p.author_id)
+    )]
+
+    if (missingIds.length === 0) return
+
+    for (let i = 0; i < missingIds.length; i += 5) {
+      const chunk = missingIds.slice(i, i + 5)
+      await Promise.all(chunk.map(async (userId) => {
+        try {
+          const res = await fetch(`${API_BASE}/users/${userId}/`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (!res.ok) return
+          const u = await res.json()
+          const foto = u.foto_perfil || u.profile_photo || u.imagem || u.photo
+          if (foto) {
+            const url = foto.startsWith('http') ? foto : API_MEDIA + (foto.startsWith('/') ? foto : '/' + foto)
+            _userFotoCache[userId] = url
+          }
+          const name = normalizeUserDisplayName(u)
+          if (name) _userNameCache[userId] = name
+        } catch (_) {
+          // ignore failed lookups
+        }
+      }))
+    }
+
+    setUserFotos({ ..._userFotoCache })
+    setUserNames({ ..._userNameCache })
+  }
+
   const loadPosts = async () => {
     try {
       setLoading(true)
@@ -251,44 +291,17 @@ function Feed() {
           })(),
         }
       }) : []
-        // Pre-fetch missing author names/photos (if authenticated) before rendering to avoid UI oscillation
-        const token = localStorage.getItem('access_token')
-        if (token) {
-          const missingIds = [...new Set(
-            normalized
-              .filter(p => p.author_id && (
-                (!p.author_foto && !_userFotoCache[p.author_id]) ||
-                (!p.author_name && !_userNameCache[p.author_id])
-              ))
-              .map(p => p.author_id)
-          )]
-          if (missingIds.length > 0) {
-            for (let i = 0; i < missingIds.length; i += 5) {
-              const chunk = missingIds.slice(i, i + 5)
-              await Promise.all(chunk.map(async (userId) => {
-                try {
-                  const res = await fetch(`${API_BASE}/users/${userId}/`, { headers: { Authorization: `Bearer ${token}` } })
-                  if (!res.ok) return
-                  const u = await res.json()
-                  const foto = u.foto_perfil || u.profile_photo
-                  if (foto) {
-                    const url = foto.startsWith('http') ? foto : API_MEDIA + (foto.startsWith('/') ? foto : '/' + foto)
-                    _userFotoCache[userId] = url
-                  }
-                  const name = normalizeUserDisplayName(u)
-                  if (name) _userNameCache[userId] = name
-                } catch (_) {}
-              }))
-            }
-          }
-        }
-        // enrich normalized posts with fetched cache if available
-        const enriched = normalized.map(p => ({
-          ...p,
-          author_name: p.author_name || (p.author_id ? _userNameCache[p.author_id] : null),
-          author_foto: p.author_foto || (p.author_id ? _userFotoCache[p.author_id] : null),
-        }))
-        setPosts(enriched)
+
+      if (token) {
+        await fetchMissingFotos(normalized)
+      }
+
+      const enriched = normalized.map(p => ({
+        ...p,
+        author_name: p.author_name || (p.author_id ? _userNameCache[p.author_id] : null),
+        author_foto: p.author_foto || (p.author_id ? _userFotoCache[p.author_id] : null),
+      }))
+      setPosts(enriched)
     } catch (err) { console.error(err); setPosts([]) }
     finally { setLoading(false) }
   }
