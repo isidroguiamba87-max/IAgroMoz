@@ -14,6 +14,30 @@ function CreatePost() {
   const location = useLocation()
   const editPost = location.state?.post || null
   const isEditing = !!editPost
+  const userRole = localStorage.getItem('userRole') || 'user'
+
+  // Bloqueio: apenas produtores podem publicar no feed
+  if (userRole === 'user') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAF8] px-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <i className="bi bi-ban text-3xl text-red-600"></i>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
+          <p className="text-gray-600 mb-6">Apenas produtores podem publicar no Feed. Solicite o upgrade para produtor para aceder a esta funcionalidade.</p>
+          <div className="flex gap-3">
+            <button onClick={() => navigate('/feed')} className="flex-1 py-2 rounded-xl border-2 border-gray-300 font-semibold text-gray-700 hover:bg-gray-50">
+              Voltar
+            </button>
+            <button onClick={() => navigate('/profile')} className="flex-1 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700">
+              Ver Upgrade
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

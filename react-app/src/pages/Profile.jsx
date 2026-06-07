@@ -394,31 +394,20 @@ function Profile() {
                   <h1 className="text-lg font-black text-gray-900 mb-0.5">
                     {`${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Utilizador'}
                   </h1>
-                  {isOwnProfile && <p className="text-gray-400 text-xs mb-2">{profile.email}</p>}
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold mb-2 ${getRoleColor(profile)}`}>
-                    {getRoleLabel(profile)}
-                  </span>
+                  {profile.email && <p className="text-gray-400 text-xs mb-2">{profile.email}</p>}
 
-                  {/* Avaliação pública do vendedor (se aplicável) */}
-                  {(!isOwnProfile) && (profile.pode_vender || profile.can_sell || profile.seller_profile) && (
-                    (() => {
-                      const avg = profile.ratings?.average_as_seller || profile.average_as_seller || profile.ratings?.average || null
-                      const total = profile.ratings?.total_as_seller || profile.total_as_seller || profile.ratings?.total || 0
-                      if (!avg && !total) return null
-                      return (
-                        <div className="flex items-center gap-2 text-xs text-gray-600 mt-1">
-                          <i className="bi bi-star-fill text-yellow-400"></i>
-                          <span className="font-semibold">{avg ? `${avg} / 5` : '—'}</span>
-                          <span className="text-gray-400">({total} avaliações)</span>
-                        </div>
-                      )
-                    })()
-                  )}
-                  {(profile.district?.name || profile.distrito?.nome) && (
-                    <p className="text-gray-500 text-xs flex items-center gap-1 mb-2">
-                      <i className="bi bi-geo-alt text-green-600"></i> {profile.district?.name || profile.distrito?.nome}
-                    </p>
-                  )}
+                  {/* Apenas os campos fornecidos no registo são mostrados */}
+                  <div className="w-full text-left mt-2 space-y-2">
+                    {profile.username && (
+                      <div className="text-xs text-gray-500">Nome de utilizador: <span className="font-medium text-gray-800">{profile.username}</span></div>
+                    )}
+                    {(profile.contact || profile.telefone || profile.phone) && (
+                      <div className="text-xs text-gray-500">Contacto: <span className="font-medium text-gray-800">{profile.contact || profile.telefone || profile.phone}</span></div>
+                    )}
+                    {(profile.district?.name || profile.distrito?.nome || profile.location) && (
+                      <div className="text-xs text-gray-500">Localização: <span className="font-medium text-gray-800">{profile.district?.name || profile.distrito?.nome || profile.location}</span></div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -454,10 +443,11 @@ function Profile() {
                     <h1 className="text-base font-black text-gray-900 truncate">
                       {`${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Utilizador'}
                     </h1>
-                    {isOwnProfile && <p className="text-gray-400 text-xs truncate">{profile.email}</p>}
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold mt-1 inline-block ${getRoleColor(profile)}`}>
-                      {getRoleLabel(profile)}
-                    </span>
+                    {profile.email && <p className="text-gray-400 text-xs truncate">{profile.email}</p>}
+                    <div className="mt-1 text-xs text-gray-500">
+                      {profile.username && <div>Nome de utilizador: <span className="font-medium text-gray-800">{profile.username}</span></div>}
+                      {(profile.contact || profile.telefone || profile.phone) && <div>Contacto: <span className="font-medium text-gray-800">{profile.contact || profile.telefone || profile.phone}</span></div>}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -786,66 +776,21 @@ function Profile() {
                 </button>
                 <h2 className="font-bold text-gray-800">Informações</h2>
               </div>
+
+              {/* Mostrar apenas os campos fornecidos no registo */}
               {[
-                { label: 'Nome Completo', value: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Utilizador' },
+                { label: 'Nome Completo', value: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Não definido' },
                 { label: 'Email', value: profile.email || 'Não definido' },
                 { label: 'Contacto', value: profile.contact || profile.telefone || profile.phone || 'Não definido' },
-                { label: 'Género', value: profile.gender === 'M' ? 'Masculino' : profile.gender === 'F' ? 'Feminino' : profile.gender === 'O' ? 'Outro' : 'Não definido' },
-                { label: 'Localização', value: profile.district?.name || profile.location || profile.store_address || profile.farm_address || 'Não definido' },
-                { label: 'Tipo de Conta', value: getRoleLabel(profile) },
-                { label: 'Nome da Loja', value: sellerProfile?.store_name || profile.store_name || 'Não definido' },
-                { label: 'Tipo de Vendedor', value: sellerProfile?.seller_type || profile.seller_type || 'Não definido' },
-                { label: 'NUIT', value: sellerProfile?.nuit || profile.nuit || 'Não definido' },
-                { label: 'Endereço da Loja', value: sellerProfile?.store_address || profile.store_address || 'Não definido' },
-                { label: 'Permissão de Venda', value: (profile.can_sell || profile.pode_vender) ? 'Sim' : 'Não' },
-              ].map(({ label, value, badge }) => (
+                { label: 'Localização', value: profile.district?.name || profile.distrito?.nome || profile.location || 'Não definido' },
+                { label: 'Nome de utilizador', value: profile.username || 'Não definido' },
+              ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
                   <span className="text-gray-500 text-sm">{label}</span>
-                  {badge
-                    ? <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${badge}`}>{value}</span>
-                    : <span className="font-medium text-gray-800 text-sm">{value}</span>}
+                  <span className="font-medium text-gray-800 text-sm">{value}</span>
                 </div>
               ))}
 
-              {/* Upgrade para Produtor (apenas para NORMAL) */}
-              {((profile.role || '').toUpperCase() === 'NORMAL') && (
-                <div className="bg-white rounded-2xl p-4 border border-gray-100">
-                  <h3 className="font-semibold text-gray-800 mb-2">Pedido de Upgrade para Produtor</h3>
-                  {upgradeReq ? (
-                    <div className="text-sm text-gray-600">
-                      <p>Status: <span className="font-semibold">{upgradeReq.status}</span></p>
-                      {upgradeReq.contact && <p>Contacto: {upgradeReq.contact}</p>}
-                      {upgradeReq.farm_address && <p>Exploração: {upgradeReq.farm_address}</p>}
-                      <p className="text-xs text-gray-400 mt-2">Enviado: {upgradeReq.created_at || upgradeReq.created || '—'}</p>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-600">
-                      <p>Ainda não submeteu um pedido de upgrade. Submeta o pedido para ser analisado pelo administrador.</p>
-                      {!showUpgradeForm ? (
-                        <div className="mt-3 flex gap-2">
-                          <button onClick={() => setShowUpgradeForm(true)} className="btn-primary text-white py-2 px-3 rounded-xl text-sm">Solicitar Upgrade</button>
-                        </div>
-                      ) : (
-                        <form onSubmit={handleUpgradeSubmit} className="space-y-2 mt-3">
-                          <div>
-                            <label className="block text-gray-700 text-xs mb-1">Contacto (telefone) *</label>
-                            <input value={upgradeContact} onChange={e => setUpgradeContact(e.target.value)} required className="form-input w-full px-3 py-2.5 rounded-xl text-sm" />
-                          </div>
-                          <div>
-                            <label className="block text-gray-700 text-xs mb-1">Endereço da exploração *</label>
-                            <textarea value={upgradeFarmAddress} onChange={e => setUpgradeFarmAddress(e.target.value)} required className="form-input w-full px-3 py-2.5 rounded-xl text-sm" rows={2} />
-                          </div>
-                          <div className="flex gap-2">
-                            <button type="button" onClick={() => setShowUpgradeForm(false)} className="flex-1 py-2 rounded-xl border-2 border-gray-200 text-sm">Cancelar</button>
-                            <button type="submit" disabled={upgradeLoading} className="flex-1 py-2 rounded-xl btn-primary text-white text-sm">{upgradeLoading ? 'A enviar...' : 'Enviar pedido'}</button>
-                          </div>
-                          {psError && <div className="text-sm text-red-600">{psError}</div>}
-                        </form>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 

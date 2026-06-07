@@ -47,6 +47,7 @@ function normalizeUserDisplayName(user) {
 
 function extractAuthorName(obj) {
   if (!obj) return 'Utilizador'
+  if (obj.full_name) return obj.full_name
   if (obj.nome_completo) return obj.nome_completo
   if (obj.autor_nome) return obj.autor_nome
   if (obj.usuario_nome) return obj.usuario_nome
@@ -54,6 +55,7 @@ function extractAuthorName(obj) {
   if (obj.author_name) return obj.author_name
   const a = obj.autor || obj.author || obj.user
   if (a) {
+    if (a.full_name) return a.full_name
     if (a.nome_completo) return a.nome_completo
     if (a.first_name && a.last_name) return `${a.first_name} ${a.last_name}`.trim()
     if (a.first_name) return a.first_name
@@ -168,23 +170,53 @@ function Feed() {
     return raw.user || raw.profile || raw
   }
 
+  // Função para renderizar o nome do autor — usa melhor fallback
+  const renderAuthorName = (post) => {
+    const cached = userNames[post.author_id]
+    const name = post.author_name || cached
+    
+    // Se ainda não há nome, tenta tirar informação útil
+    if (!name || name === 'Utilizador') {
+      // Se há ID, mostra algo genérico mas útil
+      if (post.author_id) return `Agricultor #${String(post.author_id).substring(0, 6)}`
+      // Se não há ID, mostra placeholder
+      return 'Publicação Anónima'
+    }
+    
+    return name
+  }
+
+  // Função para extrair nome do autor dos dados da API
   const extractAuthorName = (p, author) => {
-    if (!p && !author) return 'Utilizador'
-    const nameCandidates = [
-      p?.nome_completo,
-      p?.autor_nome,
-      p?.author_name,
-      author?.nome_completo,
-      author?.full_name,
-      author?.display_name,
+    if (!p && !author) return null
+    
+    // Candidatos de nome na ordem de preferência
+    const candidates = [
+      p?.full_name?.trim(),
+      p?.nome_completo?.trim(),
+      p?.autor_nome?.trim(),
+      p?.author_name?.trim(),
+      author?.full_name?.trim(),
+      author?.nome_completo?.trim(),
+      author?.display_name?.trim(),
       author?.first_name && author?.last_name ? `${author.first_name} ${author.last_name}`.trim() : null,
-      author?.first_name,
-      author?.last_name,
-      author?.username,
-      author?.name,
-      author?.email?.split('@')[0],
+      author?.first_name?.trim(),
+      author?.last_name?.trim(),
+      author?.username?.trim(),
+      author?.name?.trim(),
+      author?.email?.split('@')[0]?.trim(),
+      p?.author?.email?.split('@')[0]?.trim(),
     ]
-    return nameCandidates.find(v => v && String(v).trim()) || 'Utilizador'
+    
+    // Retorna o primeiro candidato válido (não vazio)
+    for (const candidate of candidates) {
+      if (candidate && String(candidate).trim().length > 0) {
+        return String(candidate).trim()
+      }
+    }
+    
+    // Se nada funcionou, retorna null para indicar que precisa de prefetch
+    return null
   }
 
   const loadPosts = async () => {
@@ -193,7 +225,8 @@ function Feed() {
       const data = await api.getCommunitySessions()
       const normalized = Array.isArray(data) ? data.map(p => {
         const author = resolveAuthor(p)
-        const authorName = extractAuthorName(p, author)
+        // don't default to 'Utilizador' here — try to compute, keep null if unknown
+        const authorName = extractAuthorName(p, author) || null
         return {
           id: p.id,
           title: p.titulo || p.title || '',
@@ -218,9 +251,44 @@ function Feed() {
           })(),
         }
       }) : []
-      setPosts(normalized)
-      // Buscar fotos dos autores que não vieram na resposta
-      fetchMissingFotos(normalized)
+        // Pre-fetch missing author names/photos (if authenticated) before rendering to avoid UI oscillation
+        const token = localStorage.getItem('access_token')
+        if (token) {
+          const missingIds = [...new Set(
+            normalized
+              .filter(p => p.author_id && (
+                (!p.author_foto && !_userFotoCache[p.author_id]) ||
+                (!p.author_name && !_userNameCache[p.author_id])
+              ))
+              .map(p => p.author_id)
+          )]
+          if (missingIds.length > 0) {
+            for (let i = 0; i < missingIds.length; i += 5) {
+              const chunk = missingIds.slice(i, i + 5)
+              await Promise.all(chunk.map(async (userId) => {
+                try {
+                  const res = await fetch(`${API_BASE}/users/${userId}/`, { headers: { Authorization: `Bearer ${token}` } })
+                  if (!res.ok) return
+                  const u = await res.json()
+                  const foto = u.foto_perfil || u.profile_photo
+                  if (foto) {
+                    const url = foto.startsWith('http') ? foto : API_MEDIA + (foto.startsWith('/') ? foto : '/' + foto)
+                    _userFotoCache[userId] = url
+                  }
+                  const name = normalizeUserDisplayName(u)
+                  if (name) _userNameCache[userId] = name
+                } catch (_) {}
+              }))
+            }
+          }
+        }
+        // enrich normalized posts with fetched cache if available
+        const enriched = normalized.map(p => ({
+          ...p,
+          author_name: p.author_name || (p.author_id ? _userNameCache[p.author_id] : null) || p.author_name,
+          author_foto: p.author_foto || (p.author_id ? _userFotoCache[p.author_id] : null) || p.author_foto,
+        }))
+        setPosts(enriched)
     } catch (err) { console.error(err); setPosts([]) }
     finally { setLoading(false) }
   }
@@ -234,7 +302,7 @@ function Feed() {
       postList
         .filter(p => p.author_id && (
           (!p.author_foto && !_userFotoCache[p.author_id]) ||
-          (p.author_name === 'Utilizador' && !_userNameCache[p.author_id])
+          (!p.author_name && !_userNameCache[p.author_id])
         ))
         .map(p => p.author_id)
     )]
@@ -508,7 +576,7 @@ function Feed() {
                           onClick={() => post.author_id && navigate(`/profile/${post.author_id}`)}
                           className={`flex-shrink-0 ${post.author_id ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}>
                           <Avatar
-                            name={post.author_name || userNames[post.author_id] || 'Utilizador'}
+                            name={renderAuthorName(post)}
                             foto={
                               post.author_foto ||
                               (post.author_id ? userFotos[post.author_id] : undefined) ||
@@ -521,7 +589,7 @@ function Feed() {
                           <button
                             onClick={() => post.author_id && navigate(`/profile/${post.author_id}`)}
                             className={`font-bold text-gray-900 text-sm leading-tight block text-left ${post.author_id ? 'hover:text-green-700 hover:underline' : ''}`}>
-                            {post.author_name || userNames[post.author_id] || 'Utilizador'}
+                            {renderAuthorName(post)}
                           </button>
                           <div className="flex items-center gap-2">
                             <p className="text-xs text-gray-400">{post.created_at ? new Date(post.created_at).toLocaleString('pt-PT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</p>

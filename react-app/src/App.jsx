@@ -136,6 +136,7 @@ function App() {
           <Route path="/marketplace" element={<AdminRouteBlocker><ProtectedRoute><Marketplace /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/product/:id" element={<AdminRouteBlocker><ProtectedRoute><ProductDetail /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/techniques" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><Techniques /></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/recommendations" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><Techniques /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/technique/:id" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><TechniqueDetail /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/profile" element={<AdminRouteBlocker><ProtectedRoute><Profile /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/profile/:id" element={<AdminRouteBlocker><Profile /></AdminRouteBlocker>} />
