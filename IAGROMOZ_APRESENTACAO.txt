@@ -1,0 +1,192 @@
+IAGROMOZ — AGRICULTURA INTELIGENTE PARA MOCAMBIQUE
+====================================================
+Documento de Apresentacao do Projecto
+Maio de 2026
+
+
+O PROBLEMA
+----------
+
+A agricultura e a pecuaria sao a base da economia de Mocambique. A maioria
+das familias vive do campo e depende da venda dos seus produtos para
+sobreviver. Mas existem problemas antigos que continuam a travar o
+crescimento dos agricultores e criadores de animais:
+
+1. DIFICULDADE EM VENDER
+   O agricultor produz, mas nao tem onde vender. Muitas vezes vende barato
+   a intermediarios que depois vendem caro nas cidades. O produtor perde
+   dinheiro e o consumidor paga mais do que devia.
+
+2. FALTA DE INFORMACAO
+   Muitos agricultores nao sabem quando plantar, como tratar doencas das
+   plantas ou dos animais, ou quais as melhores tecnicas para aumentar a
+   producao. Essa informacao existe, mas nao chega ao campo.
+
+3. ISOLAMENTO
+   Os agricultores trabalham sozinhos. Nao ha um espaco onde possam
+   partilhar experiencias, aprender com os outros, ou pedir ajuda quando
+   algo corre mal.
+
+4. DESCONFIANCA NAS TRANSACCOES
+   Quando um comprador quer adquirir produtos de um vendedor que nao
+   conhece, nao ha garantia de que a transaccao vai correr bem. Nao ha
+   registo, nao ha confirmacao, nao ha proteccao para nenhuma das partes.
+
+
+A SOLUCAO — IAGROMOZ
+--------------------
+
+O IAgroMOZ e uma plataforma digital criada especificamente para o sector
+agropecuario de Mocambique. Funciona como uma comunidade e um mercado
+ao mesmo tempo, acessivel pelo telemovel ou computador.
+
+Em linguagem simples: e como ter um mercado, uma sala de conversas entre
+agricultores e um assistente agricola especializado — tudo num so lugar.
+
+
+O QUE A PLATAFORMA OFERECE
+---------------------------
+
+1. MERCADO DIGITAL (Compra e Venda Segura)
+
+   Qualquer vendedor ou produtor registado pode colocar os seus produtos
+   para venda: milho, ovos, gado, horticolas, frutas, peixe, e muito mais.
+
+   O comprador ve o produto, o preco, a localizacao e as avaliacoes de
+   outros compradores. Se quiser comprar, faz uma reserva. O vendedor
+   confirma que tem o produto disponivel. O comprador paga por M-Pesa,
+   e-Mola ou outro metodo. O vendedor entrega e conclui a venda.
+
+   Nenhuma das partes e lesada porque cada passo fica registado e
+   confirmado na plataforma.
+
+2. COMUNIDADE DE AGRICULTORES (Partilha de Experiencias)
+
+   Os utilizadores podem publicar noticias, dicas, experiencias e
+   perguntas sobre agricultura e pecuaria. Outros agricultores comentam,
+   respondem e partilham o que sabem.
+
+   E como uma rede social, mas dedicada ao campo. Um agricultor de Nampula
+   pode aprender com um produtor de Manica sem sair de casa.
+
+3. TECNICAS AGRICOLAS VALIDADAS (Conhecimento da Comunidade)
+
+   Qualquer membro pode submeter uma tecnica agricola que conhece e que
+   funciona. Os outros membros votam se aprovam ou nao. Se muitas pessoas
+   aprovarem, a tecnica fica marcada como "validada" — um sinal de que
+   funciona de verdade.
+
+   Assim, o conhecimento agricola local e preservado, partilhado e
+   melhorado pela propria comunidade.
+
+4. ASSISTENTE COM INTELIGENCIA ARTIFICIAL (Ajuda a qualquer hora)
+
+   O IAgroMOZ tem um assistente inteligente que responde a perguntas sobre
+   agricultura. O agricultor pode escrever: "As minhas plantas de tomate
+   estao com manchas amarelas, o que fazer?" e recebe uma resposta
+   imediata com orientacoes praticas.
+
+   Pode ate enviar uma foto da planta ou do animal para o assistente
+   analisar. Esta disponivel 24 horas por dia, todos os dias.
+
+5. PAGAMENTOS SEGUROS
+
+   A plataforma suporta pagamento por M-Pesa, e-Mola, cartao e banco.
+   O dinheiro so circula depois de cada parte confirmar o seu passo.
+   O comprador so paga depois de o vendedor confirmar que tem o produto.
+   O vendedor so conclui depois de entregar. Se algo correr mal, a
+   transaccao pode ser cancelada e o stock e devolvido automaticamente.
+
+6. PAINEL DO VENDEDOR (Controlo do Negocio)
+
+   Cada vendedor tem um painel proprio onde ve:
+   - Quantos produtos tem e quais estao com stock baixo
+   - Quantas vendas fez e quanto dinheiro recebeu
+   - Quais as transaccoes pendentes que precisa de confirmar
+   - Como os clientes o avaliam
+
+   Tudo num so ecra, simples e claro.
+
+
+QUEM PODE USAR O IAGROMOZ
+--------------------------
+
+COMPRADOR (utilizador normal)
+   Qualquer pessoa que queira comprar produtos agricolas directamente
+   dos produtores. Pode explorar o mercado, fazer reservas, pagar e
+   acompanhar as suas compras.
+
+PRODUTOR
+   Agricultor ou criador de animais que quer vender os seus produtos.
+   Pode publicar produtos, gerir vendas e partilhar tecnicas agricolas.
+   Para se tornar produtor, faz um pedido que e aprovado pelo administrador.
+
+VENDEDOR
+   Comerciante de produtos agricolas. Tem acesso ao mercado, ao painel
+   de vendas e as transaccoes. O acesso e focado na gestao do seu negocio.
+
+ADMINISTRADOR
+   Gere toda a plataforma, aprova novos produtores, acompanha as
+   metricas e garante que tudo funciona correctamente.
+
+
+COMO FUNCIONA UMA COMPRA, PASSO A PASSO
+-----------------------------------------
+
+Passo 1 — O comprador encontra um produto no mercado e faz uma reserva.
+           O vendedor recebe um aviso imediato.
+
+Passo 2 — O vendedor confirma que tem o produto disponivel.
+           O comprador recebe um aviso para efectuar o pagamento.
+
+Passo 3 — O comprador paga por M-Pesa ou outro metodo disponivel.
+           O vendedor recebe confirmacao do pagamento.
+
+Passo 4 — O vendedor entrega o produto e confirma a entrega na plataforma.
+           A venda fica concluida para ambas as partes.
+
+Se em qualquer passo algo correr mal, qualquer das partes pode cancelar.
+O stock e devolvido automaticamente ao vendedor.
+
+
+BENEFICIOS PARA O SECTOR AGROPECUARIO
+---------------------------------------
+
+- O produtor vende directamente ao consumidor, sem intermediarios,
+  ganhando mais pelo seu trabalho.
+
+- O comprador encontra produtos frescos, com preco justo e de vendedores
+  avaliados por outros compradores.
+
+- O conhecimento agricola local e partilhado e nao se perde.
+
+- Os agricultores deixam de estar isolados e passam a fazer parte de
+  uma comunidade que se apoia mutuamente.
+
+- As transaccoes ficam registadas, o que da seguranca a ambas as partes
+  e ajuda os vendedores a gerir melhor o seu negocio.
+
+- O assistente de inteligencia artificial da acesso a orientacao agricola
+  de qualidade, mesmo em zonas remotas e sem necessidade de deslocacao.
+
+
+EM RESUMO
+----------
+
+O IAgroMOZ nasceu para resolver um problema real: os agricultores e
+criadores de animais de Mocambique precisam de ferramentas modernas para
+vender melhor, aprender mais e trabalhar juntos.
+
+Nao e uma solucao para tecnicos. E uma solucao para o campo.
+Para o agricultor que acorda de manha sem saber a quem vender os seus
+ovos. Para o criador que nao sabe o que fazer quando o seu gado adoece.
+Para o produtor que quer crescer mas nao tem com quem aprender.
+
+O IAgroMOZ e a ponte entre o campo e o mercado.
+Entre o conhecimento e quem precisa dele.
+Entre os agricultores de todo o pais.
+
+
+====================================================
+IAgroMOZ — Agricultura Inteligente para Mocambique
+====================================================

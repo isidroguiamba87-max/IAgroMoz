@@ -1,0 +1,944 @@
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import MobileNav from '../components/MobileNav'
+import LoadingPlant from '../components/LoadingPlant'
+import Logo from '../components/Logo'
+import Comment from '../components/Comment'
+import api from '../services/api'
+
+function Feed() {
+  const navigate = useNavigate()
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [likedPosts, setLikedPosts] = useState(new Set())
+  
+  // Estados para comentários expandidos
+  const [expandedComments, setExpandedComments] = useState({})
+  const [commentTexts, setCommentTexts] = useState({})
+  const [loadingComments, setLoadingComments] = useState({})
+  const [postComments, setPostComments] = useState({})
+  
+  // Estados para modais
+  const [showLikesModal, setShowLikesModal] = useState(null)
+  const [showShareModal, setShowShareModal] = useState(null)
+
+  useEffect(() => {
+    loadPosts()
+  }, [])
+
+  const loadPosts = async () => {
+    try {
+      setLoading(true)
+      const data = await api.getQuestions()
+      setPosts(data)
+    } catch (err) {
+      console.error('Erro ao carregar posts:', err)
+      // Dados de exemplo quando API não está disponível
+      setPosts([
+        {
+          id: 1,
+          title: 'Colheita de Tomates Orgânicos 🍅',
+          body: 'Acabei de colher meus tomates orgânicos! Foram 3 meses de cuidado e o resultado foi incrível. Usei apenas compostagem e controle biológico de pragas.',
+          author_name: 'João Silva',
+          created_at: new Date().toISOString(),
+          answers_count: 5,
+          likes_count: 12,
+          image: null,
+          is_product_available: true,
+          linked_product: 1,
+          product_id: 1,
+          product_name: 'Tomates Orgânicos',
+          answers: [
+            {
+              id: 101,
+              body: 'Parabéns pela colheita! Quanto tempo levou?',
+              author_name: 'Maria Costa',
+              created_at: new Date(Date.now() - 3600000).toISOString(),
+              replies: []
+            },
+            {
+              id: 102,
+              body: 'Ficaram lindos! Você vende?',
+              author_name: 'Carlos Nhantumbo',
+              created_at: new Date(Date.now() - 7200000).toISOString(),
+              replies: []
+            }
+          ]
+        },
+        {
+          id: 2,
+          title: 'Dúvida sobre Irrigação por Gotejamento',
+          body: 'Estou pensando em implementar irrigação por gotejamento na minha horta. Alguém tem experiência? Vale a pena o investimento?',
+          author_name: 'Maria Costa',
+          created_at: new Date(Date.now() - 3600000).toISOString(),
+          answers_count: 12,
+          likes_count: 8,
+          image: null,
+          is_product_available: false,
+          answers: []
+        },
+        {
+          id: 3,
+          title: 'Sementes de Milho Híbrido Disponíveis! 🌽',
+          body: 'Tenho sementes de milho híbrido de alta produtividade. Resistente a pragas e adaptado ao clima de Moçambique. Rendimento médio de 8-10 toneladas por hectare.',
+          author_name: 'Carlos Nhantumbo',
+          created_at: new Date(Date.now() - 7200000).toISOString(),
+          answers_count: 8,
+          likes_count: 25,
+          image: null,
+          is_product_available: true,
+          linked_product: 2,
+          product_id: 2,
+          product_name: 'Sementes de Milho Híbrido',
+          answers: []
+        }
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLike = (postId) => {
+    setLikedPosts(prev => {
+      const newLiked = new Set(prev)
+      if (newLiked.has(postId)) {
+        newLiked.delete(postId)
+      } else {
+        newLiked.add(postId)
+      }
+      return newLiked
+    })
+  }
+
+  const toggleComments = async (postId) => {
+    if (expandedComments[postId]) {
+      // Fechar comentários
+      setExpandedComments(prev => ({ ...prev, [postId]: false }))
+    } else {
+      // Abrir comentários
+      setExpandedComments(prev => ({ ...prev, [postId]: true }))
+      
+      // Carregar comentários se ainda não foram carregados
+      if (!postComments[postId]) {
+        try {
+          setLoadingComments(prev => ({ ...prev, [postId]: true }))
+          const post = await api.getQuestion(postId)
+          setPostComments(prev => ({ ...prev, [postId]: post.answers || [] }))
+        } catch (err) {
+          console.error('Erro ao carregar comentários:', err)
+          // Usar comentários de exemplo do post
+          const post = posts.find(p => p.id === postId)
+          setPostComments(prev => ({ ...prev, [postId]: post?.answers || [] }))
+        } finally {
+          setLoadingComments(prev => ({ ...prev, [postId]: false }))
+        }
+      }
+    }
+  }
+
+  const handleSubmitComment = async (postId, e) => {
+    e?.preventDefault()
+    const text = commentTexts[postId]
+    if (!text?.trim()) return
+
+    try {
+      await api.createAnswer(postId, text, null)
+      setCommentTexts(prev => ({ ...prev, [postId]: '' }))
+      
+      // Recarregar comentários
+      const post = await api.getQuestion(postId)
+      setPostComments(prev => ({ ...prev, [postId]: post.answers || [] }))
+      
+      // Atualizar contador no post
+      setPosts(prev => prev.map(p => 
+        p.id === postId ? { ...p, answers_count: post.answers?.length || 0 } : p
+      ))
+    } catch (err) {
+      console.error('Erro ao enviar comentário:', err)
+      alert('Erro ao enviar comentário. Faça login primeiro.')
+    }
+  }
+
+  const handleReply = async (postId, parentId, replyText) => {
+    try {
+      await api.createAnswer(postId, replyText, parentId)
+      
+      // Recarregar comentários
+      const postData = await api.getQuestion(postId)
+      setPostComments(prev => ({ ...prev, [postId]: postData.answers || [] }))
+    } catch (err) {
+      console.error('Erro ao enviar resposta:', err)
+      alert('Erro ao enviar resposta. Faça login primeiro.')
+    }
+  }
+
+  const handleShowLikes = (postId) => {
+    setShowLikesModal(postId)
+  }
+
+  const handleShare = (postId) => {
+    setShowShareModal(postId)
+  }
+
+  const shareToWhatsApp = (post) => {
+    const text = `${post.title}\n\n${post.body}\n\nVia IAgroMOZ`
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank')
+    setShowShareModal(null)
+  }
+
+  const shareToFacebook = (post) => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`
+    window.open(url, '_blank')
+    setShowShareModal(null)
+  }
+
+  const shareToTwitter = (post) => {
+    const text = `${post.title} - Via IAgroMOZ`
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank')
+    setShowShareModal(null)
+  }
+
+  const shareToOwnProfile = (postId) => {
+    alert('Funcionalidade de partilhar no seu perfil em desenvolvimento!')
+    setShowShareModal(null)
+  }
+
+  const copyLink = (postId) => {
+    const url = `${window.location.origin}/post/${postId}`
+    navigator.clipboard.writeText(url)
+    alert('Link copiado!')
+    setShowShareModal(null)
+  }
+
+  // Lista de pessoas que gostaram (exemplo)
+  const getLikesList = (postId) => {
+    return [
+      'João Silva',
+      'Maria Costa',
+      'Carlos Nhantumbo',
+      'Ana Matsinhe',
+      'Pedro Macamo',
+      'Teresa Mondlane',
+      'António Chissano',
+      'Luísa Diogo'
+    ]
+  }
+
+  return (
+    <div className="min-h-screen pb-20 soil-texture">
+      {/* Header */}
+      <header className="glass-effect sticky top-0 z-40 border-b border-gray-200">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Logo size="md" showText={true} />
+            
+            <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center click-scale">
+              <span className="text-xl">🔔</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="max-w-2xl mx-auto px-4 py-6">
+        {/* Banner Modo Demonstração */}
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">ℹ️</span>
+            <div>
+              <p className="font-semibold text-blue-800 mb-1">Modo Demonstração</p>
+              <p className="text-sm text-blue-700">
+                Você está vendo dados de exemplo. Para salvar posts reais, inicie o backend Django:
+              </p>
+              <code className="text-xs bg-blue-100 px-2 py-1 rounded mt-2 inline-block">
+                cd backend && python manage.py runserver
+              </code>
+            </div>
+          </div>
+        </div>
+        {/* Create Post */}
+        <div className="agro-card p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center text-white font-bold">
+              U
+            </div>
+            <input
+              type="text"
+              placeholder="Compartilhe sua experiência agrícola..."
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 click-scale"
+              onClick={() => navigate('/create-post')}
+              readOnly
+            />
+          </div>
+        </div>
+
+        {/* Seção de Técnicas Agrícolas */}
+        <div className="agro-card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <i className="bi bi-lightbulb-fill text-2xl text-yellow-600"></i>
+              <h2 className="text-xl font-bold text-gray-800">Técnicas Agrícolas</h2>
+            </div>
+            <button
+              onClick={() => navigate('/techniques')}
+              className="text-green-600 hover:text-green-700 font-semibold text-sm flex items-center gap-1"
+            >
+              Ver todas
+              <i className="bi bi-arrow-right"></i>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={() => navigate('/techniques')}
+              className="flex items-center gap-3 p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-xl hover:shadow-md transition-all click-scale"
+            >
+              <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                <i className="bi bi-droplet-fill text-white text-xl"></i>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-gray-800 text-sm">Irrigação</p>
+                <p className="text-xs text-gray-600">Técnicas de rega eficiente</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => navigate('/techniques')}
+              className="flex items-center gap-3 p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl hover:shadow-md transition-all click-scale"
+            >
+              <div className="w-12 h-12 rounded-full bg-orange-600 flex items-center justify-center flex-shrink-0">
+                <i className="bi bi-bug-fill text-white text-xl"></i>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-gray-800 text-sm">Controle de Pragas</p>
+                <p className="text-xs text-gray-600">Métodos naturais e químicos</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => navigate('/techniques')}
+              className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl hover:shadow-md transition-all click-scale"
+            >
+              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <i className="bi bi-moisture text-white text-xl"></i>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-gray-800 text-sm">Compostagem</p>
+                <p className="text-xs text-gray-600">Fertilizantes orgânicos</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => navigate('/techniques')}
+              className="flex items-center gap-3 p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl hover:shadow-md transition-all click-scale"
+            >
+              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
+                <i className="bi bi-arrow-repeat text-white text-xl"></i>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-gray-800 text-sm">Rotação de Culturas</p>
+                <p className="text-xs text-gray-600">Melhore a produtividade</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Seção de Dashboard / Estatísticas */}
+        <div className="agro-card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <i className="bi bi-graph-up text-2xl text-blue-600"></i>
+              <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
+            </div>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="text-green-600 hover:text-green-700 font-semibold text-sm flex items-center gap-1"
+            >
+              Ver detalhes
+              <i className="bi bi-arrow-right"></i>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <i className="bi bi-people-fill text-green-600 text-xl"></i>
+                <p className="text-xs text-gray-600 font-medium">Comunidade</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-800">1,234</p>
+              <p className="text-xs text-gray-500">Agricultores ativos</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <i className="bi bi-box-seam text-orange-600 text-xl"></i>
+                <p className="text-xs text-gray-600 font-medium">Produtos</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-800">567</p>
+              <p className="text-xs text-gray-500">No marketplace</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <i className="bi bi-lightbulb-fill text-blue-600 text-xl"></i>
+                <p className="text-xs text-gray-600 font-medium">Técnicas</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-800">89</p>
+              <p className="text-xs text-gray-500">Compartilhadas</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <i className="bi bi-chat-dots-fill text-purple-600 text-xl"></i>
+                <p className="text-xs text-gray-600 font-medium">Interações</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-800">3.2k</p>
+              <p className="text-xs text-gray-500">Esta semana</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="w-full mt-4 bg-gradient-to-r from-green-600 to-green-700 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all click-scale flex items-center justify-center gap-2"
+          >
+            <i className="bi bi-bar-chart-fill"></i>
+            Acessar Dashboard Completo
+          </button>
+        </div>
+
+        {/* Seção de Técnicas Agrícolas */}
+        <div className="agro-card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <i className="bi bi-lightbulb-fill text-2xl text-yellow-600"></i>
+              <h2 className="text-xl font-bold text-gray-800">Técnicas Agrícolas</h2>
+            </div>
+            <button
+              onClick={() => navigate('/techniques')}
+              className="text-green-600 hover:text-green-700 font-semibold text-sm flex items-center gap-1"
+            >
+              Ver todas
+              <i className="bi bi-arrow-right"></i>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={() => navigate('/techniques')}
+              className="flex items-center gap-3 p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-xl hover:shadow-md transition-all click-scale"
+            >
+              <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                <i className="bi bi-droplet-fill text-white text-xl"></i>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-gray-800 text-sm">Irrigação</p>
+                <p className="text-xs text-gray-600">Técnicas de rega eficiente</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => navigate('/techniques')}
+              className="flex items-center gap-3 p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl hover:shadow-md transition-all click-scale"
+            >
+              <div className="w-12 h-12 rounded-full bg-orange-600 flex items-center justify-center flex-shrink-0">
+                <i className="bi bi-bug-fill text-white text-xl"></i>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-gray-800 text-sm">Controle de Pragas</p>
+                <p className="text-xs text-gray-600">Métodos naturais e químicos</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => navigate('/techniques')}
+              className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl hover:shadow-md transition-all click-scale"
+            >
+              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <i className="bi bi-moisture text-white text-xl"></i>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-gray-800 text-sm">Compostagem</p>
+                <p className="text-xs text-gray-600">Fertilizantes orgânicos</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => navigate('/techniques')}
+              className="flex items-center gap-3 p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl hover:shadow-md transition-all click-scale"
+            >
+              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
+                <i className="bi bi-arrow-repeat text-white text-xl"></i>
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-gray-800 text-sm">Rotação de Culturas</p>
+                <p className="text-xs text-gray-600">Melhore a produtividade</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Seção de Dashboard / Estatísticas */}
+        <div className="agro-card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <i className="bi bi-graph-up text-2xl text-blue-600"></i>
+              <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
+            </div>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="text-green-600 hover:text-green-700 font-semibold text-sm flex items-center gap-1"
+            >
+              Ver detalhes
+              <i className="bi bi-arrow-right"></i>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <i className="bi bi-people-fill text-green-600 text-xl"></i>
+                <p className="text-xs text-gray-600 font-medium">Comunidade</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-800">1,234</p>
+              <p className="text-xs text-gray-500">Agricultores ativos</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <i className="bi bi-box-seam text-orange-600 text-xl"></i>
+                <p className="text-xs text-gray-600 font-medium">Produtos</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-800">567</p>
+              <p className="text-xs text-gray-500">No marketplace</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <i className="bi bi-lightbulb-fill text-blue-600 text-xl"></i>
+                <p className="text-xs text-gray-600 font-medium">Técnicas</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-800">89</p>
+              <p className="text-xs text-gray-500">Compartilhadas</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <i className="bi bi-chat-dots-fill text-purple-600 text-xl"></i>
+                <p className="text-xs text-gray-600 font-medium">Interações</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-800">3.2k</p>
+              <p className="text-xs text-gray-500">Esta semana</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="w-full mt-4 bg-gradient-to-r from-green-600 to-green-700 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all click-scale flex items-center justify-center gap-2"
+          >
+            <i className="bi bi-bar-chart-fill"></i>
+            Acessar Dashboard Completo
+          </button>
+        </div>
+
+        {/* Posts */}
+    const text = `${post.title}\n\n${post.body}\n\nVia IAgroMOZ`
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank')
+    setShowShareModal(null)
+  }
+
+  const shareToFacebook = (post) => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`
+    window.open(url, '_blank')
+    setShowShareModal(null)
+  }
+
+  const shareToTwitter = (post) => {
+    const text = `${post.title} - Via IAgroMOZ`
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank')
+    setShowShareModal(null)
+  }
+
+  const shareToOwnProfile = (postId) => {
+    alert('Funcionalidade de partilhar no seu perfil em desenvolvimento!')
+    setShowShareModal(null)
+  }
+
+  const copyLink = (postId) => {
+    const url = `${window.location.origin}/post/${postId}`
+    navigator.clipboard.writeText(url)
+    alert('Link copiado!')
+    setShowShareModal(null)
+  }
+
+  // Lista de pessoas que gostaram (exemplo)
+  const getLikesList = (postId) => {
+    return [
+      'João Silva',
+      'Maria Costa',
+      'Carlos Nhantumbo',
+      'Ana Matsinhe',
+      'Pedro Macamo',
+      'Teresa Mondlane',
+      'António Chissano',
+      'Luísa Diogo'
+    ]
+  }
+
+  return (
+    <div className="min-h-screen pb-20 soil-texture">
+      {/* Header */}
+      <header className="glass-effect sticky top-0 z-40 border-b border-gray-200">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Logo size="md" showText={true} />
+            
+            <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center click-scale">
+              <span className="text-xl">🔔</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="max-w-2xl mx-auto px-4 py-6">
+        {/* Banner Modo Demonstração */}
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">ℹ️</span>
+            <div>
+              <p className="font-semibold text-blue-800 mb-1">Modo Demonstração</p>
+              <p className="text-sm text-blue-700">
+                Você está vendo dados de exemplo. Para salvar posts reais, inicie o backend Django:
+              </p>
+              <code className="text-xs bg-blue-100 px-2 py-1 rounded mt-2 inline-block">
+                cd backend && python manage.py runserver
+              </code>
+            </div>
+          </div>
+        </div>
+
+        {/* Create Post */}
+        <div className="agro-card p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center text-white font-bold">
+              U
+            </div>
+            <input
+              type="text"
+              placeholder="Compartilhe sua experiência agrícola..."
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 click-scale"
+              onClick={() => navigate('/create-post')}
+              readOnly
+            />
+          </div>
+        </div>
+
+        {/* Posts */}
+        {loading ? (
+          <LoadingPlant />
+        ) : posts.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 mb-4">Nenhum post ainda</p>
+            <button 
+              onClick={() => navigate('/create-post')}
+              className="btn-primary text-white px-6 py-3 rounded-xl"
+            >
+              Criar primeiro post
+            </button>
+          </div>
+        ) : (
+          <div>
+            {posts.map(post => {
+              const isLiked = likedPosts.has(post.id)
+              const likesCount = (post.likes_count || 0) + (isLiked ? 1 : 0)
+              const commentsExpanded = expandedComments[post.id]
+              const comments = postComments[post.id] || []
+              const mainComments = comments.filter(c => !c.parent)
+              
+              return (
+                <div key={post.id} className="agro-card mb-4 soil-texture">
+                  {/* Autor e Data no Topo */}
+                  <div className="p-4 pb-0">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center text-white font-bold">
+                          {post.author_name?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800">{post.author_name || 'Usuário'}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(post.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="region-badge">
+                        <span>📍</span>
+                        <span>Comunidade</span>
+                      </div>
+                    </div>
+
+                    {/* Título e Corpo */}
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">{post.title}</h3>
+                    <p className="text-gray-600 text-sm mb-3 whitespace-pre-wrap">{post.body}</p>
+                  </div>
+
+                  {/* Imagem do Post */}
+                  {post.image && (
+                    <img 
+                      src={post.image} 
+                      alt={post.title}
+                      className="w-full h-64 object-cover"
+                    />
+                  )}
+
+                  {/* Badge de Produto Disponível */}
+                  {post.is_product_available && post.linked_product && (
+                    <div className="px-4 pt-3">
+                      <button
+                        onClick={() => navigate(`/product/${post.product_id}`)}
+                        className="inline-flex items-center gap-2 bg-green-100 hover:bg-green-200 text-green-700 px-4 py-2 rounded-full text-sm font-semibold click-scale"
+                      >
+                        <span>🛒</span>
+                        <span>Disponível no Mercado: {post.product_name}</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Estatísticas (Curtidas e Comentários) */}
+                  <div className="px-4 pt-3 pb-2">
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                      <button 
+                        onClick={() => handleShowLikes(post.id)}
+                        className="flex items-center gap-1 hover:underline"
+                      >
+                        {likesCount > 0 && (
+                          <>
+                            <span className="text-blue-600">👍</span>
+                            <span>{likesCount}</span>
+                          </>
+                        )}
+                      </button>
+                      <div className="flex items-center gap-3">
+                        {post.answers_count > 0 && (
+                          <button 
+                            onClick={() => toggleComments(post.id)}
+                            className="hover:underline"
+                          >
+                            {post.answers_count} {post.answers_count === 1 ? 'comentário' : 'comentários'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Barra de Interações (Gostar, Comentar, Partilhar) */}
+                  <div className="border-t border-gray-200 px-2 py-1">
+                    <div className="flex items-center justify-around">
+                      <button
+                        onClick={() => handleLike(post.id)}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 transition-colors click-scale ${
+                          isLiked ? 'text-blue-600 font-semibold' : 'text-gray-600'
+                        }`}
+                      >
+                        <span className="text-xl">{isLiked ? '👍' : '👍🏽'}</span>
+                        <span className="text-sm font-medium">Gostar</span>
+                      </button>
+
+                      <button
+                        onClick={() => toggleComments(post.id)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 click-scale"
+                      >
+                        <span className="text-xl">💬</span>
+                        <span className="text-sm font-medium">Comentar</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleShare(post.id)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 click-scale"
+                      >
+                        <span className="text-xl">↗️</span>
+                        <span className="text-sm font-medium">Partilhar</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Seção de Comentários Expandida */}
+                  {commentsExpanded && (
+                    <div className="border-t border-gray-200 bg-gray-50">
+                      {/* Campo para Novo Comentário */}
+                      <div className="px-4 py-3">
+                        <form onSubmit={(e) => handleSubmitComment(post.id, e)} className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            U
+                          </div>
+                          <input
+                            type="text"
+                            value={commentTexts[post.id] || ''}
+                            onChange={(e) => setCommentTexts(prev => ({ ...prev, [post.id]: e.target.value }))}
+                            placeholder="Escreva um comentário..."
+                            className="flex-1 bg-white border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
+                          />
+                        </form>
+                      </div>
+
+                      {/* Lista de Comentários */}
+                      <div className="px-4 pb-4 max-h-96 overflow-y-auto">
+                        {loadingComments[post.id] ? (
+                          <div className="text-center py-4">
+                            <LoadingPlant />
+                          </div>
+                        ) : mainComments.length > 0 ? (
+                          <div className="space-y-1">
+                            {mainComments.map(comment => (
+                              <Comment
+                                key={comment.id}
+                                comment={comment}
+                                onReply={(parentId, replyText) => handleReply(post.id, parentId, replyText)}
+                                depth={0}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4">
+                            <p className="text-gray-500 text-sm">Nenhum comentário ainda. Seja o primeiro!</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </main>
+
+      {/* Modal de Curtidas */}
+      {showLikesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowLikesModal(null)}>
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-96 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="font-bold text-lg">Pessoas que gostaram</h3>
+              <button onClick={() => setShowLikesModal(null)} className="text-gray-500 hover:text-gray-700">
+                ✕
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-80">
+              {getLikesList(showLikesModal).map((name, index) => (
+                <div key={index} className="p-3 hover:bg-gray-50 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center text-white font-bold">
+                    {name.charAt(0)}
+                  </div>
+                  <span className="font-medium text-gray-800">{name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Partilhar */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowShareModal(null)}>
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200">
+              <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4 sm:hidden"></div>
+              <h3 className="font-bold text-lg text-center">Partilhar</h3>
+            </div>
+            <div className="p-4">
+              {(() => {
+                const post = posts.find(p => p.id === showShareModal)
+                return (
+                  <>
+                    <button
+                      onClick={() => shareToOwnProfile(showShareModal)}
+                      className="w-full flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                        <span className="text-2xl">📝</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">Partilhar no seu perfil</p>
+                        <p className="text-xs text-gray-500">Compartilhe com seus seguidores</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => shareToWhatsApp(post)}
+                      className="w-full flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                        <span className="text-2xl">📱</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">WhatsApp</p>
+                        <p className="text-xs text-gray-500">Enviar via WhatsApp</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => shareToFacebook(post)}
+                      className="w-full flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-2xl">👥</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">Facebook</p>
+                        <p className="text-xs text-gray-500">Partilhar no Facebook</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => shareToTwitter(post)}
+                      className="w-full flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-2xl">🐦</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">Twitter / X</p>
+                        <p className="text-xs text-gray-500">Partilhar no Twitter</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => copyLink(showShareModal)}
+                      className="w-full flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                        <span className="text-2xl">🔗</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">Copiar link</p>
+                        <p className="text-xs text-gray-500">Copiar link do post</p>
+                      </div>
+                    </button>
+                  </>
+                )
+              })()}
+            </div>
+            <div className="p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowShareModal(null)}
+                className="w-full py-3 text-gray-600 font-semibold hover:bg-gray-50 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Navigation */}
+      <MobileNav />
+    </div>
+  )
+}
+
+export default Feed

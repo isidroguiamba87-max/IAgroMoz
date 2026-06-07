@@ -1,0 +1,264 @@
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import Logo from '../components/Logo'
+import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
+import LoadingPlant from '../components/LoadingPlant'
+import Comment from '../components/Comment'
+import api from '../services/api'
+
+function PostDetail() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const userRole = localStorage.getItem('userRole') || 'user'
+  const dashboardPath = getDashboardPath('', userRole)
+  const dashboardLabel = getDashboardLabel(userRole)
+  const [post, setPost] = useState(null)
+  const [comments, setComments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [commentText, setCommentText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const userId = localStorage.getItem('userId')
+
+  // Sellers não podem aceder aos posts independentes do Feed
+  if (userRole === 'seller') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAF8]">
+        <div className="text-center p-8 max-w-md">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <i className="bi bi-ban text-3xl text-red-600"></i>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
+          <p className="text-gray-600 mb-6">
+            Vendedores não têm acesso a posts do Feed. Utilize o seu painel para gerir produtos e transações.
+          </p>
+          <button onClick={() => navigate(dashboardPath)}
+            className="btn-primary text-white px-6 py-3 rounded-xl font-semibold">
+            <i className="bi bi-shop mr-2"></i> Ir para {dashboardLabel}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  useEffect(() => {
+    loadPost()
+  }, [id])
+
+  const loadPost = async () => {
+    try {
+      setLoading(true)
+      const data = await api.getFeedPost(id)
+      setPost(data)
+      const answers = await api.getFeedComments(id)
+      setComments(Array.isArray(answers) ? answers : [])
+    } catch (err) {
+      console.error('Erro ao carregar post:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmitComment = async (e) => {
+    e.preventDefault()
+    if (!commentText.trim()) return
+
+    try {
+      setSubmitting(true)
+      await api.createFeedComment(id, commentText, null)
+      setCommentText('')
+      loadPost()
+    } catch (err) {
+      console.error('Erro ao enviar comentário:', err)
+      alert('Erro ao enviar comentário. Faça login primeiro.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleReply = async (parentId, replyText) => {
+    try {
+      await api.createFeedComment(id, replyText, parentId)
+      loadPost()
+    } catch (err) {
+      console.error('Erro ao enviar resposta:', err)
+      alert('Erro ao enviar resposta. Faça login primeiro.')
+    }
+  }
+
+  const handleEditComment = async (commentId, message) => {
+    try {
+      await api.updateFeedComment(commentId, message)
+      loadPost()
+    } catch (err) {
+      console.error('Erro ao atualizar comentário:', err)
+      alert('Erro ao atualizar comentário.')
+    }
+  }
+
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Deseja apagar este comentário?')) return
+    try {
+      await api.deleteFeedComment(commentId)
+      loadPost()
+    } catch (err) {
+      console.error('Erro ao apagar comentário:', err)
+      alert('Erro ao apagar comentário.')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingPlant />
+      </div>
+    )
+  }
+
+  if (!post) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Post não encontrado</p>
+          <button 
+            onClick={() => navigate('/')}
+            className="btn-primary text-white px-6 py-3 rounded-xl"
+          >
+            Voltar ao Feed
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const postTitle = post.titulo || post.title || ''
+  const postBody = post.primeira_mensagem || post.conteudo || post.body || ''
+  const postAuthor = post.nome_completo || post.author_name || 'Utilizador'
+  const postDate = post.criado_em || post.created_at
+  const postImage = post.primeira_imagem || post.imagem || post.image || null
+  const mainComments = comments.filter(c => !c.parent_message && !c.parent)
+
+  return (
+    <div className="min-h-screen soil-texture pb-8">
+      <header className="glass-effect sticky top-0 z-40 border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-gray-600 hover:text-green-600 click-scale"
+            >
+              <span>←</span>
+              <span className="font-medium">Voltar</span>
+            </button>
+            <Logo size="sm" showText={false} />
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <div className="agro-card p-6 mb-6">
+          {postImage && (
+            <img 
+              src={postImage} 
+              alt={postTitle}
+              className="w-full h-96 object-cover rounded-xl mb-6"
+            />
+          )}
+
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center text-white font-bold text-lg">
+              {postAuthor.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800">{postAuthor}</p>
+              <p className="text-xs text-gray-500">
+                {postDate ? new Date(postDate).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+              </p>
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-bold text-gray-800 mb-3">{postTitle}</h1>
+          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap mb-4">{postBody}</p>
+
+          {post.is_product_available && post.linked_product && (
+            <button
+              onClick={() => navigate(`/product/${post.product_id}`)}
+              className="inline-flex items-center gap-2 bg-green-100 hover:bg-green-200 text-green-700 px-4 py-2 rounded-full text-sm font-semibold click-scale mb-4"
+            >
+              <span>🛒</span>
+              <span>Ver no Mercado: {post.product_name}</span>
+              <span>→</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-6 pt-4 border-t border-gray-200 text-sm text-gray-600">
+            <span>{mainComments.length} {mainComments.length === 1 ? 'comentário' : 'comentários'}</span>
+          </div>
+        </div>
+
+        <div className="agro-card p-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">
+            Comentários ({mainComments.length})
+          </h2>
+
+          <form onSubmit={handleSubmitComment} className="mb-6">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center text-white font-bold flex-shrink-0">
+                U
+              </div>
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Escreva um comentário..."
+                  className="w-full px-4 py-2 rounded-full bg-gray-100 border-none focus:outline-none focus:ring-2 focus:ring-green-600"
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+          </form>
+
+          {mainComments.length > 0 ? (
+            <div className="space-y-1">
+              {mainComments.map(comment => (
+                <Comment
+                  key={comment.message_id || comment.id}
+                  comment={{
+                    id: comment.message_id || comment.id,
+                    body: comment.mensagem || comment.body,
+                    author_name: comment.user
+                      ? `${comment.user.first_name || ''} ${comment.user.last_name || ''}`.trim() || comment.user.username || 'Utilizador'
+                      : comment.author_name || 'Utilizador',
+                    author_id: comment.user?.id || comment.author_id || comment.user_id || null,
+                    created_at: comment.timestamp || comment.created_at,
+                    replies: (comment.respostas || comment.replies || []).map(r => ({
+                      id: r.message_id || r.id,
+                      body: r.mensagem || r.body,
+                      author_name: r.user
+                        ? `${r.user.first_name || ''} ${r.user.last_name || ''}`.trim() || r.user.username || 'Utilizador'
+                        : r.author_name || 'Utilizador',
+                      author_id: r.user?.id || r.author_id || r.user_id || null,
+                      created_at: r.timestamp || r.created_at,
+                      replies: []
+                    }))
+                  }}
+                  onReply={handleReply}
+                  onEdit={handleEditComment}
+                  onDelete={handleDeleteComment}
+                  currentUserId={userId}
+                  depth={0}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Nenhum comentário ainda. Seja o primeiro!</p>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
+
+export default PostDetail

@@ -10,17 +10,7 @@
             "request": "attach",
             "port": 9222,
             "webRoot": "${workspaceFolder}",
-            "reAttach": true,
             "sourceMaps": true
-        },
-
-        {
-            "type": "chrome",
-            "request": "launch",
-            "name": "CMake: Configure project",
-            "cmakeDebugType": "configure",
-            "clean": false,
-            "configureAll": false
         },
         {
             "name": "Attach to Chrome",
@@ -28,7 +18,6 @@
             "request": "attach",
             "port": 9222,
             "webRoot": "${workspaceFolder}",
-            "reAttach": true,
             "sourceMaps": true
         },
         {

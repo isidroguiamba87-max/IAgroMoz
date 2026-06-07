@@ -1,0 +1,35 @@
+IAGROMOZ - Plataforma para o setor agropecuário
+
+Problema:
+A agricultura e a produção rural em Moçambique enfrentam dificuldades para se ligar aos clientes e ao mercado de forma eficiente. Muitos agricultores, produtores e vendedores trabalham isolados, sem acesso fácil a compradores, sem ferramentas para gerir vendas, sem acompanhamento dos pedidos e sem um espaço para trocar informação e apoio.
+
+Solução:
+O IAGROMOZ é uma plataforma digital pensada para o agricultor, o produtor e o vendedor. O objetivo é juntar num só lugar:
+- um mercado onde se pode mostrar e vender produtos agrícolas;
+- um espaço para comunicação e partilha de conhecimento;
+- um painel de controle para o vendedor acompanhar pedidos, produtos e receita;
+- um perfil com os dados da empresa ou do agricultor preenchidos automaticamente para facilitar o uso.
+
+Para quem serve:
+- Agricultores e produtores rurais que querem vender direto ao mercado.
+- Vendedores de produtos agrícolas que precisam de uma loja online simples e completa.
+- Consumidores que procuram produtos frescos e querem comprar com confiança.
+- Gestores e técnicos que querem apoiar o setor agrícola com informação mais organizada.
+
+O que o sistema oferece:
+- registo de utilizadores com perfis diferentes (normal, produtor, vendedor);
+- possibilidade de ser vendedor ou produtor e ter um painel próprio;
+- preenchimento automático dos dados do vendedor a partir do registo inicial;
+- acesso seguro para cada tipo de utilizador;
+- áreas específicas para ver produtos, pedidos, transações e notificações;
+- possibilidade de chat e partilha de experiências entre utilizadores.
+
+Benefícios para o setor agropecuário:
+- melhora a visibilidade e a organização das ofertas agrícolas;
+- facilita o contacto entre quem produz e quem compra;
+- dá aos vendedores controlo e transparência sobre as suas vendas;
+- ajuda a profissionalizar pequenos produtores e lojas agrícolas;
+- reduz a dependência de processos manuais e papel, usando uma ferramenta digital.
+
+Resumo:
+O IAGROMOZ é uma solução prática para modernizar a forma como a agricultura moçambicana chega ao mercado. Com ele, agricultores e vendedores ganham um lugar único para oferecer os seus produtos, gerir os seus negócios e interagir com o mercado de forma mais simples e eficiente.
