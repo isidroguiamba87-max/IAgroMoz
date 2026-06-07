@@ -142,8 +142,11 @@ function App() {
           <Route path="/notifications" element={<AdminRouteBlocker><ProtectedRoute><Notifications /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/create-post" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><CreatePost /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/create-product" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><CreateProduct /></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/transactions/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Navigate replace to="/minhas-reservas" /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/transactions" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Navigate replace to="/minhas-reservas" /></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/minhas-reservas/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Transactions /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/minhas-reservas" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Transactions /></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/transactions/:id/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><TransactionDetail /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/transactions/:id" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><TransactionDetail /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/product/:productId/units" element={<AdminRouteBlocker><ProtectedRoute><ProductUnits /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/seller/dashboard/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller']}><SellerDashboardLayout /></ProtectedRoute></AdminRouteBlocker>}>

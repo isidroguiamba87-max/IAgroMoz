@@ -53,8 +53,8 @@ function DesktopSidebar() {
   const filterByRole = (items) => items.filter(i => i.roles.includes(userRole))
 
   const NavItem = ({ item }) => {
-    const currentPath = location.pathname + location.search
-    const isActive = currentPath === item.path || location.pathname === item.path || location.pathname.startsWith(item.path + '/')
+    const normalizedPath = location.pathname.replace(/\/+$/, '') || '/'
+    const isActive = normalizedPath === item.path || normalizedPath.startsWith(item.path + '/')
     return (
       <Link to={item.path}
         className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-[15px] group ${

@@ -40,7 +40,7 @@ function ProtectedRoute({ children, adminOnly = false, allowedRoles = null }) {
 
   // Restrição adicional para sellers e producers: só podem aceder às rotas permitidas
   if (['seller', 'producer'].includes(userRole)) {
-    const pathname = location.pathname
+    const pathname = location.pathname.replace(/\/+$/, '') || '/'
     const isAllowed = SELLER_ALLOWED_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))
     if (!isAllowed) {
       return <Navigate to={dashboardPath} replace />

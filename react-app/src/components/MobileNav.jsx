@@ -51,8 +51,8 @@ function MobileNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
       <div className={`${isSellerOrProducer ? 'bg-white border-t border-gray-100 shadow-lg' : 'bottom-nav'} flex items-center max-w-full mx-auto px-1 py-1`}>
         {visibleItems.map((item) => {
-          const currentPath = location.pathname + location.search
-          const isActive = !item.isPlus && (currentPath === item.path || location.pathname === item.path || location.pathname.startsWith(item.path + '/'))
+          const currentPath = location.pathname.replace(/\/+$/, '') || '/'
+          const isActive = !item.isPlus && (currentPath === item.path || currentPath.startsWith(item.path + '/'))
 
           if (item.isPlus) {
             return (
