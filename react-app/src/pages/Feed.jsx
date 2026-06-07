@@ -285,57 +285,12 @@ function Feed() {
         // enrich normalized posts with fetched cache if available
         const enriched = normalized.map(p => ({
           ...p,
-          author_name: p.author_name || (p.author_id ? _userNameCache[p.author_id] : null) || p.author_name,
-          author_foto: p.author_foto || (p.author_id ? _userFotoCache[p.author_id] : null) || p.author_foto,
+          author_name: p.author_name || (p.author_id ? _userNameCache[p.author_id] : null),
+          author_foto: p.author_foto || (p.author_id ? _userFotoCache[p.author_id] : null),
         }))
         setPosts(enriched)
     } catch (err) { console.error(err); setPosts([]) }
     finally { setLoading(false) }
-  }
-
-  // Busca fotos e nomes de perfil dos autores que não vieram na resposta da API
-  const fetchMissingFotos = async (postList) => {
-    const token = localStorage.getItem('access_token')
-    if (!token) return
-    // IDs únicos sem foto ou sem nome extraído de forma confiável
-    const missingIds = [...new Set(
-      postList
-        .filter(p => p.author_id && (
-          (!p.author_foto && !_userFotoCache[p.author_id]) ||
-          (!p.author_name && !_userNameCache[p.author_id])
-        ))
-        .map(p => p.author_id)
-    )]
-    if (missingIds.length === 0) return
-    missingIds.forEach(id => { _userFotoCache[id] = null; _userNameCache[id] = _userNameCache[id] ?? null })
-    const chunks = []
-    for (let i = 0; i < missingIds.length; i += 5) chunks.push(missingIds.slice(i, i + 5))
-    for (const chunk of chunks) {
-      await Promise.all(chunk.map(async (userId) => {
-        try {
-          const res = await fetch(`${API_BASE}/users/${userId}/`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          if (!res.ok) return
-          const u = await res.json()
-          const foto = u.foto_perfil || u.profile_photo
-          if (foto) {
-            const url = foto.startsWith('http') ? foto : API_MEDIA + (foto.startsWith('/') ? foto : '/' + foto)
-            _userFotoCache[userId] = url
-          }
-          const name = normalizeUserDisplayName(u)
-          if (name) _userNameCache[userId] = name
-        } catch (_) {}
-      }))
-    }
-    setUserFotos({ ..._userFotoCache })
-    setUserNames({ ..._userNameCache })
-    setPosts(prev => prev.map(post => {
-      if (post.author_name === 'Utilizador' && post.author_id && _userNameCache[post.author_id]) {
-        return { ...post, author_name: _userNameCache[post.author_id] }
-      }
-      return post
-    }))
   }
 
   const loadComments = async (postId) => {
