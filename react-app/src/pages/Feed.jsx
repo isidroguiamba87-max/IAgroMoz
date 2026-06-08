@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import MobileNav from '../components/MobileNav'
 import DesktopSidebar from '../components/DesktopSidebar'
 import FeedRightPanel, { getPendingRequestsForMe } from '../components/FeedRightPanel'
@@ -90,25 +90,9 @@ function Feed() {
   const dashboardPath = getDashboardPath('', userRole)
   const dashboardLabel = getDashboardLabel(userRole)
   
-  // Sellers com acesso de venda usam o painel e não acedem ao Feed normal
-  if (userRole === 'seller') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAF8]">
-        <div className="text-center p-8 max-w-md">
-          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-            <i className="bi bi-ban text-3xl text-red-600"></i>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
-          <p className="text-gray-600 mb-6">
-            Vendedores não têm acesso ao Feed. Dirija-se ao seu <strong>{dashboardLabel}</strong> para gerir os seus produtos e vendas.
-          </p>
-          <Link to={dashboardPath}
-            className="inline-flex items-center justify-center btn-primary text-white px-6 py-3 rounded-xl font-semibold">
-            <i className="bi bi-shop mr-2"></i> Ir para {dashboardLabel}
-          </Link>
-        </div>
-      </div>
-    )
+  // Sellers e produtores não acessam o Feed normal, devem ir diretamente ao painel
+  if (userRole === 'seller' || userRole === 'producer') {
+    return <Navigate replace to={dashboardPath} />
   }
   
   const pressTimer = useRef(null)
