@@ -274,10 +274,10 @@ function Feed() {
           author_name: authorName,
           author_id: author?.id || p.autor?.id || p.autor || p.author?.id || p.author || p.autor_id || p.author_id || null,
           author_foto: (() => {
-            const foto = author?.foto_perfil || author?.photo || author?.imagem || p.autor_foto || p.author_foto || null
+            const foto = author?.foto_perfil || author?.profile_photo || author?.photo || author?.imagem || p.autor_foto || p.author_foto || null
             if (!foto) return null
             if (foto.startsWith('http')) return foto
-            return foto
+            return API_MEDIA + (foto.startsWith('/') ? foto : '/' + foto)
           })(),
           created_at: p.criado_em || p.created_at,
           answers_count: Array.isArray(p.comments) ? p.comments.length : (p.answers_count || 0),
