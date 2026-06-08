@@ -743,8 +743,8 @@ function ProductDetail() {
 
       {/* Modal sucesso de compra */}
       {buySuccess && (
-        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 px-0 sm:px-4">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md p-6 text-center">
+        <div className="fixed inset-0 bg-black/60 flex items-center lg:items-end justify-center z-50 px-0 sm:px-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md p-6 text-center max-h-[90vh] overflow-auto">
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
               <i className="bi bi-bag-check-fill text-green-600 text-3xl"></i>
             </div>
