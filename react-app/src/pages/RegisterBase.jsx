@@ -182,3 +182,34 @@ export async function loginAfterRegister(email, password, navigate) {
     throw err
   }
 }
+
+// ─── Utilitário: extrair mensagem de erro legível da API ──────────────────────
+// A API Django REST retorna erros por campo: { email: ["já existe"], contact: ["inválido"] }
+export function extractRegisterError(err) {
+  if (!err) return "Erro ao criar conta."
+  if (err?.data && typeof err.data === 'object') {
+    const fieldLabels = {
+      email: "Email",
+      password: "Senha",
+      first_name: "Primeiro nome",
+      last_name: "Apelido",
+      district_id: "Distrito",
+      contact: "Contacto",
+      farm_address: "Endereço da exploração",
+      store_name: "Nome da loja",
+      store_address: "Endereço da loja",
+      nuit: "NUIT",
+      seller_type: "Tipo de vendedor",
+      non_field_errors: "",
+      detail: "",
+    }
+    const parts = Object.entries(err.data).map(([field, errors]) => {
+      const label = fieldLabels[field] !== undefined ? fieldLabels[field] : field
+      const text = Array.isArray(errors) ? errors.join(", ") : String(errors)
+      return label ? `${label}: ${text}` : text
+    })
+    return parts.join(" | ")
+  }
+  if (err?.message) return err.message
+  return "Erro ao criar conta."
+}

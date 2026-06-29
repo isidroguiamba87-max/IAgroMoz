@@ -1,10 +1,8 @@
 ﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { RegisterLayout, FieldInput, LocationFields, useLocation_, loginAfterRegister } from "./RegisterBase"
+import { RegisterLayout, FieldInput, LocationFields, useLocation_, loginAfterRegister, extractRegisterError } from "./RegisterBase"
 
 import api from "../services/api"
-import { API_BASE as _API_BASE } from '../config/api'
-const API_BASE = _API_BASE
 
 function RegisterProducer() {
   const navigate = useNavigate()
@@ -32,15 +30,16 @@ function RegisterProducer() {
     if (!form.districtId) return setError("Selecione o seu distrito.")
     if (!form.contact.trim()) return setError("O contacto é obrigatório.")
     if (!form.farm_address.trim()) return setError("O endereço da exploração é obrigatório.")
+
+    // Validação de telefone antes de iniciar o loading
+    const phoneNormalized = form.contact.trim()
+    const phoneRe = /^\+?\d{8,15}$/
+    if (!phoneRe.test(phoneNormalized)) return setError('Formato de contacto inválido. Ex: +258841234567')
+
     setLoading(true)
     try {
-      // basic phone validation: allow + and digits, length 8-15
-      const phoneNormalized = form.contact.trim()
-      const phoneRe = /^\+?\d{8,15}$/
-      if (!phoneRe.test(phoneNormalized)) return setError('Formato de contacto inválido. Ex: +258841234567')
-
       await api.registerProducer({
-        email: form.email,
+        email: form.email.trim(),
         password: form.password,
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
@@ -49,10 +48,9 @@ function RegisterProducer() {
         contact: phoneNormalized,
         farm_address: form.farm_address.trim(),
       })
-      await loginAfterRegister(form.email, form.password, navigate)
+      await loginAfterRegister(form.email.trim(), form.password, navigate)
     } catch (err) {
-      const msg = err?.message || (err?.data ? JSON.stringify(err.data) : null) || "Erro ao criar conta."
-      setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+      setError(extractRegisterError(err))
     } finally {
       setLoading(false)
     }

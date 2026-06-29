@@ -1,10 +1,8 @@
 ﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { RegisterLayout, FieldInput, LocationFields, useLocation_, loginAfterRegister } from "./RegisterBase"
+import { RegisterLayout, FieldInput, LocationFields, useLocation_, loginAfterRegister, extractRegisterError } from "./RegisterBase"
 
 import api from "../services/api"
-import { API_BASE as _API_BASE } from '../config/api'
-const API_BASE = _API_BASE
 
 function RegisterNormal() {
   const navigate = useNavigate()
@@ -41,9 +39,7 @@ function RegisterNormal() {
       })
       await loginAfterRegister(form.email, form.password, navigate)
     } catch (err) {
-      // api throws {status,message,data} or Error
-      const msg = err?.message || (err?.data ? JSON.stringify(err.data) : null) || "Erro ao criar conta."
-      setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+      setError(extractRegisterError(err))
     } finally {
       setLoading(false)
     }

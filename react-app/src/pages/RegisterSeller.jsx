@@ -1,10 +1,8 @@
 ﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { RegisterLayout, FieldInput, FieldSelect, LocationFields, useLocation_, loginAfterRegister } from "./RegisterBase"
+import { RegisterLayout, FieldInput, FieldSelect, LocationFields, useLocation_, loginAfterRegister, extractRegisterError } from "./RegisterBase"
 
 import api from "../services/api"
-import { API_BASE as _API_BASE } from '../config/api'
-const API_BASE = _API_BASE
 
 const SELLER_TYPES = [
   { value: "INDIVIDUAL", label: "Individual" },
@@ -39,19 +37,19 @@ function RegisterSeller() {
     if (!form.store_name.trim()) return setError("O nome da loja é obrigatório.")
     if (!form.contact.trim()) return setError("O contacto é obrigatório.")
     if (!form.store_address.trim()) return setError("O endereço da loja é obrigatório.")
+
+    // Validações antes de iniciar o loading
+    const phoneNormalized = form.contact.trim()
+    const phoneRe = /^\+?\d{8,15}$/
+    if (!phoneRe.test(phoneNormalized)) return setError('Formato de contacto inválido. Ex: +258841234567')
+
+    const nuit = form.nuit.trim()
+    if (nuit && !/^\d{9}$/.test(nuit)) return setError('NUIT inválido. Deve conter 9 dígitos numéricos.')
+
     setLoading(true)
     try {
-      // basic phone validation
-      const phoneNormalized = form.contact.trim()
-      const phoneRe = /^\+?\d{8,15}$/
-      if (!phoneRe.test(phoneNormalized)) return setError('Formato de contacto inválido. Ex: +258841234567')
-
-      // nuit validation when provided (expect 9 digits)
-      const nuit = form.nuit.trim()
-      if (nuit && !/^\d{9}$/.test(nuit)) return setError('NUIT inválido. Deve conter 9 dígitos numéricos.')
-
       await api.registerSeller({
-        email: form.email,
+        email: form.email.trim(),
         password: form.password,
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
@@ -63,10 +61,9 @@ function RegisterSeller() {
         contact: phoneNormalized,
         store_address: form.store_address.trim(),
       })
-      await loginAfterRegister(form.email, form.password, navigate)
+      await loginAfterRegister(form.email.trim(), form.password, navigate)
     } catch (err) {
-      const msg = err?.message || (err?.data ? JSON.stringify(err.data) : null) || "Erro ao criar conta."
-      setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+      setError(extractRegisterError(err))
     } finally {
       setLoading(false)
     }
