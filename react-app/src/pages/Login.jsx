@@ -52,8 +52,8 @@ function Login() {
 
       {/* Logo + tagline */}
       <div className="relative z-10 text-center pt-16 pb-8 px-6 flex-1 flex flex-col items-center justify-center">
-        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center mb-4 shadow-2xl overflow-hidden">
-          <img src="/logo.png" alt="IAgroMOZ" className="w-10 h-10 object-contain" />
+        <div className="w-28 h-28 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center mb-4 shadow-2xl overflow-hidden">
+          <img src="/logo.png" alt="IAgroMOZ" className="w-24 h-24 object-contain" />
         </div>
         <h1 className="text-4xl font-black text-white tracking-tight mb-1">IAgroMOZ</h1>
         <p className="text-green-200 text-base font-medium">Agricultura Inteligente para Moçambique</p>
