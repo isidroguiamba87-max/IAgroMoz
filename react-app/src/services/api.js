@@ -640,14 +640,17 @@ class APIService {
 
   // ─── Marketplace — Avaliações ────────────────────────────────────────────────
 
-  // POST /products/{productId}/rate/  { score, comment }
+  // POST /api/marketplace/ratings/{product_id}/rate_product/
+  // Body: { score: 4.5, comment: "Muito bom!" }
+  // Erros: 400 se auto-avaliação, duplicado, ou score fora de [1.0, 5.0]
   rateProduct(productId, score, comment = '') {
-    return this.post(`/products/${productId}/rate/`, { score, comment });
+    return this.post(`/marketplace/ratings/${productId}/rate_product/`, { score, comment });
   }
 
-  // POST /seller-ratings/  { seller, score, comment }
+  // POST /api/marketplace/ratings/{seller_id}/rate_seller/
+  // Body: { score: 3.0, comment: "Entrega rápida" }
   rateVendedor(sellerId, score, comment = '') {
-    return this.post('/seller-ratings/', { seller: sellerId, score, comment });
+    return this.post(`/marketplace/ratings/${sellerId}/rate_seller/`, { score, comment });
   }
 
   // Compatibilidade — getProductRatings

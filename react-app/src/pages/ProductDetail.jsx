@@ -211,18 +211,21 @@ function ProductDetail() {
   const handleSubmitRating = async () => {
     if (userRating === 0) { setRatingError('Selecione uma avaliação de 1 a 5 estrelas'); return }
     if (!token) { navigate('/login'); return }
+    // score deve ser float entre 1.0 e 5.0
+    const score = parseFloat(userRating)
+    if (score < 1.0 || score > 5.0) { setRatingError('A avaliação deve ser entre 1 e 5 estrelas'); return }
     setRatingLoading(true)
     setRatingError('')
     setRatingSuccess('')
     try {
       if (ratingType === 'produto') {
-        await api.rateProduct(id, userRating, userComment)
+        await api.rateProduct(id, score, userComment)
         // Atualizar produto localmente com nova média (optimistic)
         setProduct(prev => {
           if (!prev) return prev
           const oldTotal = (prev.media_avaliacao || prev.average_rating || 0) * (prev.total_avaliacoes || prev.ratings_count || 0)
           const newCount = (prev.total_avaliacoes || prev.ratings_count || 0) + 1
-          const newMedia = ((oldTotal + userRating) / newCount).toFixed(1)
+          const newMedia = ((oldTotal + score) / newCount).toFixed(1)
           return {
             ...prev,
             media_avaliacao: parseFloat(newMedia),
@@ -239,7 +242,7 @@ function ProductDetail() {
           setRatingError('Não foi possível encontrar o vendedor para avaliação.')
           return
         }
-        await api.rateVendedor(sellerId, userRating, userComment)
+        await api.rateVendedor(sellerId, score, userComment)
         setRatingSuccess('Vendedor avaliado com sucesso! ⭐')
       }
       setUserRating(0)
@@ -252,9 +255,27 @@ function ProductDetail() {
         setRatingSuccess('')
       }, 1500)
     } catch (err) {
-      const msg = err?.data
-        ? Object.entries(err.data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ')
-        : err?.message || 'Erro ao enviar avaliação.'
+      // Tratar erros específicos da API de avaliações
+      const errData = err?.data
+      let msg = ''
+      if (errData) {
+        const flat = Object.values(errData).flat().join(' | ')
+        // Mensagens amigáveis para erros comuns
+        if (flat.toLowerCase().includes('auto') || flat.toLowerCase().includes('próprio') || flat.toLowerCase().includes('yourself')) {
+          msg = 'Não podes avaliar o teu próprio produto ou perfil.'
+        } else if (flat.toLowerCase().includes('duplic') || flat.toLowerCase().includes('already') || flat.toLowerCase().includes('once')) {
+          msg = 'Já avaliaste este ' + (ratingType === 'produto' ? 'produto' : 'vendedor') + ' anteriormente.'
+        } else {
+          msg = flat
+        }
+      } else {
+        msg = err?.message || 'Erro ao enviar avaliação.'
+        if (msg.toLowerCase().includes('auto') || msg.toLowerCase().includes('próprio')) {
+          msg = 'Não podes avaliar o teu próprio produto ou perfil.'
+        } else if (msg.toLowerCase().includes('duplic') || msg.toLowerCase().includes('already')) {
+          msg = 'Já avaliaste este ' + (ratingType === 'produto' ? 'produto' : 'vendedor') + ' anteriormente.'
+        }
+      }
       setRatingError(msg)
     } finally {
       setRatingLoading(false)
