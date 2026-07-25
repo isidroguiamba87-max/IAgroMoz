@@ -311,6 +311,7 @@ function Marketplace() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
+  const [reservationCount, setReservationCount] = useState(0)
 
   const token = localStorage.getItem("access_token")
   const userId = localStorage.getItem("userId")
@@ -323,7 +324,10 @@ function Marketplace() {
     hasMounted.current = true
 
     loadProducts()
-    if (token) loadMyProfile()
+    if (token) {
+      loadMyProfile()
+      loadReservationCount()
+    }
     const params = new URLSearchParams(window.location.search)
     if (params.get("anunciar") === "1" && token) {
       ;(async () => {
@@ -339,6 +343,15 @@ function Marketplace() {
       })()
     }
   }, [])
+
+  const loadReservationCount = async () => {
+    try {
+      const data = await api.getTransactions()
+      const list = Array.isArray(data) ? data : (data.results || [])
+      const active = list.filter(tx => !['COMPLETED', 'CANCELLED'].includes(tx.status))
+      setReservationCount(active.length)
+    } catch (_) {}
+  }
 
   const loadMyProfile = async () => {
     try {
@@ -502,24 +515,51 @@ function Marketplace() {
                 <h1 className="text-xl font-black text-gray-900">Mercado</h1>
                 <p className="text-xs text-gray-500">Compre e venda produtos agrícolas.</p>
               </div>
-              {token && (
-                <button onClick={handlePublishClick} disabled={checkingStatus}
-                  className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center text-white shadow-lg flex-shrink-0">
-                  <i className="bi bi-plus-lg font-bold"></i>
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {token && (
+                  <button onClick={() => navigate('/minhas-reservas')}
+                    className="relative w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 shadow-sm flex-shrink-0">
+                    <i className="bi bi-cart3 text-lg"></i>
+                    {reservationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                        {reservationCount > 9 ? '9+' : reservationCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+                {token && (
+                  <button onClick={handlePublishClick} disabled={checkingStatus}
+                    className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center text-white shadow-lg flex-shrink-0">
+                    <i className="bi bi-plus-lg font-bold"></i>
+                  </button>
+                )}
+              </div>
             </div>
             <div className="hidden lg:flex items-center justify-between mb-3">
               <div>
                 <h1 className="text-2xl font-black text-gray-900">Mercado</h1>
                 <p className="text-sm text-gray-500">Encontre os melhores produtos agrícolas.</p>
               </div>
-              {token && (
-                <button onClick={handlePublishClick} disabled={checkingStatus}
-                  className="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 disabled:opacity-70">
-                  {checkingStatus ? <><i className="bi bi-arrow-repeat"></i> A verificar...</> : <><i className="bi bi-plus-lg"></i> Anunciar</>}
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {token && (
+                  <button onClick={() => navigate('/minhas-reservas')}
+                    className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors">
+                    <i className="bi bi-cart3 text-base"></i>
+                    <span>As minhas reservas</span>
+                    {reservationCount > 0 && (
+                      <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                        {reservationCount > 9 ? '9+' : reservationCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+                {token && (
+                  <button onClick={handlePublishClick} disabled={checkingStatus}
+                    className="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 disabled:opacity-70">
+                    {checkingStatus ? <><i className="bi bi-arrow-repeat"></i> A verificar...</> : <><i className="bi bi-plus-lg"></i> Anunciar</>}
+                  </button>
+                )}
+              </div>
             </div>
             {/* Pesquisa */}
             <div className="relative mb-3">

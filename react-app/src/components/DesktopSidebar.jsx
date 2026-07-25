@@ -11,6 +11,7 @@ function DesktopSidebar() {
   const [userName, setUserName] = useState('')
   const [unreadNotif, setUnreadNotif] = useState(0)
   const [unreadMsg, setUnreadMsg] = useState(0)
+  const [activeReservations, setActiveReservations] = useState(0)
 
   useEffect(() => {
     const refreshState = () => {
@@ -31,6 +32,16 @@ function DesktopSidebar() {
     return () => window.removeEventListener('app-notifications-updated', refreshState)
   }, [])
 
+  useEffect(() => {
+    if (!localStorage.getItem('access_token')) return
+    import('../services/api').then(({ default: api }) => {
+      api.getTransactions().then(data => {
+        const list = Array.isArray(data) ? data : (data.results || [])
+        setActiveReservations(list.filter(tx => !['COMPLETED', 'CANCELLED'].includes(tx.status)).length)
+      }).catch(() => {})
+    })
+  }, [])
+
   const dashboardPath = getDashboardPath('', userRole)
   const dashboardLabel = getDashboardLabel(userRole)
 
@@ -44,8 +55,8 @@ function DesktopSidebar() {
 
   // Grupo 2 — social e perfil
   const secondaryItems = [
-    { path: '/notifications', icon: 'bi-bell-fill',      label: 'Notificações',  badge: unreadNotif, roles: ['user', 'seller', 'producer', 'admin'] },
-    { path: '/minhas-reservas', icon: 'bi-receipt', label: 'Minhas Reservas', roles: ['seller', 'producer', 'admin'] },
+    { path: '/notifications',   icon: 'bi-bell-fill',  label: 'Notificações',    badge: unreadNotif,       roles: ['user', 'seller', 'producer', 'admin'] },
+    { path: '/minhas-reservas', icon: 'bi-cart3',      label: 'Minhas Reservas', badge: activeReservations, roles: ['user', 'seller', 'producer', 'admin'] },
     { path: dashboardPath,     icon: 'bi-speedometer2', label: dashboardLabel, roles: ['seller', 'producer'] },
     { path: '/profile',        icon: 'bi-person-fill',   label: 'Meu Perfil',    roles: ['user', 'seller', 'producer', 'admin'] },
     { path: '/dashboard',      icon: 'bi-graph-up',      label: 'Dashboard',     roles: ['admin'] },

@@ -32,11 +32,11 @@ function MobileNav() {
 
   // Nav do utilizador normal — 5 itens com "+" central contextual
   const normalUserNavItems = [
-    { path: '/feed',             icon: 'bi-house-fill',   label: 'Feed',           roles: ['user', 'admin'] },
-    { path: '/marketplace',      icon: 'bi-shop-window',  label: 'Mercado',        roles: ['user', 'admin'] },
-    { path: '#',                 icon: null,              label: 'Publicar',       isPlus: true, isContextual: true },
-    { path: '/chat',             icon: 'bi-robot',        label: 'Chat',           roles: ['user', 'admin'] },
-    { path: '/recommendations',  icon: 'bi-star',         label: 'Recomendações',  roles: ['user', 'admin'] },
+    { path: '/feed',            icon: 'bi-house-fill',  label: 'Feed',    roles: ['user', 'admin'] },
+    { path: '/marketplace',     icon: 'bi-shop-window', label: 'Mercado', roles: ['user', 'admin'] },
+    { path: '#',                icon: null,             label: 'Publicar', isPlus: true, isContextual: true },
+    { path: '/chat',            icon: 'bi-robot',       label: 'Chat',    roles: ['user', 'admin'] },
+    { path: '/minhas-reservas', icon: 'bi-cart3',       label: 'Pedidos', roles: ['user', 'admin'] },
   ]
 
   const defaultNavItems = [
