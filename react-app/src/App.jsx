@@ -157,6 +157,7 @@ function App() {
           <Route path="/product/:productId/units" element={<AdminRouteBlocker><ProtectedRoute><ProductUnits /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/seller/dashboard/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller']}><SellerDashboardLayout /></ProtectedRoute></AdminRouteBlocker>}>
             <Route index element={<SellerDashboardOverview />} />
+            <Route path="pedidos" element={<SellerDashboardSales />} />
             <Route path="produtos" element={<SellerDashboardProducts />} />
             <Route path="anuncios" element={<SellerDashboardProducts />} />
             <Route path="notificacoes" element={<SellerDashboardNotifications />} />
@@ -164,6 +165,7 @@ function App() {
           </Route>
           <Route path="/producer/dashboard/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['producer']}><SellerDashboardLayout /></ProtectedRoute></AdminRouteBlocker>}>
             <Route index element={<SellerDashboardOverview />} />
+            <Route path="pedidos" element={<SellerDashboardSales />} />
             <Route path="produtos" element={<SellerDashboardProducts />} />
             <Route path="anuncios" element={<SellerDashboardProducts />} />
             <Route path="notificacoes" element={<SellerDashboardNotifications />} />

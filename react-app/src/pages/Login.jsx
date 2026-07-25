@@ -22,9 +22,8 @@ function Login() {
       await api.login(formData.email, formData.password)
       // api.login já chama getUserProfile() internamente e guarda userRole
       const userRole = localStorage.getItem('userRole')
-      const dashboardPath = userRole === 'producer' ? '/producer/dashboard' : '/seller/dashboard'
-      if (userRole === 'seller' || userRole === 'producer') {
-        navigate(dashboardPath, { replace: true })
+      if (userRole === 'seller') {
+        navigate('/seller/dashboard', { replace: true })
       } else {
         navigate(nextPath, { replace: true })
       }

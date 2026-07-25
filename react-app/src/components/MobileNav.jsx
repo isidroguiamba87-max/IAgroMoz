@@ -23,11 +23,11 @@ function MobileNav() {
   ]
 
   const producerNavItems = [
-    { path: '/feed',             icon: 'bi-house-fill',   label: 'Início' },
-    { path: '/marketplace',      icon: 'bi-box-seam',     label: 'Produtos' },
-    { path: '/create-post',      icon: null,              label: 'Publicar', isPlus: true },
-    { path: '/minhas-reservas',  icon: 'bi-receipt',      label: 'Pedidos' },
-    { path: '/profile',          icon: 'bi-list',         label: 'Menu' },
+    { path: '/feed',                 icon: 'bi-house-fill',    label: 'Início' },
+    { path: '/marketplace',          icon: 'bi-box-seam',      label: 'Produtos' },
+    { path: '/create-post',          icon: null,               label: 'Publicar', isPlus: true },
+    { path: '/producer/dashboard',   icon: 'bi-speedometer2',  label: 'Painel' },
+    { path: '/profile',              icon: 'bi-list',          label: 'Menu' },
   ]
 
   // Nav do utilizador normal — 5 itens com "+" central contextual

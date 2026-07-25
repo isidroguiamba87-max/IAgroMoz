@@ -56,7 +56,7 @@ function DesktopSidebar() {
   // Grupo 2 — social e perfil
   const secondaryItems = [
     { path: '/notifications',   icon: 'bi-bell-fill',  label: 'Notificações',    badge: unreadNotif,       roles: ['seller', 'producer', 'admin'] },
-    { path: '/minhas-reservas', icon: 'bi-cart3',      label: 'Minhas Reservas', badge: activeReservations, roles: ['user', 'seller', 'producer', 'admin'] },
+    { path: '/minhas-reservas', icon: 'bi-cart3',      label: 'Minhas Reservas', badge: activeReservations, roles: ['user', 'seller', 'admin'] },
     { path: dashboardPath,     icon: 'bi-speedometer2', label: dashboardLabel, roles: ['seller', 'producer'] },
     { path: '/profile',        icon: 'bi-person-fill',   label: 'Meu Perfil',    roles: ['user', 'seller', 'producer', 'admin'] },
     { path: '/dashboard',      icon: 'bi-graph-up',      label: 'Dashboard',     roles: ['admin'] },

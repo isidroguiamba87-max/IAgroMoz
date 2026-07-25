@@ -17,7 +17,7 @@ function SellerDashboardLayout() {
   const dashboardLabel = getDashboardLabel(userRole)
   const isProducerDashboard = userRole === 'producer' || dashboardLabel.toLowerCase().includes('produtor')
   const SECTIONS = [
-    { label: 'Minhas Reservas', path: '/minhas-reservas', icon: 'bi-receipt' },
+    { label: 'Pedidos', path: `${dashboardBase}/pedidos`, icon: 'bi-receipt' },
     { label: 'Meus Produtos', path: `${dashboardBase}/produtos`, icon: 'bi-box-seam' },
     { label: 'Meus Anúncios', path: `${dashboardBase}/anuncios`, icon: 'bi-megaphone' },
     { label: 'Notificações', path: `${dashboardBase}/notificacoes`, icon: 'bi-bell' },
