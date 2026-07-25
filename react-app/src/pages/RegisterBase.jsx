@@ -180,9 +180,8 @@ export async function loginAfterRegister(email, password, navigate) {
   try {
     await api.login(email, password)
     const userRole = localStorage.getItem('userRole') || 'user'
-    if (userRole === 'seller' || userRole === 'producer') {
-      const dashboardPath = userRole === 'producer' ? '/producer/dashboard' : '/seller/dashboard'
-      navigate(dashboardPath, { replace: true })
+    if (userRole === 'seller') {
+      navigate('/seller/dashboard', { replace: true })
     } else {
       navigate('/feed', { replace: true })
     }
