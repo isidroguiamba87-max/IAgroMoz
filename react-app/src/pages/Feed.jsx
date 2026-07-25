@@ -41,8 +41,9 @@ function Feed() {
   const dashboardPath = getDashboardPath('', userRole)
   const dashboardLabel = getDashboardLabel(userRole)
   
-  // Sellers e produtores não acessam o Feed normal, devem ir diretamente ao painel
-  if (userRole === 'seller' || userRole === 'producer') {
+  // Sellers não acessam o Feed normal, devem ir diretamente ao painel.
+  // Produtores usam o Feed como início (o Painel fica acessível à parte, ver MobileNav/DesktopSidebar).
+  if (userRole === 'seller') {
     return <Navigate replace to={dashboardPath} />
   }
   
