@@ -10,6 +10,8 @@ function _jwtExp(token) {
   } catch (e) { return null; }
 }
 
+const REQUEST_TIMEOUT_MS = 30_000
+
 class APIService {
   constructor() {
     this.baseURL = API_BASE_URL;
@@ -76,7 +78,15 @@ class APIService {
     }
 
     try {
-      const response = await fetch(url, this._buildConfig(options));
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+      let response
+      try {
+        response = await fetch(url, { ...this._buildConfig(options), signal: controller.signal })
+      } finally {
+        clearTimeout(timeoutId)
+      }
 
       if (isFirst) window.dispatchEvent(new CustomEvent('server-loading-end'))
 
@@ -90,7 +100,7 @@ class APIService {
           throw { status: 401, message: 'Sessão expirada. Faça login novamente.', data: null };
         }
 
-        // Retry com novo access token
+        // Retry com novo access token (sem timeout extra — o original já passou)
         const retry = await fetch(url, this._buildConfig(options));
         if (retry.status === 401) {
           this._clearAuth();
@@ -102,6 +112,9 @@ class APIService {
 
       return this._handleResponse(response);
     } catch (err) {
+      if (err?.name === 'AbortError') {
+        throw { status: 408, message: 'O servidor demorou demasiado a responder. Tente novamente.', data: null }
+      }
       if (isFirst) window.dispatchEvent(new CustomEvent('server-loading-end'))
       if (err && err.status) throw err;
       // Só mostrar modal se for mesmo falha de rede (servidor inacessível)
@@ -227,7 +240,7 @@ class APIService {
     localStorage.setItem('refresh_token', data.refresh);
     if (data.user?.id) localStorage.setItem('userId', data.user.id);
     // Após login, buscar perfil completo para guardar nome e role
-    try { await this.getUserProfile(); } catch (e) {}
+    try { await this.getUserProfile(); } catch (e) { console.warn('getUserProfile após login falhou:', e) }
     return data;
   }
 

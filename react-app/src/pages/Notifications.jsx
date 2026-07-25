@@ -54,7 +54,7 @@ const markAllRead = async (notifs, setNotifs) => {
   if (!Array.isArray(notifs) || notifs.length === 0) return
   const unread = notifs.filter(n => !n.read)
   if (unread.length > 0) {
-    await Promise.allSettled(unread.map(n => api.markNotificationRead(n.id).catch(() => {})))
+    await Promise.allSettled(unread.map(n => api.markNotificationRead(n.id)))
   }
   const updated = notifs.map(n => ({ ...n, read: true }))
   setNotifs(updated)

@@ -4,21 +4,7 @@ import TransactionCard from '../components/TransactionCard'
 import CancelConfirmModal from '../components/CancelConfirmModal'
 import api from '../services/api'
 import { getDashboardPath } from '../utils/dashboardPaths'
-
-const normTx = (tx) => ({
-  id: tx.id,
-  status: tx.status || 'RESERVED',
-  product_name: tx.product_name || tx.product?.name || tx.product?.nome || 'Produto',
-  product_photo: tx.product?.photo || null,
-  buyer_id: tx.buyer?.id ?? tx.buyer_id ?? (typeof tx.buyer === 'string' ? tx.buyer : null),
-  buyer_name: tx.buyer_name || (tx.buyer?.first_name ? `${tx.buyer.first_name} ${tx.buyer.last_name || ''}`.trim() : null) || 'Comprador',
-  seller_id: tx.seller?.id ?? tx.seller_id ?? (typeof tx.seller === 'string' ? tx.seller : null),
-  seller_name: tx.seller_name || (tx.seller?.first_name ? `${tx.seller.first_name} ${tx.seller.last_name || ''}`.trim() : null) || 'Vendedor',
-  quantity: tx.quantity ?? 1,
-  unit_name: tx.unit_name || tx.unit || 'un',
-  amount: tx.amount || tx.total_price || tx.price || '0',
-  created_at: tx.created_at || tx.criado_em || '',
-})
+import { normTx, extractApiErrorMessage } from '../utils/normalizers'
 
 function SellerDashboardSales() {
   const navigate = useNavigate()

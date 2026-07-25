@@ -6,26 +6,7 @@ import TransactionCard from '../components/TransactionCard'
 import CancelConfirmModal from '../components/CancelConfirmModal'
 import api from '../services/api'
 import { addNotification } from './Notifications'
-
-// ─── Normalização defensiva da transação ─────────────────────────────────────
-const normTx = (tx) => ({
-  id:            tx.id,
-  status:        tx.status || 'RESERVED',
-  product_name:  tx.product_name || tx.product?.name || 'Produto',
-  product_photo: tx.product?.photo || null,
-  buyer_id:      tx.buyer?.id ?? tx.buyer_id ?? (typeof tx.buyer === 'string' ? tx.buyer : null),
-  buyer_name:    tx.buyer_name
-    || (tx.buyer?.first_name ? `${tx.buyer.first_name} ${tx.buyer.last_name || ''}`.trim() : null)
-    || 'Comprador',
-  seller_id:     tx.seller?.id ?? tx.seller_id ?? (typeof tx.seller === 'string' ? tx.seller : null),
-  seller_name:   tx.seller_name
-    || (tx.seller?.first_name ? `${tx.seller.first_name} ${tx.seller.last_name || ''}`.trim() : null)
-    || 'Vendedor',
-  quantity:      tx.quantity   ?? 1,
-  unit_name:     tx.unit_name  || tx.unit || '',
-  amount:        tx.amount     || tx.total_price || tx.price || '0',
-  created_at:    tx.created_at || '',
-})
+import { normTx, extractApiErrorMessage } from '../utils/normalizers'
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 function Transactions() {
@@ -67,7 +48,7 @@ function Transactions() {
       updateTxStatus(txId, 'AWAITING_CONFIRMATION')
       addNotification({ type: 'transaction', message: 'Reserva confirmada com sucesso.', icon: 'bi-check2-circle', transaction_id: txId, transaction_status: 'AWAITING_CONFIRMATION' }, true)
     } catch (err) {
-      setActionError(err?.data ? Object.values(err.data).flat().join(' | ') : err?.message || 'Erro ao confirmar.')
+      setActionError(extractApiErrorMessage(err, 'Erro ao confirmar.'))
     } finally { setActionLoading(null) }
   }
 
@@ -78,7 +59,7 @@ function Transactions() {
       updateTxStatus(txId, 'COMPLETED')
       addNotification({ type: 'transaction', message: 'Reserva concluída com sucesso.', icon: 'bi-check-circle', transaction_id: txId, transaction_status: 'COMPLETED' }, true)
     } catch (err) {
-      setActionError(err?.data ? Object.values(err.data).flat().join(' | ') : err?.message || 'Erro ao concluir.')
+      setActionError(extractApiErrorMessage(err, 'Erro ao concluir.'))
     } finally { setActionLoading(null) }
   }
 
@@ -91,7 +72,7 @@ function Transactions() {
       addNotification({ type: 'transaction', message: 'Reserva cancelada.', icon: 'bi-x-circle', transaction_id: cancelTarget.id, transaction_status: 'CANCELLED' }, true)
       setCancelTarget(null)
     } catch (err) {
-      setActionError(err?.data ? Object.values(err.data).flat().join(' | ') : err?.message || 'Erro ao cancelar.')
+      setActionError(extractApiErrorMessage(err, 'Erro ao cancelar.'))
       setCancelTarget(null)
     } finally { setCancelLoading(false) }
   }

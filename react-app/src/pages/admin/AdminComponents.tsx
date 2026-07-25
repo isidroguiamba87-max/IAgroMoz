@@ -99,7 +99,7 @@ export function Table({ cols, rows, loading, empty = 'Sem dados.' }) {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {rows.map((row, idx) => (
-            <tr key={idx} className="hover:bg-gray-50 transition-colors">
+            <tr key={row.id ?? idx} className="hover:bg-gray-50 transition-colors">
               {cols.map(col => (
                 <td key={col.key} className="px-4 py-3 align-top text-gray-700 whitespace-nowrap">
                   {col.render ? col.render(row) : (row[col.key] ?? '—')}

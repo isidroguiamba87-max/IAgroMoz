@@ -390,7 +390,7 @@ function Techniques() {
       api.getUserProfile().then(p => {
         if (p?.nome_completo) setMyName(p.nome_completo)
         else if (p?.first_name) setMyName(`${p.first_name} ${p.last_name || ''}`.trim())
-      }).catch(() => {})
+      }).catch((err) => console.warn('Falha ao carregar perfil para técnicas:', err))
     }
   }, [])
 

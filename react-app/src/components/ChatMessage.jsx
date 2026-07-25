@@ -17,7 +17,9 @@ function ChatMessage({ message, isAI, timestamp, image }) {
           <div className="mb-3">
             <img src={image} alt="Imagem enviada"
               className="rounded-lg max-w-full h-auto border-2 border-gray-200"
-              style={{ maxHeight: '300px' }} />
+              style={{ maxHeight: '300px' }}
+              loading="lazy"
+              decoding="async" />
           </div>
         )}
 

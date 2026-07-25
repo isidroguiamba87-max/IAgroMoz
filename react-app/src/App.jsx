@@ -4,6 +4,8 @@ import { ThemeProvider } from './context/ThemeContext'
 import { ServerLoadingOverlay } from './components/NetworkErrorModal'
 import AdminRouteBlocker from './components/AdminRouteBlocker'
 import ProtectedRoute from './components/ProtectedRoute'
+import { RouteErrorBoundaryWithNav } from './components/RouteErrorBoundary'
+import { captureError } from './utils/errorTracking'
 
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
@@ -41,6 +43,9 @@ class ErrorBoundary extends Component {
   }
   static getDerivedStateFromError(error) {
     return { hasError: true, error }
+  }
+  componentDidCatch(error, info) {
+    captureError(error, { componentStack: info.componentStack, type: 'react_error_boundary' })
   }
   render() {
     if (this.state.hasError) {
@@ -120,8 +125,8 @@ function App() {
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-6 text-gray-700">Carregando...</div>}>
             <Routes>
           {/* Feed é a página inicial — acessível sem login */}
-          <Route path="/" element={<AdminRouteBlocker><Feed /></AdminRouteBlocker>} />
-          <Route path="/feed" element={<AdminRouteBlocker><Feed /></AdminRouteBlocker>} />
+          <Route path="/" element={<AdminRouteBlocker><RouteErrorBoundaryWithNav><Feed /></RouteErrorBoundaryWithNav></AdminRouteBlocker>} />
+          <Route path="/feed" element={<AdminRouteBlocker><RouteErrorBoundaryWithNav><Feed /></RouteErrorBoundaryWithNav></AdminRouteBlocker>} />
           <Route path="/producer" element={<Navigate replace to="/feed" />} />
           <Route path="/producer/*" element={<Navigate replace to="/feed" />} />
           <Route path="/agricultores" element={<AdminRouteBlocker><Feed /></AdminRouteBlocker>} />
@@ -132,9 +137,9 @@ function App() {
           <Route path="/register/seller" element={<AdminRouteBlocker><RegisterSeller /></AdminRouteBlocker>} />
           <Route path="/post/:id" element={<AdminRouteBlocker><PostDetail /></AdminRouteBlocker>} />
           {/* Rotas que requerem login */}
-          <Route path="/chat" element={<AdminRouteBlocker><ProtectedRoute><ChatAI /></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/marketplace" element={<AdminRouteBlocker><ProtectedRoute><Marketplace /></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/product/:id" element={<AdminRouteBlocker><ProtectedRoute><ProductDetail /></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/chat" element={<AdminRouteBlocker><ProtectedRoute><RouteErrorBoundaryWithNav><ChatAI /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/marketplace" element={<AdminRouteBlocker><ProtectedRoute><RouteErrorBoundaryWithNav><Marketplace /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/product/:id" element={<AdminRouteBlocker><ProtectedRoute><RouteErrorBoundaryWithNav><ProductDetail /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/techniques" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><Techniques /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/recommendations" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><Techniques /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/technique/:id" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><TechniqueDetail /></ProtectedRoute></AdminRouteBlocker>} />
@@ -146,9 +151,9 @@ function App() {
           <Route path="/transactions/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Navigate replace to="/minhas-reservas" /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/transactions" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Navigate replace to="/minhas-reservas" /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/minhas-reservas/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Transactions /></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/minhas-reservas" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Transactions /></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/transactions/:id/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><TransactionDetail /></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/transactions/:id" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><TransactionDetail /></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/minhas-reservas" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><RouteErrorBoundaryWithNav><Transactions /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/transactions/:id/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><RouteErrorBoundaryWithNav><TransactionDetail /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/transactions/:id" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><RouteErrorBoundaryWithNav><TransactionDetail /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/product/:productId/units" element={<AdminRouteBlocker><ProtectedRoute><ProductUnits /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/seller/dashboard/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller']}><SellerDashboardLayout /></ProtectedRoute></AdminRouteBlocker>}>
             <Route index element={<SellerDashboardOverview />} />

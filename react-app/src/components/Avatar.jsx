@@ -40,6 +40,8 @@ function Avatar({ name, foto, size = 'md', className = '' }) {
         src={foto_url}
         alt={name || 'Avatar'}
         className={`${sizeClass} rounded-full object-cover flex-shrink-0 ${className}`}
+        loading="lazy"
+        decoding="async"
         onError={() => setImgError(true)}
       />
     )

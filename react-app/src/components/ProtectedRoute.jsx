@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { API_BASE } from '../config/api'
 
 // Rotas permitidas para papel seller e producer
 const SELLER_ALLOWED_ROUTES = [
@@ -70,9 +71,7 @@ function ProtectedRoute({ children, adminOnly = false, allowedRoles = null }) {
 
   const tryRefresh = async (refreshToken) => {
     try {
-      const apiBase = localStorage.getItem('apiBase') ||
-        (window.__API_BASE__ || 'https://iagromoz.onrender.com/api')
-      const res = await fetch(`${apiBase}/token/refresh/`, {
+      const res = await fetch(`${API_BASE}/token/refresh/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh: refreshToken }),

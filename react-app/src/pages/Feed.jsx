@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import MobileNav from '../components/MobileNav'
 import DesktopSidebar from '../components/DesktopSidebar'
@@ -8,6 +8,8 @@ import Avatar from '../components/Avatar'
 import ImageViewer from '../components/ImageViewer'
 import api from '../services/api'
 import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
+import { normalizeUserDisplayName, normalizeComment, resolveMediaUrl } from '../utils/normalizers'
+import { createKeyedThrottle } from '../utils/debounce'
 
 import { API_BASE, API_MEDIA } from '../config/api'
 
@@ -30,58 +32,7 @@ const CATEGORIES = [
   { id: 'LIVESTOCK',   label: 'Pecuária',    icon: 'bi-heart' },
 ]
 
-// ─── Funções utilitárias ──────────────────────────────────────────────────────
-function normalizeUserDisplayName(user) {
-  if (!user) return null
-  const name = `${user.first_name || ''} ${user.last_name || ''}`.trim()
-    || user.nome_completo
-    || user.autor_nome
-    || user.usuario_nome
-    || user.nome
-    || user.display_name
-    || user.username
-    || user.name
-    || (user.email ? user.email.split('@')[0] : null)
-  return name ? String(name).trim() : null
-}
-
-function extractAuthorName(obj) {
-  if (!obj) return 'Utilizador'
-  if (obj.full_name) return obj.full_name
-  if (obj.nome_completo) return obj.nome_completo
-  if (obj.autor_nome) return obj.autor_nome
-  if (obj.usuario_nome) return obj.usuario_nome
-  if (obj.nome) return obj.nome
-  if (obj.author_name) return obj.author_name
-  const a = obj.autor || obj.author || obj.user
-  if (a) {
-    if (a.full_name) return a.full_name
-    if (a.nome_completo) return a.nome_completo
-    if (a.first_name && a.last_name) return `${a.first_name} ${a.last_name}`.trim()
-    if (a.first_name) return a.first_name
-    if (a.last_name) return a.last_name
-    if (a.autor_nome) return a.autor_nome
-    if (a.usuario_nome) return a.usuario_nome
-    if (a.nome) return a.nome
-    if (a.username) return a.username
-    if (a.name) return a.name
-    if (a.display_name) return a.display_name
-    if (a.email) return a.email.split('@')[0]
-  }
-  return 'Utilizador'
-}
-
-function normalizeComment(c) {
-  return {
-    id: c.id || c.message_id || null,
-    body: c.mensagem || c.body || c.message || c.text || c.conteudo || '',
-    author_name: extractAuthorName(c),
-    author_id: c.author_id || c.user?.id || c.autor?.id || c.user_id || (c.author && (c.author.id || c.author.user_id)) || null,
-    created_at: c.criado_em || c.created_at || c.timestamp || c.createdAt || null,
-    parent: c.parent ?? c.parent_message ?? null,
-    replies: Array.isArray(c.replies) ? c.replies.map(normalizeComment) : (Array.isArray(c.respostas) ? c.respostas.map(normalizeComment) : [])
-  }
-}
+// normalizeUserDisplayName, normalizeComment, resolveMediaUrl importadas de utils/normalizers
 
 // ─── Componente principal ──────────────────────────────────────────────────────
 function Feed() {
@@ -96,6 +47,7 @@ function Feed() {
   }
   
   const pressTimer = useRef(null)
+  const likeThrottle = useRef(createKeyedThrottle())
   const userName = localStorage.getItem('userName')
   const userId = localStorage.getItem('userId')
   const token = localStorage.getItem('access_token')
@@ -303,38 +255,39 @@ function Feed() {
     } finally { setLoadingComments(prev => ({ ...prev, [postId]: false })) }
   }
 
-  const handleCreatePost = () => { if (!requireAuth()) return; navigate('/create-post') }
+  const handleCreatePost = useCallback(() => { if (!requireAuth()) return; navigate('/create-post') }, [navigate])
 
-  const handleLike = async (postId) => {
+  const handleLike = useCallback(async (postId) => {
     if (!requireAuth()) return
-    // Optimistic update — inverte imediatamente na UI
-    setPosts(prev => prev.map(p => {
-      if (p.id !== postId) return p
-      const liked = !p.gostou
-      return { ...p, gostou: liked, likes_count: liked ? p.likes_count + 1 : Math.max(0, p.likes_count - 1) }
-    }))
-    // Limpar reação local se existir
-    setPostReactions(prev => { const n = { ...prev }; delete n[postId]; return n })
-    try {
-      await api.likeFeedPost(postId)
-    } catch (_) {
-      // Reverter em caso de erro
+    await likeThrottle.current(postId, async () => {
+      // Optimistic update — inverte imediatamente na UI
       setPosts(prev => prev.map(p => {
         if (p.id !== postId) return p
         const liked = !p.gostou
         return { ...p, gostou: liked, likes_count: liked ? p.likes_count + 1 : Math.max(0, p.likes_count - 1) }
       }))
-    }
-  }
+      setPostReactions(prev => { const n = { ...prev }; delete n[postId]; return n })
+      try {
+        await api.likeFeedPost(postId)
+      } catch (_) {
+        // Reverter em caso de erro
+        setPosts(prev => prev.map(p => {
+          if (p.id !== postId) return p
+          const liked = !p.gostou
+          return { ...p, gostou: liked, likes_count: liked ? p.likes_count + 1 : Math.max(0, p.likes_count - 1) }
+        }))
+      }
+    })
+  }, [])
 
-  const handleReaction = async (postId, key) => {
+  const handleReaction = useCallback(async (postId, key) => {
     if (!requireAuth()) return
     setPostReactions(prev => { const n = { ...prev }; n[postId] === key ? delete n[postId] : (n[postId] = key); return n })
     setShowReactionPanel(null)
     // Também enviar like à API para persistir
-    try { await api.likeFeedPost(postId) } catch (_) {}
-  }
-  const handlePressStart = (postId) => { pressTimer.current = setTimeout(() => { if (!requireAuth()) return; setShowReactionPanel(postId) }, 600) }
+    try { await api.likeFeedPost(postId) } catch (err) { console.warn('Erro ao registar reação:', err) }
+  }, [])
+  const handlePressStart = useCallback((postId) => { pressTimer.current = setTimeout(() => { if (!requireAuth()) return; setShowReactionPanel(postId) }, 600) }, [])
   const handlePressEnd = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } }
   const toggleComments = async (postId) => {
     if (!requireAuth()) return

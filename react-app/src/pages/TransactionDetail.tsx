@@ -7,28 +7,12 @@ import ContactForm from '../components/ContactForm'
 import TransactionStepper from '../components/TransactionStepper'
 import api from '../services/api'
 import { addNotification } from './Notifications'
+import { normTx as _normTx, normalizePhoneForWhatsapp, extractApiErrorMessage } from '../utils/normalizers'
 
+// TransactionDetail usa status AWAITING_PAYMENT em vez de AWAITING_CONFIRMATION
 const normTx = (tx) => ({
-  id:                tx.id,
-  status:            tx.status === 'AWAITING_CONFIRMATION' ? 'AWAITING_PAYMENT' : tx.status || 'RESERVED',
-  product_id:        tx.product?.id || tx.product_id || tx.product || null,
-  product_name:      tx.product_name || tx.product?.name || tx.product?.nome || 'Produto',
-  product_photo:     tx.product?.photo || tx.product?.foto || tx.product_photo || null,
-  quantity:          tx.quantity ?? 1,
-  unit_name:         tx.unit_name || tx.unit || 'un',
-  amount:            tx.amount || tx.total_price || tx.price || '0',
-  created_at:        tx.created_at || tx.created_at || '',
-  buyer_id:          tx.buyer?.id ?? tx.buyer_id ?? (typeof tx.buyer === 'string' ? tx.buyer : null),
-  buyer_name:        tx.buyer_name || (tx.buyer?.first_name ? `${tx.buyer.first_name} ${tx.buyer.last_name || ''}`.trim() : null) || 'Comprador',
-  seller_id:         tx.seller?.id ?? tx.seller_id ?? (typeof tx.seller === 'string' ? tx.seller : null),
-  seller_name:       tx.seller_name || (tx.seller?.first_name ? `${tx.seller.first_name} ${tx.seller.last_name || ''}`.trim() : null) || 'Vendedor',
-  buyer_contact_name: tx.buyer_contact_name || tx.buyer_name || '',
-  buyer_contact_phone: tx.buyer_contact_phone || tx.buyer_phone || tx.buyer?.contact || '',
-  buyer_contact_whatsapp: tx.buyer_contact_whatsapp || tx.buyer_contact_phone || tx.buyer_phone || tx.buyer?.contact || '',
-  seller_phone:      tx.seller_phone || tx.seller?.phone || tx.seller?.contact || '',
-  seller_whatsapp:   tx.seller_whatsapp || tx.seller_phone || tx.seller?.phone || tx.seller?.contact || '',
-  delivery_address:  tx.delivery_address || tx.address || tx.location || '',
-  note:              tx.note || tx.observations || tx.comments || '',
+  ..._normTx(tx),
+  status: tx.status === 'AWAITING_CONFIRMATION' ? 'AWAITING_PAYMENT' : (tx.status || 'RESERVED'),
 })
 
 const STATUS_LABEL = {
@@ -56,11 +40,6 @@ function TransactionDetail() {
   const tx = transaction
   const isBuyer = tx && String(tx.buyer_id) === String(userId)
   const isSeller = tx && String(tx.seller_id) === String(userId)
-
-  const normalizePhoneForWhatsapp = (value) => {
-    const digits = String(value || '').replace(/\D/g, '')
-    return digits ? `https://wa.me/${digits}` : null
-  }
 
   const buyerContactReady = tx && Boolean(tx.buyer_contact_whatsapp && tx.buyer_contact_name)
   const sellerWhatsappUrl = tx ? normalizePhoneForWhatsapp(tx.seller_whatsapp || tx.seller_phone) : null
@@ -95,7 +74,7 @@ function TransactionDetail() {
       await api.confirmTransaction(txId)
       setTransaction(prev => prev ? { ...prev, status: 'AWAITING_CONFIRMATION' } : null)
     } catch (err) {
-      setActionError(err?.data ? Object.values(err.data).flat().join(' | ') : err?.message || 'Erro ao confirmar transação.')
+      setActionError(extractApiErrorMessage(err, 'Erro ao confirmar transação.'))
     } finally {
       setActionLoading(false)
     }
@@ -117,7 +96,7 @@ function TransactionDetail() {
         transaction_status: 'AWAITING_PAYMENT',
       })
     } catch (err) {
-      setActionError(err?.data ? Object.values(err.data).flat().join(' | ') : err?.message || 'Erro ao confirmar transação.')
+      setActionError(extractApiErrorMessage(err, 'Erro ao confirmar transação.'))
     } finally {
       setActionLoading(false)
     }
@@ -149,7 +128,7 @@ function TransactionDetail() {
       } : null)
       setShowBuyerForm(false)
     } catch (err) {
-      setActionError(err?.data ? Object.values(err.data).flat().join(' | ') : err?.message || 'Erro ao enviar dados.')
+      setActionError(extractApiErrorMessage(err, 'Erro ao enviar dados.'))
     } finally {
       setActionLoading(false)
     }
@@ -162,7 +141,7 @@ function TransactionDetail() {
       await api.concludeTransaction(txId)
       setTransaction(prev => prev ? { ...prev, status: 'COMPLETED' } : null)
     } catch (err) {
-      setActionError(err?.data ? Object.values(err.data).flat().join(' | ') : err?.message || 'Erro ao concluir transação.')
+      setActionError(extractApiErrorMessage(err, 'Erro ao concluir transação.'))
     } finally {
       setActionLoading(false)
     }
@@ -177,7 +156,7 @@ function TransactionDetail() {
       setTransaction(prev => prev ? { ...prev, status: 'CANCELLED' } : null)
       setCancelTarget(null)
     } catch (err) {
-      setActionError(err?.data ? Object.values(err.data).flat().join(' | ') : err?.message || 'Erro ao cancelar transação.')
+      setActionError(extractApiErrorMessage(err, 'Erro ao cancelar transação.'))
       setCancelTarget(null)
     } finally {
       setCancelLoading(false)

@@ -65,6 +65,8 @@ function ImageViewer({ src, alt = 'Imagem', className = '', imgClassName = '' })
           src={src}
           alt={alt}
           className={`cursor-zoom-in ${imgClassName}`}
+          loading="lazy"
+          decoding="async"
         />
       </div>
 

@@ -1,10 +1,12 @@
-﻿import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import MobileNav from "../components/MobileNav"
 import DesktopSidebar from "../components/DesktopSidebar"
 import LoadingPlant from "../components/LoadingPlant"
+import LazyImage from "../components/LazyImage"
 import api from "../services/api"
 import { API_BASE } from "../config/api"
+import { normProduct as norm, extractApiErrorMessage } from "../utils/normalizers"
 
 // ─── Categorias e subcategorias conforme GET /api/enums/ ─────────────────────
 const CATEGORIES = [
@@ -33,23 +35,6 @@ const CATEGORIES = [
     ]
   },
 ]
-
-// ─── Normaliza campos da API (suporta campos antigos e novos) ─────────────────
-const norm = (p) => ({
-  id:             p.id,
-  name:           p.name  || p.nome  || "",
-  description:    p.description || p.descricao || "",
-  price:          p.price || p.preco || "0",
-  photo:          p.photo || p.foto  || null,
-  category:       p.category || p.categoria || "",
-  subcategory:    p.subcategory || "",
-  district:       p.district?.name || p.district || p.distrito || "",
-  seller:         typeof p.seller === "object" ? `${p.seller?.first_name || ""} ${p.seller?.last_name || ""}`.trim() : (p.seller || p.vendedor || ""),
-  seller_id:      p.seller?.id || p.seller_id || p.vendedor_id || null,
-  avg_rating:     parseFloat(p.average_rating || p.media_avaliacao || 0),
-  total_ratings:  p.total_ratings || p.total_avaliacoes || 0,
-  created_at:     p.created_at || p.criado_em || "",
-})
 
 // ─── Modal de pedido de upgrade para produtor ─────────────────────────────────
 // POST /api/users/upgrade-to-producer/  { contact, farm_address }
@@ -341,11 +326,17 @@ function Marketplace() {
     if (token) loadMyProfile()
     const params = new URLSearchParams(window.location.search)
     if (params.get("anunciar") === "1" && token) {
-      api.getUpgradeStatus().then(req => setExistingRequest(req)).catch(() => {})
-        .finally(() => {
+      ;(async () => {
+        try {
+          const req = await api.getUpgradeStatus()
+          setExistingRequest(req)
+        } catch (err) {
+          console.warn('getUpgradeStatus:', err)
+        } finally {
           setShowUpgradeModal(true)
-          window.history.replaceState({}, "", "/marketplace")
-        })
+          window.history.replaceState({}, '', '/marketplace')
+        }
+      })()
     }
   }, [])
 
@@ -441,9 +432,12 @@ function Marketplace() {
       )}
       {size === "sm" ? (
         <>
-          {product.photo
-            ? <img src={product.photo} alt={product.name} className="w-16 h-16 object-cover rounded-xl flex-shrink-0" />
-            : <div className="w-16 h-16 bg-gray-100 rounded-xl flex-shrink-0 flex items-center justify-center"><i className="bi bi-image text-gray-300 text-xl"></i></div>}
+          <LazyImage
+              src={product.photo}
+              alt={product.name}
+              className="w-16 h-16 object-cover rounded-xl flex-shrink-0"
+              fallback={<div className="w-16 h-16 bg-gray-100 rounded-xl flex-shrink-0 flex items-center justify-center"><i className="bi bi-image text-gray-300 text-xl"></i></div>}
+            />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-800 text-sm line-clamp-2 leading-tight">{product.name}</p>
             {product.district && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><i className="bi bi-geo-alt"></i>{product.district}</p>}
@@ -457,9 +451,12 @@ function Marketplace() {
               {CATEGORIES.find(c => c.value === product.category)?.label || product.category}
             </span>
           )}
-          {product.photo
-            ? <img src={product.photo} alt={product.name} className="w-full h-40 object-cover" />
-            : <div className="w-full h-40 bg-gray-100 flex items-center justify-center"><i className="bi bi-image text-4xl text-gray-300"></i></div>}
+          <LazyImage
+              src={product.photo}
+              alt={product.name}
+              className="w-full h-40 object-cover"
+              fallback={<div className="w-full h-40 bg-gray-100 flex items-center justify-center"><i className="bi bi-image text-4xl text-gray-300"></i></div>}
+            />
           <div className="p-3">
             <p className="font-bold text-gray-800 text-sm line-clamp-2 leading-tight mb-1">{product.name}</p>
             {product.district && <p className="text-xs text-gray-400 flex items-center gap-1 mb-1"><i className="bi bi-geo-alt"></i>{product.district}</p>}

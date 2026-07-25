@@ -89,21 +89,31 @@ export function useLocation_() {
   const [loadingProvinces, setLoadingProvinces] = useState(false)
 
   useEffect(() => {
-    setLoadingProvinces(true)
-    fetch(`${API_BASE}/provinces/`)
-      .then(r => r.json())
-      .then(d => setProvinces(Array.isArray(d) ? d : (d.results || [])))
-      .catch(() => {})
-      .finally(() => setLoadingProvinces(false))
+    const load = async () => {
+      setLoadingProvinces(true)
+      try {
+        const r = await fetch(`${API_BASE}/provinces/`)
+        const d = await r.json()
+        setProvinces(Array.isArray(d) ? d : (d.results || []))
+      } catch (err) {
+        console.warn('Falha ao carregar províncias:', err)
+      } finally {
+        setLoadingProvinces(false)
+      }
+    }
+    load()
   }, [])
 
-  const loadDistricts = (provinceId) => {
+  const loadDistricts = async (provinceId) => {
     setDistricts([])
     if (!provinceId) return
-    fetch(`${API_BASE}/districts/?id=${provinceId}`)
-      .then(r => r.json())
-      .then(d => setDistricts(Array.isArray(d) ? d : (d.results || [])))
-      .catch(() => {})
+    try {
+      const r = await fetch(`${API_BASE}/districts/?id=${provinceId}`)
+      const d = await r.json()
+      setDistricts(Array.isArray(d) ? d : (d.results || []))
+    } catch (err) {
+      console.warn('Falha ao carregar distritos:', err)
+    }
   }
 
   return { provinces, districts, loadingProvinces, loadDistricts }
