@@ -1,7 +1,7 @@
 // ─── Configuração central da API ─────────────────────────────────────────────
 // ⚠️  Para mudar o servidor, altere APENAS a linha abaixo:
 
-export const API_URL = 'https://iagromoz.onrender.com';
+export const API_URL = 'http://65.21.165.103';
 export const API_BASE = `${API_URL}/api`;
 export const API_MEDIA = `${API_URL}/`;
 

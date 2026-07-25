@@ -725,6 +725,11 @@ class APIService {
     return this.put(`/marketplace/transactions/${id}/`, data);
   }
 
+  // Partilha do WhatsApp do comprador — só permitido em AWAITING_PAYMENT
+  shareTransactionContact(id, whatsapp) {
+    return this.post(`/marketplace/transactions/${id}/contact/`, { whatsapp });
+  }
+
   // ─── Pagamentos ──────────────────────────────────────────────────────────────
 
   // POST /payments/initiate/  { transaction_id, method, provider, phone_number }

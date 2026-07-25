@@ -4,6 +4,7 @@ import DesktopSidebar from '../components/DesktopSidebar'
 import MobileNav from '../components/MobileNav'
 import TransactionCard from '../components/TransactionCard'
 import CancelConfirmModal from '../components/CancelConfirmModal'
+import RejectModal from '../components/RejectModal'
 import api from '../services/api'
 import { addNotification } from './Notifications'
 import { normTx, extractApiErrorMessage } from '../utils/normalizers'
@@ -18,6 +19,8 @@ function Transactions() {
   const [actionError, setActionError]     = useState('')
   const [cancelTarget, setCancelTarget]   = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [rejectTarget, setRejectTarget]   = useState(null)
+  const [rejectLoading, setRejectLoading] = useState(false)
 
   const userId = localStorage.getItem('userId')
 
@@ -77,6 +80,22 @@ function Transactions() {
     } finally { setCancelLoading(false) }
   }
 
+  const handleReject = async (reason) => {
+    if (!rejectTarget) return
+    setRejectLoading(true); setActionError('')
+    try {
+      await api.cancelTransaction(rejectTarget.id, reason)
+      setTransactions(prev => prev.map(tx =>
+        tx.id === rejectTarget.id ? { ...tx, status: 'CANCELLED', cancel_reason: reason } : tx
+      ))
+      addNotification({ type: 'transaction', message: 'Reserva recusada.', icon: 'bi-x-circle', transaction_id: rejectTarget.id, transaction_status: 'CANCELLED' }, true)
+      setRejectTarget(null)
+    } catch (err) {
+      setActionError(extractApiErrorMessage(err, 'Erro ao recusar reserva.'))
+      setRejectTarget(null)
+    } finally { setRejectLoading(false) }
+  }
+
   // Mostrar apenas reservas ativas (não concluídas/canceladas)
   const activeTransactions = transactions.filter(tx => !['COMPLETED', 'CANCELLED'].includes(tx.status))
   const historyTransactions = transactions.filter(tx => ['COMPLETED', 'CANCELLED'].includes(tx.status))
@@ -90,6 +109,12 @@ function Transactions() {
         loading={cancelLoading}
         onConfirm={handleCancelConfirm}
         onClose={() => setCancelTarget(null)}
+      />
+      <RejectModal
+        transaction={rejectTarget}
+        loading={rejectLoading}
+        onConfirm={handleReject}
+        onClose={() => setRejectTarget(null)}
       />
 
       <div className="flex-1 min-w-0 flex flex-col">
@@ -176,6 +201,7 @@ function Transactions() {
                         onConfirm={handleConfirm}
                         onConclude={handleConclude}
                         onCancelRequest={setCancelTarget}
+                        onRejectRequest={setRejectTarget}
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
                       />
                     )
@@ -202,6 +228,7 @@ function Transactions() {
                         onConfirm={handleConfirm}
                         onConclude={handleConclude}
                         onCancelRequest={setCancelTarget}
+                        onRejectRequest={setRejectTarget}
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
                       />
                     )

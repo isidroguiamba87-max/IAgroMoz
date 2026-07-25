@@ -1,3 +1,5 @@
+import { normalizePhoneForWhatsapp } from '../utils/normalizers'
+
 // TransactionCard — perspetiva diferente para comprador e vendedor
 // Fluxo completo simplificado:
 //   RESERVED              → Vendedor confirma ou cancela
@@ -94,6 +96,28 @@ function TransactionCard({
             <i className={`bi ${ctx.icon} text-sm flex-shrink-0 mt-0.5`}></i>
             <span>{ctx.text}</span>
           </div>
+        )}
+
+        {/* ── WhatsApp: vendedor abre o chat com o comprador ── */}
+        {isSeller && tx.status === 'AWAITING_CONFIRMATION' && tx.buyer_whatsapp && (
+          <a
+            href={normalizePhoneForWhatsapp(tx.buyer_whatsapp)}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mb-3 flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors">
+            <span className="flex items-center gap-2"><i className="bi bi-whatsapp text-sm"></i> {tx.buyer_whatsapp}</span>
+            <span className="underline">Abrir WhatsApp</span>
+          </a>
+        )}
+
+        {/* ── WhatsApp: comprador ainda não partilhou o número ── */}
+        {isBuyer && tx.status === 'AWAITING_CONFIRMATION' && !tx.buyer_whatsapp && onViewDetails && (
+          <button
+            onClick={() => onViewDetails(tx.id)}
+            className="mb-3 w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100 transition-colors">
+            <span className="flex items-center gap-2"><i className="bi bi-whatsapp text-sm"></i> Envie o seu WhatsApp ao vendedor</span>
+            <span className="underline">Continuar →</span>
+          </button>
         )}
 
         {/* ── Botões de ação ── */}

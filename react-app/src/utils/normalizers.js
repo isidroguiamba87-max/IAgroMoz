@@ -20,6 +20,7 @@ export function normTx(tx) {
     buyer_contact_name:     tx.buyer_contact_name || tx.buyer_name || '',
     buyer_contact_phone:    tx.buyer_contact_phone || tx.buyer_phone || tx.buyer?.contact || '',
     buyer_contact_whatsapp: tx.buyer_contact_whatsapp || tx.buyer_contact_phone || tx.buyer_phone || tx.buyer?.contact || '',
+    buyer_whatsapp:         tx.buyer_whatsapp || tx.buyer_contact_whatsapp || tx.buyer_contact_phone || tx.buyer_phone || tx.buyer?.contact || '',
     seller_phone:           tx.seller_phone || tx.seller?.phone || tx.seller?.contact || '',
     seller_whatsapp:        tx.seller_whatsapp || tx.seller_phone || tx.seller?.phone || tx.seller?.contact || '',
     delivery_address:       tx.delivery_address || tx.address || tx.location || '',

@@ -37,17 +37,24 @@ function TransactionDetail() {
   const [cancelLoading, setCancelLoading] = useState(false)
   const [rejectTarget, setRejectTarget] = useState<any>(null)
   const [rejectLoading, setRejectLoading] = useState(false)
-  const [showBuyerForm, setShowBuyerForm] = useState(false)
+  const [profileWhatsapp, setProfileWhatsapp] = useState('')
 
   const userId = localStorage.getItem('userId')
   const tx = transaction
   const isBuyer = tx && String(tx.buyer_id) === String(userId)
   const isSeller = tx && String(tx.seller_id) === String(userId)
 
-  const buyerContactReady = tx && Boolean(tx.buyer_contact_whatsapp && tx.buyer_contact_name)
+  const buyerContactReady = tx && Boolean(tx.buyer_whatsapp || tx.buyer_contact_whatsapp)
   const sellerWhatsappUrl = tx ? normalizePhoneForWhatsapp(tx.seller_whatsapp || tx.seller_phone) : null
-  const buyerWhatsappUrl = tx ? normalizePhoneForWhatsapp(tx.buyer_contact_whatsapp) : null
+  const buyerWhatsappUrl = tx ? normalizePhoneForWhatsapp(tx.buyer_whatsapp || tx.buyer_contact_whatsapp) : null
   const shouldShowBuyerContactForm = isBuyer && ['AWAITING_PAYMENT'].includes(tx?.status) && !buyerContactReady
+
+  useEffect(() => {
+    if (!shouldShowBuyerContactForm) return
+    api.getUserProfile()
+      .then((profile: any) => setProfileWhatsapp(profile?.contact || profile?.telefone || profile?.phone || ''))
+      .catch(() => {})
+  }, [shouldShowBuyerContactForm])
 
   useEffect(() => {
     if (!id) return
@@ -125,29 +132,20 @@ function TransactionDetail() {
     }
   }
 
-  useEffect(() => {
-    if (!tx) return
-    if (isBuyer && tx.status === 'AWAITING_PAYMENT') {
-      setShowBuyerForm(true)
-    }
-  }, [tx, isBuyer])
-
-  const handleSubmitBuyerDetails = async (details: any) => {
+  const handleShareWhatsapp = async (whatsapp: string) => {
     setActionLoading(true)
     setActionError('')
     try {
-      await api.updateTransaction(tx.id, {
-        buyer_contact_name: details.name,
-        buyer_contact_whatsapp: details.whatsapp,
-      })
+      const digits = whatsapp.replace(/\D/g, '')
+      const res: any = await api.shareTransactionContact(tx.id, digits)
+      const savedWhatsapp = res?.whatsapp || digits
       setTransaction((prev: any) => prev ? {
         ...prev,
-        buyer_contact_name: details.name,
-        buyer_contact_whatsapp: details.whatsapp,
+        buyer_whatsapp: savedWhatsapp,
+        buyer_contact_whatsapp: savedWhatsapp,
       } : null)
-      setShowBuyerForm(false)
     } catch (err) {
-      setActionError(extractApiErrorMessage(err, 'Erro ao enviar dados.'))
+      setActionError(extractApiErrorMessage(err, 'Erro ao enviar contacto.'))
     } finally {
       setActionLoading(false)
     }
@@ -271,7 +269,7 @@ function TransactionDetail() {
           </div>
 
           {/* Layout: Info Left, Actions Right */}
-          <div className={`grid gap-4 ${isBuyer && tx.status === 'AWAITING_CONFIRMATION' && showBuyerForm ? 'grid-cols-1' : 'lg:grid-cols-[2fr_1fr]'}`}>
+          <div className={`grid gap-4 ${shouldShowBuyerContactForm ? 'grid-cols-1' : 'lg:grid-cols-[2fr_1fr]'}`}>
             
             {/* LEFT: Product & Details */}
             <div className="space-y-4">
@@ -414,65 +412,13 @@ function TransactionDetail() {
                     </div>
                   )}
 
-                  {['AWAITING_PAYMENT'].includes(tx.status) && !buyerContactReady && (
-                    <div className="bg-white rounded-3xl border border-green-200 shadow-sm p-6 space-y-3">
-                      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm text-green-700 mb-3">
-                        <i className="bi bi-check-circle mr-2"></i>
-                        <strong>Reserva confirmada!</strong> O vendedor confirmou a disponibilidade.
-                      </div>
-                      <button
-                        onClick={() => setShowBuyerForm(true)}
-                        className="w-full py-3 rounded-2xl bg-green-600 text-white font-bold hover:bg-green-700 flex items-center justify-center gap-2">
-                        <i className="bi bi-pencil-square"></i>
-                        Fornecer dados de contacto
-                      </button>
-                    </div>
-                  )}
-
-                  {shouldShowBuyerContactForm && showBuyerForm && (
+                  {shouldShowBuyerContactForm && (
                     <ContactForm
-                      transaction={tx}
-                      onSubmit={handleSubmitBuyerDetails}
+                      profileWhatsapp={profileWhatsapp}
+                      onSubmit={handleShareWhatsapp}
                       loading={actionLoading}
                       error={actionError}
                     />
-                  )}
-
-                  {buyerContactReady && (
-                    <div className="bg-white rounded-3xl border border-green-100 shadow-sm p-6 space-y-4">
-                      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm text-green-700">
-                        <i className="bi bi-whatsapp mr-2"></i>
-                        Os contactos foram guardados. Abra o chat e combine os detalhes com a outra parte.
-                      </div>
-                      {isBuyer && sellerWhatsappUrl && (
-                        <a
-                          href={sellerWhatsappUrl}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700"
-                        >
-                          <i className="bi bi-whatsapp"></i>
-                          Abrir WhatsApp do vendedor
-                        </a>
-                      )}
-                      {isSeller && buyerWhatsappUrl && (
-                        <a
-                          href={buyerWhatsappUrl}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700"
-                        >
-                          <i className="bi bi-whatsapp"></i>
-                          Abrir WhatsApp do comprador
-                        </a>
-                      )}
-                      {isBuyer && !sellerWhatsappUrl && (
-                        <div className="text-sm text-gray-600">Ainda não temos o número WhatsApp do vendedor. Aguarde até ele partilhar o contacto ou verifique no perfil dele.</div>
-                      )}
-                      {isSeller && !buyerWhatsappUrl && (
-                        <div className="text-sm text-gray-600">Aguardando o comprador preencher o WhatsApp para abrir o chat.</div>
-                      )}
-                    </div>
                   )}
 
                   {(tx.status === 'PROCESSING' || tx.status === 'IN_TRANSIT') && (
@@ -493,6 +439,43 @@ function TransactionDetail() {
                     </div>
                   )}
                 </>
+              )}
+
+              {buyerContactReady && (
+                <div className="bg-white rounded-3xl border border-green-100 shadow-sm p-6 space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm text-green-700">
+                    <i className="bi bi-whatsapp mr-2"></i>
+                    Os contactos foram guardados. Abra o chat e combine os detalhes com a outra parte.
+                  </div>
+                  {isBuyer && sellerWhatsappUrl && (
+                    <a
+                      href={sellerWhatsappUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700"
+                    >
+                      <i className="bi bi-whatsapp"></i>
+                      Abrir WhatsApp do vendedor
+                    </a>
+                  )}
+                  {isSeller && buyerWhatsappUrl && (
+                    <a
+                      href={buyerWhatsappUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700"
+                    >
+                      <i className="bi bi-whatsapp"></i>
+                      Abrir WhatsApp do comprador
+                    </a>
+                  )}
+                  {isBuyer && !sellerWhatsappUrl && (
+                    <div className="text-sm text-gray-600">Ainda não temos o número WhatsApp do vendedor. Aguarde até ele partilhar o contacto ou verifique no perfil dele.</div>
+                  )}
+                  {isSeller && !buyerWhatsappUrl && (
+                    <div className="text-sm text-gray-600">Aguardando o comprador preencher o WhatsApp para abrir o chat.</div>
+                  )}
+                </div>
               )}
 
               {tx.status === 'CANCELLED' && (
