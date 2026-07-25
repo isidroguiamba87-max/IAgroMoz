@@ -164,13 +164,14 @@ function Transactions() {
                     {activeTransactions.length} reserva{activeTransactions.length === 1 ? '' : 's'} ativa{activeTransactions.length === 1 ? '' : 's'}
                   </p>
                   {activeTransactions.map(tx => {
-                    const txIsBuyer = String(tx.buyer_id) === String(userId)
+                    const txIsBuyer  = String(tx.buyer_id)  === String(userId)
+                    const txIsSeller = !txIsBuyer && String(tx.seller_id) === String(userId)
                     return (
                       <TransactionCard
                         key={tx.id}
                         transaction={tx}
-                        isBuyer={txIsBuyer}
-                        isSeller={!txIsBuyer}
+                        isBuyer={txIsBuyer || (!txIsBuyer && !txIsSeller)}
+                        isSeller={txIsSeller}
                         isLoading={actionLoading === tx.id}
                         onConfirm={handleConfirm}
                         onConclude={handleConclude}
@@ -189,13 +190,14 @@ function Transactions() {
                     Histórico ({historyTransactions.length})
                   </p>
                   {historyTransactions.map(tx => {
-                    const txIsBuyer = String(tx.buyer_id) === String(userId)
+                    const txIsBuyer  = String(tx.buyer_id)  === String(userId)
+                    const txIsSeller = !txIsBuyer && String(tx.seller_id) === String(userId)
                     return (
                       <TransactionCard
                         key={tx.id}
                         transaction={tx}
-                        isBuyer={txIsBuyer}
-                        isSeller={!txIsBuyer}
+                        isBuyer={txIsBuyer || (!txIsBuyer && !txIsSeller)}
+                        isSeller={txIsSeller}
                         isLoading={actionLoading === tx.id}
                         onConfirm={handleConfirm}
                         onConclude={handleConclude}
