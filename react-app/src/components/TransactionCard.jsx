@@ -44,6 +44,7 @@ function TransactionCard({
   onConfirm,
   onConclude,
   onCancelRequest,
+  onRejectRequest,
   onViewDetails,
 }) {
   const tx     = transaction
@@ -100,25 +101,25 @@ function TransactionCard({
 
           {/* ── VENDEDOR ── */}
 
-          {/* Vendedor + RESERVED → Confirmar disponibilidade + Cancelar */}
+          {/* Vendedor + RESERVED → Confirmar disponibilidade + Recusar com motivo */}
           {isSeller && tx.status === 'RESERVED' && (
-            <>
+            <div className="flex gap-2 w-full">
               <button
                 onClick={() => onConfirm(tx.id)}
                 disabled={isLoading}
                 className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors">
                 {isLoading
                   ? <i className="bi bi-arrow-repeat animate-spin"></i>
-                  : <><i className="bi bi-check-lg"></i> Confirmar disponibilidade</>
+                  : <><i className="bi bi-check-lg"></i> Tenho o produto</>
                 }
               </button>
               <button
-                onClick={() => onCancelRequest(tx)}
+                onClick={() => (onRejectRequest ?? onCancelRequest)(tx)}
                 disabled={isLoading}
-                className="py-2.5 px-3 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-50 font-bold text-sm flex items-center justify-center gap-1 disabled:opacity-50 transition-colors">
-                <i className="bi bi-x-lg"></i>
+                className="flex-1 py-2.5 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-50 font-bold text-sm flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors">
+                <i className="bi bi-x-lg"></i> Não tenho
               </button>
-            </>
+            </div>
           )}
 
           {/* Vendedor + AWAITING_CONFIRMATION → Aguarda confirmação + pode cancelar */}
@@ -214,8 +215,16 @@ function TransactionCard({
 
           {/* CANCELLED */}
           {tx.status === 'CANCELLED' && (
-            <div className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 text-sm font-semibold flex items-center justify-center gap-1.5">
-              <i className="bi bi-x-circle-fill"></i> Cancelado
+            <div className="flex-1 flex flex-col gap-1.5">
+              <div className="py-2.5 rounded-xl bg-red-50 text-red-500 text-sm font-semibold flex items-center justify-center gap-1.5">
+                <i className="bi bi-x-circle-fill"></i>
+                {isBuyer && tx.cancel_reason ? 'Recusado pelo vendedor' : 'Cancelado'}
+              </div>
+              {isBuyer && tx.cancel_reason && (
+                <div className="px-3 py-2 rounded-xl bg-red-50 border border-red-100 text-xs text-red-700">
+                  <span className="font-semibold">Motivo: </span>{tx.cancel_reason}
+                </div>
+              )}
             </div>
           )}
 

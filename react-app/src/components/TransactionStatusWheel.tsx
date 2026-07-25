@@ -14,7 +14,12 @@ const CANCELLED_COLOR = '#EF4444'
 const RADIUS = 42
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
-function TransactionStatusWheel({ currentStatus = 'RESERVED', statusLabel }) {
+interface TransactionStatusWheelProps {
+  currentStatus?: string
+  statusLabel?: string
+}
+
+function TransactionStatusWheel({ currentStatus = 'RESERVED', statusLabel }: TransactionStatusWheelProps) {
   const isCancelled = currentStatus === 'CANCELLED'
 
   const activeIndex = useMemo(() => {

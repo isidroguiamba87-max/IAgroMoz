@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import DesktopSidebar from '../components/DesktopSidebar'
 import MobileNav from '../components/MobileNav'
 import CancelConfirmModal from '../components/CancelConfirmModal'
+import RejectModal from '../components/RejectModal'
 import ContactForm from '../components/ContactForm'
 import TransactionStatusWheel from '../components/TransactionStatusWheel'
 import api from '../services/api'
@@ -10,7 +11,7 @@ import { addNotification } from './Notifications'
 import { normTx as _normTx, normalizePhoneForWhatsapp, extractApiErrorMessage } from '../utils/normalizers'
 
 // TransactionDetail usa status AWAITING_PAYMENT em vez de AWAITING_CONFIRMATION
-const normTx = (tx) => ({
+const normTx = (tx: any) => ({
   ..._normTx(tx),
   status: tx.status === 'AWAITING_CONFIRMATION' ? 'AWAITING_PAYMENT' : (tx.status || 'RESERVED'),
 })
@@ -28,12 +29,14 @@ const STATUS_LABEL = {
 function TransactionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [transaction, setTransaction] = useState(null)
+  const [transaction, setTransaction] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState('')
-  const [cancelTarget, setCancelTarget] = useState(null)
+  const [cancelTarget, setCancelTarget] = useState<any>(null)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [rejectTarget, setRejectTarget] = useState<any>(null)
+  const [rejectLoading, setRejectLoading] = useState(false)
   const [showBuyerForm, setShowBuyerForm] = useState(false)
 
   const userId = localStorage.getItem('userId')
@@ -58,7 +61,7 @@ function TransactionDetail() {
       const data = await api.getTransaction(id)
       const normalized = normTx(data)
       setTransaction(normalized)
-    } catch (err) {
+    } catch (err: any) {
       if (!silent) {
         setActionError(err?.message || 'Não foi possível carregar a transação.')
       }
@@ -67,12 +70,12 @@ function TransactionDetail() {
     }
   }
 
-  const handleConfirm = async (txId) => {
+  const handleConfirm = async (txId: any) => {
     setActionLoading(true)
     setActionError('')
     try {
       await api.confirmTransaction(txId)
-      setTransaction(prev => prev ? { ...prev, status: 'AWAITING_CONFIRMATION' } : null)
+      setTransaction((prev: any) => prev ? { ...prev, status: 'AWAITING_CONFIRMATION' } : null)
     } catch (err) {
       setActionError(extractApiErrorMessage(err, 'Erro ao confirmar transação.'))
     } finally {
@@ -80,7 +83,7 @@ function TransactionDetail() {
     }
   }
 
-  const handleConfirmYes = async (txId) => {
+  const handleConfirmYes = async (txId: any) => {
     setActionLoading(true)
     setActionError('')
     try {
@@ -102,8 +105,24 @@ function TransactionDetail() {
     }
   }
 
-  const handleConfirmNo = async (txId) => {
-    setCancelTarget(tx)
+  const handleConfirmNo = async (txId: any) => {
+    setRejectTarget(tx)
+  }
+
+  const handleReject = async (reason: string) => {
+    if (!rejectTarget) return
+    setRejectLoading(true)
+    setActionError('')
+    try {
+      await api.cancelTransaction(rejectTarget.id, reason)
+      setTransaction((prev: any) => prev ? { ...prev, status: 'CANCELLED', cancel_reason: reason } : null)
+      setRejectTarget(null)
+    } catch (err) {
+      setActionError(extractApiErrorMessage(err, 'Erro ao recusar reserva.'))
+      setRejectTarget(null)
+    } finally {
+      setRejectLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -113,7 +132,7 @@ function TransactionDetail() {
     }
   }, [tx, isBuyer])
 
-  const handleSubmitBuyerDetails = async (details) => {
+  const handleSubmitBuyerDetails = async (details: any) => {
     setActionLoading(true)
     setActionError('')
     try {
@@ -121,7 +140,7 @@ function TransactionDetail() {
         buyer_contact_name: details.name,
         buyer_contact_whatsapp: details.whatsapp,
       })
-      setTransaction(prev => prev ? {
+      setTransaction((prev: any) => prev ? {
         ...prev,
         buyer_contact_name: details.name,
         buyer_contact_whatsapp: details.whatsapp,
@@ -134,12 +153,12 @@ function TransactionDetail() {
     }
   }
 
-  const handleConclude = async (txId) => {
+  const handleConclude = async (txId: any) => {
     setActionLoading(true)
     setActionError('')
     try {
       await api.concludeTransaction(txId)
-      setTransaction(prev => prev ? { ...prev, status: 'COMPLETED' } : null)
+      setTransaction((prev: any) => prev ? { ...prev, status: 'COMPLETED' } : null)
     } catch (err) {
       setActionError(extractApiErrorMessage(err, 'Erro ao concluir transação.'))
     } finally {
@@ -153,7 +172,7 @@ function TransactionDetail() {
     setActionError('')
     try {
       await api.cancelTransaction(cancelTarget.id)
-      setTransaction(prev => prev ? { ...prev, status: 'CANCELLED' } : null)
+      setTransaction((prev: any) => prev ? { ...prev, status: 'CANCELLED' } : null)
       setCancelTarget(null)
     } catch (err) {
       setActionError(extractApiErrorMessage(err, 'Erro ao cancelar transação.'))
@@ -207,6 +226,12 @@ function TransactionDetail() {
         onConfirm={handleCancelConfirm}
         onClose={() => setCancelTarget(null)}
       />
+      <RejectModal
+        transaction={rejectTarget}
+        loading={rejectLoading}
+        onConfirm={handleReject}
+        onClose={() => setRejectTarget(null)}
+      />
       
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Header */}
@@ -220,7 +245,7 @@ function TransactionDetail() {
               <h1 className="text-xl font-black text-gray-900">Reserva #{tx.id}</h1>
               <p className="text-xs text-gray-400">Detalhes da reserva</p>
             </div>
-            <button onClick={loadTransaction}
+            <button onClick={() => loadTransaction()}
               className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
               title="Recarregar">
               <i className="bi bi-arrow-clockwise text-lg"></i>
@@ -471,11 +496,22 @@ function TransactionDetail() {
               )}
 
               {tx.status === 'CANCELLED' && (
-                <div className="bg-white rounded-3xl border border-red-200 shadow-sm p-6">
+                <div className="bg-white rounded-3xl border border-red-200 shadow-sm p-6 space-y-3">
                   <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
                     <i className="bi bi-x-circle-fill mr-2 text-lg"></i>
-                    <strong>Reserva cancelada.</strong> Se tiver dúvidas, contacte a outra parte.
+                    {isBuyer && tx.cancel_reason
+                      ? <><strong>Reserva recusada pelo vendedor.</strong></>
+                      : <><strong>Reserva cancelada.</strong> Se tiver dúvidas, contacte a outra parte.</>
+                    }
                   </div>
+                  {isBuyer && tx.cancel_reason && (
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-800">
+                      <p className="font-semibold mb-1 flex items-center gap-2">
+                        <i className="bi bi-chat-left-text"></i> Motivo do vendedor:
+                      </p>
+                      <p className="italic">"{tx.cancel_reason}"</p>
+                    </div>
+                  )}
                 </div>
               )}
 

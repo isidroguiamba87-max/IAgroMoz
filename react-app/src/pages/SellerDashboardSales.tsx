@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TransactionCard from '../components/TransactionCard'
 import CancelConfirmModal from '../components/CancelConfirmModal'
+import RejectModal from '../components/RejectModal'
 import api from '../services/api'
 import { getDashboardPath } from '../utils/dashboardPaths'
 import { normTx, extractApiErrorMessage } from '../utils/normalizers'
@@ -14,6 +15,8 @@ function SellerDashboardSales() {
   const [actionLoading, setActionLoading] = useState(null)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [rejectTarget, setRejectTarget] = useState(null)
+  const [rejectLoading, setRejectLoading] = useState(false)
   const [error, setError] = useState('')
 
   const userId = localStorage.getItem('userId')
@@ -84,6 +87,23 @@ function SellerDashboardSales() {
     }
   }
 
+  const handleReject = async (reason: string) => {
+    if (!rejectTarget) return
+    setRejectLoading(true)
+    try {
+      await api.cancelTransaction(rejectTarget.id, reason)
+      setTransactions(prev => prev.map(tx =>
+        tx.id === rejectTarget.id ? { ...tx, status: 'CANCELLED', cancel_reason: reason } : tx
+      ))
+      setRejectTarget(null)
+    } catch (err) {
+      setError('Erro ao recusar reserva.')
+      setRejectTarget(null)
+    } finally {
+      setRejectLoading(false)
+    }
+  }
+
   const getPayment = (tx) => payments.find(p => String(p.transaction || p.transaction_id) === String(tx.id))
 
   if (loading) {
@@ -97,6 +117,12 @@ function SellerDashboardSales() {
         loading={cancelLoading}
         onConfirm={handleCancel}
         onClose={() => setCancelTarget(null)}
+      />
+      <RejectModal
+        transaction={rejectTarget}
+        loading={rejectLoading}
+        onConfirm={handleReject}
+        onClose={() => setRejectTarget(null)}
       />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -128,6 +154,7 @@ function SellerDashboardSales() {
               onConfirm={handleConfirm}
               onConclude={handleConclude}
               onCancelRequest={setCancelTarget}
+              onRejectRequest={setRejectTarget}
               onPay={() => {} }
               payment={getPayment(tx)}
               onVerifyPayment={() => {} }

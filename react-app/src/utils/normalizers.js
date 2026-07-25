@@ -24,6 +24,7 @@ export function normTx(tx) {
     seller_whatsapp:        tx.seller_whatsapp || tx.seller_phone || tx.seller?.phone || tx.seller?.contact || '',
     delivery_address:       tx.delivery_address || tx.address || tx.location || '',
     note:                   tx.note || tx.observations || tx.comments || '',
+    cancel_reason:          tx.cancel_reason || tx.cancellation_reason || tx.rejection_reason || tx.motivo || '',
   }
 }
 

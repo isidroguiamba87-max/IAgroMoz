@@ -713,8 +713,8 @@ class APIService {
     return this.post(`/marketplace/transactions/${id}/confirm/`);
   }
 
-  cancelTransaction(id) {
-    return this.post(`/marketplace/transactions/${id}/cancel/`);
+  cancelTransaction(id, reason = '') {
+    return this.post(`/marketplace/transactions/${id}/cancel/`, reason ? { reason } : {});
   }
 
   concludeTransaction(id) {
