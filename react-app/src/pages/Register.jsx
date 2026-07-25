@@ -21,7 +21,7 @@ function Register() {
       iconColor: "text-green-700 bg-green-100",
       title: "Produtor",
       desc: "Publica técnicas agrícolas, vende e compra produtos no mercado.",
-      badge: "Aprovação necessária",
+      badge: "Conta activa",
       badgeColor: "bg-green-100 text-green-700",
     },
     {

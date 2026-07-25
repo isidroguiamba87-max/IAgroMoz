@@ -39,7 +39,7 @@ function RegisterSeller() {
     if (!form.store_address.trim()) return setError("O endereço da loja é obrigatório.")
 
     // Validações antes de iniciar o loading
-    const phoneNormalized = form.contact.trim()
+    const phoneNormalized = form.contact.trim().replace(/\s+/g, '')
     const phoneRe = /^\+?\d{8,15}$/
     if (!phoneRe.test(phoneNormalized)) return setError('Formato de contacto inválido. Ex: +258841234567')
 
@@ -61,12 +61,13 @@ function RegisterSeller() {
         contact: phoneNormalized,
         store_address: form.store_address.trim(),
       })
-      await loginAfterRegister(form.email.trim(), form.password, navigate)
     } catch (err) {
       setError(extractRegisterError(err))
-    } finally {
       setLoading(false)
+      return
     }
+    await loginAfterRegister(form.email.trim(), form.password, navigate)
+    setLoading(false)
   }
 
   return (

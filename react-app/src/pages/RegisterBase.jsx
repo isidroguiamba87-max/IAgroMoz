@@ -179,7 +179,6 @@ export function LocationFields({ provinces, districts, loadingProvinces, provinc
 export async function loginAfterRegister(email, password, navigate) {
   try {
     await api.login(email, password)
-    // Após login, o userRole foi guardado no localStorage por getUserProfile()
     const userRole = localStorage.getItem('userRole') || 'user'
     if (userRole === 'seller' || userRole === 'producer') {
       const dashboardPath = userRole === 'producer' ? '/producer/dashboard' : '/seller/dashboard'
@@ -187,9 +186,9 @@ export async function loginAfterRegister(email, password, navigate) {
     } else {
       navigate('/feed', { replace: true })
     }
-  } catch (err) {
-    console.error('Erro ao fazer login após registo:', err)
-    throw err
+  } catch (_) {
+    // Conta criada com sucesso mas login automático falhou — redirecionar para login
+    navigate('/login', { replace: true, state: { registerSuccess: true } })
   }
 }
 

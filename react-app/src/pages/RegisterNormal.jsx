@@ -37,12 +37,13 @@ function RegisterNormal() {
         district_id: Number(form.districtId),
         gender: form.gender || undefined,
       })
-      await loginAfterRegister(form.email, form.password, navigate)
     } catch (err) {
       setError(extractRegisterError(err))
-    } finally {
       setLoading(false)
+      return
     }
+    await loginAfterRegister(form.email, form.password, navigate)
+    setLoading(false)
   }
 
   return (

@@ -12,6 +12,7 @@ function Login() {
 
   // Destino após login — usa ?next= ou /feed por defeito
   const nextPath = new URLSearchParams(location.search).get('next') || '/feed'
+  const registerSuccess = location.state?.registerSuccess
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -64,6 +65,12 @@ function Login() {
         <div className="bg-white rounded-t-[32px] px-6 pt-8 pb-10 shadow-2xl">
           <h2 className="text-2xl font-black text-gray-900 mb-1">Bem-vindo de volta <i className="bi bi-hand-wave text-yellow-500"></i></h2>
           <p className="text-gray-500 text-sm mb-6">Entre na sua conta para continuar</p>
+
+          {registerSuccess && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl mb-4 text-sm flex items-center gap-2">
+              <i className="bi bi-check-circle-fill"></i> Conta criada com sucesso! Faça login para continuar.
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm flex items-center gap-2">
