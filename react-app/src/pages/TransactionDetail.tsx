@@ -4,7 +4,7 @@ import DesktopSidebar from '../components/DesktopSidebar'
 import MobileNav from '../components/MobileNav'
 import CancelConfirmModal from '../components/CancelConfirmModal'
 import ContactForm from '../components/ContactForm'
-import TransactionStepper from '../components/TransactionStepper'
+import TransactionStatusWheel from '../components/TransactionStatusWheel'
 import api from '../services/api'
 import { addNotification } from './Notifications'
 import { normTx as _normTx, normalizePhoneForWhatsapp, extractApiErrorMessage } from '../utils/normalizers'
@@ -242,13 +242,7 @@ function TransactionDetail() {
 
           {/* Status */}
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Status da reserva</p>
-                <h2 className="text-2xl font-black text-gray-900">{STATUS_LABEL[tx.status] || tx.status}</h2>
-              </div>
-              <TransactionStepper currentStatus={tx.status} />
-            </div>
+            <TransactionStatusWheel currentStatus={tx.status} statusLabel={STATUS_LABEL[tx.status] || tx.status} />
           </div>
 
           {/* Layout: Info Left, Actions Right */}

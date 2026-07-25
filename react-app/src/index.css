@@ -214,6 +214,14 @@ body {
 /* ── Card shadow ──────────────────────────────────── */
 .card-shadow { box-shadow: 0 4px 20px rgba(0, 109, 63, 0.08); }
 
+/* ── Status wheel ─────────────────────────────────── */
+.status-wheel-ring {
+  transition: stroke-dashoffset 700ms cubic-bezier(0.16, 1, 0.3, 1), stroke 300ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-wheel-ring { transition: none; }
+}
+
 /* ── Pulse market ─────────────────────────────────── */
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.4); }
