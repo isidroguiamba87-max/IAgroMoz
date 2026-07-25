@@ -20,7 +20,15 @@ function SellerDashboardPurchases() {
         const [txData, pyData] = await Promise.all([api.getTransactions(), api.getPayments().catch(() => [])])
         const list = Array.isArray(txData) ? txData : txData.results || []
         const pyList = Array.isArray(pyData) ? pyData : pyData.results || []
-        setTransactions(list.map(normTx).filter(tx => String(tx.buyer_id) === String(userId) && String(tx.seller_id) !== String(userId)))
+        const normalized = list.map(normTx)
+        // Compras: utilizador é comprador e não é simultaneamente o vendedor
+        const purchases = normalized.filter(tx => {
+          const isBuyer = tx.buyer_id != null
+            ? String(tx.buyer_id) === String(userId)
+            : String(tx.seller_id) !== String(userId)
+          return isBuyer && String(tx.seller_id) !== String(userId)
+        })
+        setTransactions(purchases)
         setPayments(pyList)
       } catch (err) {
         setError('Não foi possível carregar as compras.')

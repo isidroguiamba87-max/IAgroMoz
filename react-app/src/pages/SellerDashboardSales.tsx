@@ -29,7 +29,14 @@ function SellerDashboardSales() {
       const [txData, pyData] = await Promise.all([api.getTransactions(), api.getPayments().catch(() => [])])
       const list = Array.isArray(txData) ? txData : txData.results || []
       const pyList = Array.isArray(pyData) ? pyData : pyData.results || []
-      setTransactions(list.map(normTx).filter(tx => String(tx.seller_id) === String(userId)))
+      const normalized = list.map(normTx)
+      // Filtrar vendas: transações onde o utilizador é vendedor.
+      // Fallback: se seller_id não vier da API, mostrar transações onde não é comprador.
+      const sales = normalized.filter(tx => {
+        if (tx.seller_id != null) return String(tx.seller_id) === String(userId)
+        return String(tx.buyer_id) !== String(userId)
+      })
+      setTransactions(sales)
       setPayments(pyList)
     } catch (err) {
       setError('Não foi possível carregar as vendas.')
