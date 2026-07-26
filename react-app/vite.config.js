@@ -6,7 +6,11 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Permite acesso de outros dispositivos na rede
     port: 3000,
-    open: true
+    open: true,
+    proxy: {
+      '/api': { target: 'http://65.21.165.103', changeOrigin: true },
+      '/media': { target: 'http://65.21.165.103', changeOrigin: true },
+    },
   },
   test: {
     environment: 'jsdom',

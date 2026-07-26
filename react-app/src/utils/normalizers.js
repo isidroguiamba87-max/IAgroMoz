@@ -111,8 +111,14 @@ export function normalizeComment(c) {
 
 // ─── Media URL ────────────────────────────────────────────────────────────────
 
+const BACKEND_HTTP_ORIGINS = ['http://65.21.165.103', 'http://192.168.88.67:8000']
+
 export function resolveMediaUrl(path) {
   if (!path) return null
+  // Converter URLs absolutas do backend para caminhos relativos (evita mixed content em HTTPS)
+  for (const origin of BACKEND_HTTP_ORIGINS) {
+    if (path.startsWith(origin)) return path.slice(origin.length)
+  }
   if (path.startsWith('http')) return path
   return API_MEDIA + (path.startsWith('/') ? path : '/' + path)
 }

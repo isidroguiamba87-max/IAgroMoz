@@ -1,9 +1,10 @@
 // ─── Configuração central da API ─────────────────────────────────────────────
-// ⚠️  Para mudar o servidor, altere APENAS a linha abaixo:
+// URLs relativas — o proxy do Vite (dev) e do Vercel (prod) encaminham para o backend.
+// ⚠️  Para mudar o servidor, altere o proxy em vite.config.js e vercel.json.
 
-export const API_URL = 'http://65.21.165.103';
-export const API_BASE = `${API_URL}/api`;
-export const API_MEDIA = `${API_URL}/`;
+export const API_URL = '';
+export const API_BASE = '/api';
+export const API_MEDIA = '';
 
 // Expor no window para acesso pelo ProtectedRoute sem criar dependência circular
 if (typeof window !== 'undefined') {

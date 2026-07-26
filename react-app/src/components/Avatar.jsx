@@ -1,13 +1,11 @@
 import { useState } from 'react'
 
 import { API_MEDIA } from '../config/api'
+import { resolveMediaUrl } from '../utils/normalizers'
 
-// Normaliza URL de foto — adiciona domínio se for relativa
+// Normaliza URL de foto — converte URLs absolutas do backend para relativas
 function normalizeFoto(url) {
-  if (!url) return null
-  if (url.startsWith('http')) return url
-  // URL relativa — adicionar domínio do backend
-  return API_MEDIA + (url.startsWith('/') ? url : '/' + url)
+  return resolveMediaUrl(url)
 }
 
 // Avatar reutilizável — mostra foto_perfil se disponível, senão iniciais
