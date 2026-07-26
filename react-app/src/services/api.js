@@ -319,6 +319,11 @@ class APIService {
       const canSell = profile.can_sell === true || profile.can_sell === 'true'
       localStorage.setItem('userCanSell', canSell ? 'true' : 'false')
 
+      // Guardar contacto (usado na partilha automática de WhatsApp)
+      const contact = profile.contact || profile.phone || profile.whatsapp || ''
+      if (contact) localStorage.setItem('userContact', contact)
+      else localStorage.removeItem('userContact')
+
       // Notificação de aprovação — se passou de 'user' para 'seller'/'producer'/'admin'
       const newRole = localStorage.getItem('userRole')
       if (prevRole === 'user' && (newRole === 'seller' || newRole === 'producer' || newRole === 'admin')) {

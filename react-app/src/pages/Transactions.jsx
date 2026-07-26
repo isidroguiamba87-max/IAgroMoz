@@ -44,6 +44,11 @@ function Transactions() {
   const updateTxStatus = (txId, newStatus) =>
     setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, status: newStatus } : tx))
 
+  const handleShareWhatsapp = async (txId, whatsapp) => {
+    await api.shareTransactionContact(txId, whatsapp)
+    setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, buyer_whatsapp: whatsapp } : tx))
+  }
+
   const handleConfirm = async (txId) => {
     setActionLoading(txId); setActionError('')
     try {
@@ -203,6 +208,7 @@ function Transactions() {
                         onCancelRequest={setCancelTarget}
                         onRejectRequest={setRejectTarget}
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
+                        onShareWhatsapp={handleShareWhatsapp}
                       />
                     )
                   })}
@@ -230,6 +236,7 @@ function Transactions() {
                         onCancelRequest={setCancelTarget}
                         onRejectRequest={setRejectTarget}
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
+                        onShareWhatsapp={handleShareWhatsapp}
                       />
                     )
                   })}
