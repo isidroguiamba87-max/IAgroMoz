@@ -11,31 +11,28 @@ import { normalizePhoneForWhatsapp, extractApiErrorMessage } from '../utils/norm
 //   CANCELLED             → Cancelado
 
 const STATUS_CONFIG = {
-  RESERVED:              { label: 'Reservado',                 color: 'bg-amber-100 text-amber-800',   icon: 'bi-clock-history',      dot: 'bg-amber-400' },
-  AWAITING_CONFIRMATION: { label: 'Aguardando Confirmação',    color: 'bg-blue-100 text-blue-800',     icon: 'bi-hourglass-split',    dot: 'bg-blue-500' },
-  PROCESSING:            { label: 'Em Processamento',          color: 'bg-cyan-100 text-cyan-800',     icon: 'bi-gear',               dot: 'bg-cyan-500' },
-  IN_TRANSIT:            { label: 'A Caminho',                 color: 'bg-purple-100 text-purple-800',  icon: 'bi-truck',              dot: 'bg-purple-500' },
-  COMPLETED:             { label: 'Entregue/Finalizado',       color: 'bg-gray-100 text-gray-600',     icon: 'bi-bag-check-fill',     dot: 'bg-gray-400' },
-  CANCELLED:             { label: 'Cancelado',                 color: 'bg-red-100 text-red-700',       icon: 'bi-x-circle-fill',      dot: 'bg-red-400' },
+  RESERVED:         { label: 'Reservado',            color: 'bg-amber-100 text-amber-800',  icon: 'bi-clock-history',   dot: 'bg-amber-400' },
+  AWAITING_PAYMENT: { label: 'Confirmado — Pagar',   color: 'bg-blue-100 text-blue-800',    icon: 'bi-hourglass-split', dot: 'bg-blue-500' },
+  PAID:             { label: 'Pago',                 color: 'bg-emerald-100 text-emerald-800', icon: 'bi-cash-coin',    dot: 'bg-emerald-500' },
+  COMPLETED:        { label: 'Entregue/Finalizado',  color: 'bg-gray-100 text-gray-600',    icon: 'bi-bag-check-fill',  dot: 'bg-gray-400' },
+  CANCELLED:        { label: 'Cancelado',            color: 'bg-red-100 text-red-700',      icon: 'bi-x-circle-fill',   dot: 'bg-red-400' },
 }
 
 // Mensagem de contexto para cada papel + estado
 const CONTEXT_MSG = {
   buyer: {
-    RESERVED:              { icon: 'bi-hourglass-split', text: 'Aguarda confirmação do vendedor', color: 'text-amber-700 bg-amber-50 border-amber-200' },
-    AWAITING_CONFIRMATION: { icon: 'bi-hourglass-split', text: 'O vendedor está a confirmar a sua reserva.', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-    PROCESSING:            { icon: 'bi-gear',             text: 'O vendedor está a processar o seu pedido.', color: 'text-cyan-700 bg-cyan-50 border-cyan-200' },
-    IN_TRANSIT:            { icon: 'bi-truck',            text: 'O seu pedido está a caminho!', color: 'text-purple-700 bg-purple-50 border-purple-200' },
-    COMPLETED:             { icon: 'bi-patch-check-fill', text: 'Transação concluída com sucesso!', color: 'text-gray-600 bg-gray-50 border-gray-200' },
-    CANCELLED:             { icon: 'bi-x-circle',         text: 'Reserva cancelada. O stock foi devolvido.', color: 'text-red-600 bg-red-50 border-red-200' },
+    RESERVED:         { icon: 'bi-hourglass-split', text: 'Aguarda confirmação do vendedor.', color: 'text-amber-700 bg-amber-50 border-amber-200' },
+    AWAITING_PAYMENT: { icon: 'bi-whatsapp',         text: 'Vendedor confirmou! Envia o teu número de WhatsApp para combinar a entrega.', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+    PAID:             { icon: 'bi-cash-coin',         text: 'Pagamento recebido. Aguarda a entrega do vendedor.', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+    COMPLETED:        { icon: 'bi-patch-check-fill',  text: 'Transação concluída com sucesso!', color: 'text-gray-600 bg-gray-50 border-gray-200' },
+    CANCELLED:        { icon: 'bi-x-circle',          text: 'Reserva cancelada. O stock foi devolvido.', color: 'text-red-600 bg-red-50 border-red-200' },
   },
   seller: {
-    RESERVED:              { icon: 'bi-bell-fill',        text: 'Nova reserva! Confirma se tens o produto disponível.', color: 'text-amber-700 bg-amber-50 border-amber-200' },
-    AWAITING_CONFIRMATION: { icon: 'bi-hourglass-split',  text: 'Confirmado. Processa o pedido do comprador.', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-    PROCESSING:            { icon: 'bi-gear',             text: 'Processando o pedido do comprador.', color: 'text-cyan-700 bg-cyan-50 border-cyan-200' },
-    IN_TRANSIT:            { icon: 'bi-truck',            text: 'Pedido enviado. Aguarda confirmação de entrega.', color: 'text-purple-700 bg-purple-50 border-purple-200' },
-    COMPLETED:             { icon: 'bi-patch-check-fill', text: 'Transação concluída. Receita registada.', color: 'text-gray-600 bg-gray-50 border-gray-200' },
-    CANCELLED:             { icon: 'bi-x-circle',         text: 'Transação cancelada. Stock devolvido automaticamente.', color: 'text-red-600 bg-red-50 border-red-200' },
+    RESERVED:         { icon: 'bi-bell-fill',         text: 'Nova reserva! Confirma se tens o produto disponível.', color: 'text-amber-700 bg-amber-50 border-amber-200' },
+    AWAITING_PAYMENT: { icon: 'bi-whatsapp',          text: 'Confirmado! Aguarda o WhatsApp do comprador para combinar a entrega.', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+    PAID:             { icon: 'bi-cash-coin',          text: 'Pagamento recebido. Conclui a transação após a entrega.', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+    COMPLETED:        { icon: 'bi-patch-check-fill',  text: 'Transação concluída. Receita registada.', color: 'text-gray-600 bg-gray-50 border-gray-200' },
+    CANCELLED:        { icon: 'bi-x-circle',          text: 'Transação cancelada. Stock devolvido automaticamente.', color: 'text-red-600 bg-red-50 border-red-200' },
   },
 }
 
@@ -119,7 +116,7 @@ function TransactionCard({
         )}
 
         {/* ── WhatsApp lado do VENDEDOR ── */}
-        {isSeller && tx.status === 'AWAITING_CONFIRMATION' && (
+        {isSeller && tx.status === 'AWAITING_PAYMENT' && (
           tx.buyer_whatsapp ? (
             <a
               href={normalizePhoneForWhatsapp(tx.buyer_whatsapp)}
@@ -138,7 +135,7 @@ function TransactionCard({
         )}
 
         {/* ── WhatsApp lado do COMPRADOR ── */}
-        {isBuyer && tx.status === 'AWAITING_CONFIRMATION' && (
+        {isBuyer && tx.status === 'AWAITING_PAYMENT' && (
           tx.buyer_whatsapp ? (
             <div className="mb-3 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-medium">
               <i className="bi bi-check2-circle text-sm"></i>
@@ -206,23 +203,8 @@ function TransactionCard({
             </div>
           )}
 
-          {/* Vendedor + AWAITING_CONFIRMATION → Aguarda confirmação + pode cancelar */}
-          {isSeller && tx.status === 'AWAITING_CONFIRMATION' && (
-            <>
-              <div className="flex-1 py-2.5 rounded-xl bg-blue-50 text-blue-700 text-sm font-semibold flex items-center justify-center gap-1.5">
-                <i className="bi bi-hourglass-split"></i> Aguarda processamento
-              </div>
-              <button
-                onClick={() => onCancelRequest(tx)}
-                disabled={isLoading}
-                className="py-2.5 px-3 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-50 font-bold text-sm flex items-center justify-center gap-1 disabled:opacity-50 transition-colors">
-                <i className="bi bi-x-lg"></i>
-              </button>
-            </>
-          )}
-
-          {/* Vendedor + AWAITING_CONFIRMATION → Aguarda confirmação ou pode concluir */}
-          {isSeller && (tx.status === 'AWAITING_CONFIRMATION' || tx.status === 'PROCESSING' || tx.status === 'IN_TRANSIT') && (
+          {/* Vendedor + AWAITING_PAYMENT ou PAID → pode concluir ou cancelar */}
+          {isSeller && (tx.status === 'AWAITING_PAYMENT' || tx.status === 'PAID') && (
             <>
               <button
                 onClick={() => onConclude(tx.id)}
@@ -260,24 +242,8 @@ function TransactionCard({
             </>
           )}
 
-          {/* Comprador + AWAITING_CONFIRMATION → Aguarda processamento */}
-          {isBuyer && tx.status === 'AWAITING_CONFIRMATION' && (
-            <>
-              <div className="flex-1 py-2.5 rounded-xl bg-blue-50 text-blue-700 text-sm font-semibold flex items-center justify-center gap-1.5">
-                <i className="bi bi-hourglass-split"></i> Aguarda processamento do vendedor
-              </div>
-              <button
-                onClick={() => onCancelRequest(tx)}
-                disabled={isLoading}
-                className="py-2.5 px-3 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-50 font-bold text-sm flex items-center justify-center gap-1 disabled:opacity-50 transition-colors"
-                title="Cancelar">
-                <i className="bi bi-x-lg"></i>
-              </button>
-            </>
-          )}
-
-          {/* Comprador + AWAITING_CONFIRMATION/PROCESSING/IN_TRANSIT → Aguarda entrega */}
-          {isBuyer && (tx.status === 'AWAITING_CONFIRMATION' || tx.status === 'PROCESSING' || tx.status === 'IN_TRANSIT') && (
+          {/* Comprador + AWAITING_PAYMENT ou PAID → aguarda entrega */}
+          {isBuyer && (tx.status === 'AWAITING_PAYMENT' || tx.status === 'PAID') && (
             <div className="flex-1 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold flex items-center justify-center gap-1.5">
               <i className="bi bi-truck"></i> Aguarda entrega do vendedor
             </div>

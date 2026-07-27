@@ -53,7 +53,7 @@ function Transactions() {
     setActionLoading(txId); setActionError('')
     try {
       await api.confirmTransaction(txId)
-      updateTxStatus(txId, 'AWAITING_CONFIRMATION')
+      updateTxStatus(txId, 'AWAITING_PAYMENT')
       addNotification({ type: 'transaction', message: 'Reserva confirmada com sucesso.', icon: 'bi-check2-circle', transaction_id: txId, transaction_status: 'AWAITING_CONFIRMATION' }, true)
     } catch (err) {
       setActionError(extractApiErrorMessage(err, 'Erro ao confirmar.'))
