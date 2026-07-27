@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://iagromoz.vercel.app/</loc>
+    <loc>https://www.iagromoz.com/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://iagromoz.vercel.app/login</loc>
+    <loc>https://www.iagromoz.com/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://iagromoz.vercel.app/register</loc>
+    <loc>https://www.iagromoz.com/register</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://iagromoz.vercel.app/register/normal</loc>
+    <loc>https://www.iagromoz.com/register/normal</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://iagromoz.vercel.app/register/producer</loc>
+    <loc>https://www.iagromoz.com/register/producer</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://iagromoz.vercel.app/register/seller</loc>
+    <loc>https://www.iagromoz.com/register/seller</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>

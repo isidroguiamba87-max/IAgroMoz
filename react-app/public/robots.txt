@@ -13,4 +13,4 @@ Disallow: /chat
 Disallow: /create-post
 Disallow: /create-product
 
-Sitemap: https://iagromoz.vercel.app/sitemap.xml
+Sitemap: https://www.iagromoz.com/sitemap.xml
