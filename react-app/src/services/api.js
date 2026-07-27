@@ -673,10 +673,9 @@ class APIService {
 
   // Compatibilidade — getProductRatings
   getProductRatings(productId) {
-    return this.get(`/products/${productId}/`).then(p => ({
+    return this.get(`/marketplace/products/${productId}/`).then(p => ({
       average_rating: p.average_rating,
       total_ratings: p.total_ratings,
-      // aliases antigos
       media_avaliacao: p.average_rating,
       total_avaliacoes: p.total_ratings,
     })).catch(() => ({}))
@@ -684,24 +683,16 @@ class APIService {
 
   // Compatibilidade — getProductAvaliacoes
   getProductAvaliacoes(productId) {
-    // Primeiro tentar obter o produto e extrair avaliações embutidas (algumas APIs retornam as avaliações
-    // junto com o detalhe do produto). Se não existirem, tentar o endpoint dedicado /ratings/.
-    return this.get(`/products/${productId}/`).then(p => {
+    return this.get(`/marketplace/products/${productId}/`).then(p => {
       const candidates = p?.ratings || p?.avaliacoes || p?.product_ratings || p?.reviews || p?.ratings_list
       if (Array.isArray(candidates)) return candidates
       return []
-    }).catch(() => {
-      return this.get(`/products/${productId}/ratings/`)
-        .then(data => Array.isArray(data) ? data : (data?.results || []))
-        .catch(() => [])
-    })
+    }).catch(() => [])
   }
 
-  // Compatibilidade — getSellerAvaliacoes
-  getSellerAvaliacoes(sellerId) {
-    return this.get('/seller-ratings/', { seller: sellerId })
-      .then(data => Array.isArray(data) ? data : (data?.results || []))
-      .catch(() => [])
+  // Compatibilidade — getSellerAvaliacoes (endpoint não existe na API, retorna vazio)
+  getSellerAvaliacoes(_sellerId) {
+    return Promise.resolve([])
   }
 
   // ─── Marketplace — Transações ────────────────────────────────────────────────
