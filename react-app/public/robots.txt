@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Disallow: /feed
+Disallow: /marketplace/
+Disallow: /profile
+Disallow: /notifications
+Disallow: /transactions
+Disallow: /minhas-reservas
+Disallow: /seller/
+Disallow: /producer/
+Disallow: /admin
+Disallow: /chat
+Disallow: /create-post
+Disallow: /create-product
+
+Sitemap: https://iagromoz.vercel.app/sitemap.xml
