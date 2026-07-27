@@ -1,9 +1,9 @@
 // ─── Configuração central da API ─────────────────────────────────────────────
-// Lê VITE_API_BASE_URL do ambiente; cai em '/api' (proxy) se não definido.
-// Para mudar o servidor, defina VITE_API_BASE_URL em .env ou nas env vars do Vercel.
+// URLs relativas — proxy do Vite (dev) e rewrites do Vercel (prod) encaminham para o backend.
+// Para mudar o servidor, altere o target em vite.config.js e destination em vercel.json.
 
 export const API_URL = '';
-export const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
+export const API_BASE = '/api';
 export const API_MEDIA = '';
 
 // Expor no window para acesso pelo ProtectedRoute sem criar dependência circular
