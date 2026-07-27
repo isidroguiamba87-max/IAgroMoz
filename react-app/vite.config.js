@@ -8,8 +8,8 @@ export default defineConfig({
     port: 3000,
     open: true,
     proxy: {
-      '/api': { target: 'http://65.21.165.103', changeOrigin: true },
-      '/media': { target: 'http://65.21.165.103', changeOrigin: true },
+      '/api': { target: 'https://api.iagromoz.com', changeOrigin: true },
+      '/media': { target: 'https://api.iagromoz.com', changeOrigin: true },
     },
   },
   test: {
