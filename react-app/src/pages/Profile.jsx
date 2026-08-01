@@ -206,9 +206,12 @@ function Profile() {
   const loadProfile = async () => {
     setLoading(true)
     try {
-      const data = isOwnProfile
+      const raw = isOwnProfile
         ? await api.getFullProfile().catch(async () => await api.getUserProfile())
         : await api.getUserPublicProfile(id)
+      // getFullProfile() devolve { user: {...}, producer_profile, seller_profile } — os
+      // outros dois endpoints devolvem o utilizador diretamente (achatado).
+      const data = raw?.user || raw
       setProfile(data)
       // Actualiza o formulário com dados frescos da API (sobrepõe o cache inicial)
       const contactFromApi = data.contact || data.telefone || data.phone || ''
