@@ -13,6 +13,29 @@ import { getConnections, addConnection, removeConnection, isConnected } from '..
 import { API_BASE, API_MEDIA } from '../config/api'
 import { getUserCache, genderLabel, roleLabel, setUserCache } from '../utils/userCache'
 
+// Comprime imagem no cliente antes do upload para evitar 413
+function compressImage(file, maxWidth = 1024, quality = 0.82) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height, 1)
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * ratio)
+        canvas.height = Math.round(img.height * ratio)
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(
+          (blob) => resolve(blob ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }) : file),
+          'image/jpeg', quality
+        )
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 // Normaliza a URL de uma imagem — garante URL absoluta
 const resolveImg = (url) => {
   if (!url) return null
@@ -32,10 +55,12 @@ function Profile() {
   // Publicações do feed
   const [posts, setPosts] = useState([])
   const [loadingPosts, setLoadingPosts] = useState(false)
+  const [postsError, setPostsError] = useState('')
 
   // Produtos do marketplace
   const [products, setProducts] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(false)
+  const [productsError, setProductsError] = useState('')
 
   // Técnicas / Recomendações
   const [techniques, setTechniques] = useState([])
@@ -250,16 +275,16 @@ function Profile() {
   const normalizeText = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
 
   const loadPosts = async () => {
-    setLoadingPosts(true)
+    setLoadingPosts(true); setPostsError('')
     try {
-      // Tenta filtrar pelo ID do autor via query param
       let list = []
+      let failed = false
       if (profileId) {
         const byAuthor = await api.getFeedPosts({ author: profileId }).catch(() => null)
         list = Array.isArray(byAuthor) ? byAuthor : (byAuthor?.results || [])
-        // Se a API não suporta o filtro (devolve todos), filtramos no frontend
         if (list.length === 0 || (byAuthor?.count != null && byAuthor.count > list.length + 5)) {
-          const all = await api.getFeedPosts().catch(() => null)
+          const all = await api.getFeedPosts().catch(() => { failed = true; return null })
+          if (failed) { setPostsError('Erro ao carregar publicações. Tente novamente.'); setPosts([]); return }
           const allList = Array.isArray(all) ? all : (all?.results || [])
           list = allList.filter(p => {
             const aid = p.autor?.id ?? p.autor_id ?? p.author_id ?? p.autor ?? p.author?.id
@@ -267,11 +292,12 @@ function Profile() {
           })
         }
       } else {
-        const all = await api.getFeedPosts().catch(() => null)
+        const all = await api.getFeedPosts().catch(() => { failed = true; return null })
+        if (failed) { setPostsError('Erro ao carregar publicações. Tente novamente.'); setPosts([]); return }
         list = Array.isArray(all) ? all : (all?.results || [])
       }
       setPosts(list)
-    } catch (err) { setPosts([]) }
+    } catch (err) { setPostsError('Erro ao carregar publicações. Tente novamente.'); setPosts([]) }
     finally { setLoadingPosts(false) }
   }
 
@@ -287,17 +313,17 @@ function Profile() {
   })
 
   const loadProducts = async () => {
-    setLoadingProducts(true)
+    setLoadingProducts(true); setProductsError('')
     try {
       const targetId = profileId || localStorage.getItem('userId')
       let list = []
+      let failed = false
       if (targetId) {
-        // Tenta filtrar server-side por seller id
         const bySeller = await api.getProducts({ seller: targetId }).catch(() => null)
         list = Array.isArray(bySeller) ? bySeller : (bySeller?.results || [])
-        // Se vierem todos (sem filtro) → filtra no frontend
         if (list.length === 0) {
-          const all = await api.getProducts().catch(() => null)
+          const all = await api.getProducts().catch(() => { failed = true; return null })
+          if (failed) { setProductsError('Erro ao carregar produtos. Tente novamente.'); setProducts([]); return }
           const allList = Array.isArray(all) ? all : (all?.results || [])
           list = allList.filter(p => {
             const sid = p.seller?.id ?? p.seller_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id
@@ -306,7 +332,7 @@ function Profile() {
         }
       }
       setProducts(list.map(normalizeProduct))
-    } catch (err) { setProducts([]) }
+    } catch (err) { setProductsError('Erro ao carregar produtos. Tente novamente.'); setProducts([]) }
     finally { setLoadingProducts(false) }
   }
 
@@ -552,7 +578,14 @@ function Profile() {
               {/* Tab: Publicações do Feed */}
           {activeTab === 'posts' && (
             <div>
-              {loadingPosts ? <LoadingPlant /> : posts.length === 0 ? (
+              {postsError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-3 text-sm flex items-center gap-2">
+                  <i className="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+                  <span>{postsError}</span>
+                  <button onClick={loadPosts} className="ml-auto underline text-xs">Tentar novamente</button>
+                </div>
+              )}
+              {loadingPosts ? <LoadingPlant /> : posts.length === 0 && !postsError ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
                     <i className="bi bi-journal-text text-3xl text-gray-300"></i>
@@ -622,7 +655,14 @@ function Profile() {
           {/* Tab: Produtos do Marketplace */}
           {activeTab === 'produtos' && (
             <div>
-              {loadingProducts ? <LoadingPlant /> : products.length === 0 ? (
+              {productsError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-3 text-sm flex items-center gap-2">
+                  <i className="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+                  <span>{productsError}</span>
+                  <button onClick={loadProducts} className="ml-auto underline text-xs">Tentar novamente</button>
+                </div>
+              )}
+              {loadingProducts ? <LoadingPlant /> : products.length === 0 && !productsError ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
                     <i className="bi bi-shop text-3xl text-gray-300"></i>
@@ -738,11 +778,12 @@ function Profile() {
                       <i className="bi bi-camera text-green-600"></i>
                       {editFotoPreview ? 'Trocar foto' : 'Adicionar foto'}
                       <input type="file" accept="image/*" className="hidden"
-                        onChange={e => {
+                        onChange={async e => {
                           const f = e.target.files[0]
                           if (!f) return
-                          setEditForm(p => ({ ...p, foto_perfil: f }))
-                          const r = new FileReader(); r.onloadend = () => setEditFotoPreview(r.result); r.readAsDataURL(f)
+                          const compressed = await compressImage(f)
+                          setEditForm(p => ({ ...p, foto_perfil: compressed }))
+                          const r = new FileReader(); r.onloadend = () => setEditFotoPreview(r.result); r.readAsDataURL(compressed)
                         }} />
                     </label>
                   </div>
@@ -971,11 +1012,12 @@ function Profile() {
                       <i className="bi bi-camera text-green-600"></i>
                       {editFotoPreview ? 'Trocar foto' : 'Adicionar foto'}
                       <input type="file" accept="image/*" className="hidden"
-                        onChange={e => {
+                        onChange={async e => {
                           const f = e.target.files[0]
                           if (!f) return
-                          setEditForm(p => ({ ...p, foto_perfil: f }))
-                          const r = new FileReader(); r.onloadend = () => setEditFotoPreview(r.result); r.readAsDataURL(f)
+                          const compressed = await compressImage(f)
+                          setEditForm(p => ({ ...p, foto_perfil: compressed }))
+                          const r = new FileReader(); r.onloadend = () => setEditFotoPreview(r.result); r.readAsDataURL(compressed)
                         }} />
                     </label>
                   </div>
