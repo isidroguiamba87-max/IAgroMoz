@@ -86,8 +86,10 @@ function ProductDetail() {
 
   const getSellerId = (p) => {
     if (!p) return null
-    const seller = resolveSeller(p)
-    return seller.id ?? p.seller?.id ?? p.seller_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id ?? null
+    // Usar o ID do perfil de vendedor/produtor diretamente (não o user.id aninhado).
+    // p.seller?.id → seller profile ID (o que o backend espera)
+    // p.producer?.id → producer profile ID (para produtos de produtores)
+    return p.seller?.id ?? p.producer?.id ?? p.seller_id ?? p.producer_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id ?? null
   }
 
   const resolveSeller = (p) => {
@@ -255,16 +257,17 @@ function ProductDetail() {
         setRatingSuccess('')
       }, 1500)
     } catch (err) {
-      // Tratar erros específicos da API de avaliações
       const errData = err?.data
+      const status = err?.status || err?.response?.status
       let msg = ''
       if (errData) {
         const flat = Object.values(errData).flat().join(' | ')
-        // Mensagens amigáveis para erros comuns
         if (flat.toLowerCase().includes('auto') || flat.toLowerCase().includes('próprio') || flat.toLowerCase().includes('yourself')) {
           msg = 'Não podes avaliar o teu próprio produto ou perfil.'
         } else if (flat.toLowerCase().includes('duplic') || flat.toLowerCase().includes('already') || flat.toLowerCase().includes('once')) {
           msg = 'Já avaliaste este ' + (ratingType === 'produto' ? 'produto' : 'vendedor') + ' anteriormente.'
+        } else if (flat.toLowerCase().includes('não encontrado') || flat.toLowerCase().includes('not found') || status === 404) {
+          msg = 'Não foi possível encontrar o perfil para avaliar. Tente avaliar o produto diretamente.'
         } else {
           msg = flat
         }
@@ -274,6 +277,8 @@ function ProductDetail() {
           msg = 'Não podes avaliar o teu próprio produto ou perfil.'
         } else if (msg.toLowerCase().includes('duplic') || msg.toLowerCase().includes('already')) {
           msg = 'Já avaliaste este ' + (ratingType === 'produto' ? 'produto' : 'vendedor') + ' anteriormente.'
+        } else if (msg.toLowerCase().includes('não encontrado') || msg.toLowerCase().includes('not found') || status === 404) {
+          msg = 'Não foi possível encontrar o perfil para avaliar. Tente avaliar o produto diretamente.'
         }
       }
       setRatingError(msg)

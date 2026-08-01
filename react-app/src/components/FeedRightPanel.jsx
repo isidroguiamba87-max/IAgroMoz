@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 
-import { API_BASE } from '../config/api'
+import { API_BASE, API_MEDIA } from '../config/api'
 
 // Gestão de conexões via localStorage
 export const getConnections = () => {
@@ -31,10 +31,8 @@ export const sendConnectionRequest = (fromUser, toUserId) => {
     reqs.push({ id: Date.now(), fromId: fromUser.id, fromName: fromUser.nome, toId: toUserId, status: 'pending' })
     localStorage.setItem('connection_requests', JSON.stringify(reqs))
 
-    // Criar notificação para o destinatário
     const myId = localStorage.getItem('userId')
     if (String(toUserId) === String(myId)) {
-      // É para mim mesmo — adicionar à lista de notificações
       try {
         const notifs = JSON.parse(localStorage.getItem('app_notifications') || '[]')
         notifs.unshift({
@@ -49,7 +47,6 @@ export const sendConnectionRequest = (fromUser, toUserId) => {
         localStorage.setItem('app_notifications', JSON.stringify(notifs.slice(0, 50)))
       } catch (e) {}
     } else {
-      // Guardar notificação para o utilizador destino (chave separada por userId)
       try {
         const key = `app_notifications_${toUserId}`
         const notifs = JSON.parse(localStorage.getItem(key) || '[]')
@@ -71,12 +68,10 @@ export const acceptConnectionRequest = (reqId) => {
   const reqs = getConnectionRequests()
   const req = reqs.find(r => r.id === reqId)
   if (req) {
-    // Adicionar conexão mútua
     addConnection({ id: req.fromId, nome: req.fromName, tipos: '', distrito: '' })
     const updated = reqs.filter(r => r.id !== reqId)
     localStorage.setItem('connection_requests', JSON.stringify(updated))
 
-    // Notificar o remetente que foi aceite (guarda na chave do remetente)
     const myId = localStorage.getItem('userId')
     const myName = localStorage.getItem('userName') || 'Utilizador'
     try {
@@ -94,8 +89,6 @@ export const acceptConnectionRequest = (reqId) => {
       localStorage.setItem(key, JSON.stringify(notifs.slice(0, 50)))
     } catch (e) {}
 
-    // Também adicionar o utilizador que aceitou como conexão do remetente
-    // (conexão mútua — ambos ficam conectados)
     try {
       const key = `connections_${req.fromId}`
       const conns = JSON.parse(localStorage.getItem(key) || '[]')
@@ -115,60 +108,71 @@ export const getPendingRequestsForMe = () => {
   return getConnectionRequests().filter(r => String(r.toId) === String(myId) && r.status === 'pending')
 }
 
+const resolveImg = (url) => {
+  if (!url) return null
+  if (url.startsWith('http')) return url
+  return `${API_MEDIA}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
+function StarRow({ value, max = 5 }) {
+  const stars = []
+  for (let i = 1; i <= max; i++) {
+    if (value >= i) stars.push('bi-star-fill')
+    else if (value >= i - 0.5) stars.push('bi-star-half')
+    else stars.push('bi-star')
+  }
+  return (
+    <span className="flex items-center gap-0.5">
+      {stars.map((cls, i) => (
+        <i key={i} className={`bi ${cls} text-yellow-400 text-[10px]`}></i>
+      ))}
+    </span>
+  )
+}
+
 function FeedRightPanel({ isLoggedIn }) {
   const navigate = useNavigate()
   const userName = localStorage.getItem('userName') || ''
   const userRole = localStorage.getItem('userRole') || 'user'
 
-  const [topVendedores, setTopVendedores] = useState([])
+  const [topProdutos, setTopProdutos] = useState([])
 
   useEffect(() => {
-    loadTopVendedores()
+    loadTopProdutos()
   }, [])
 
-  const loadTopVendedores = async () => {
+  const loadTopProdutos = async () => {
     try {
-      // Só carregar se o utilizador estiver logado (endpoint requer autenticação)
       const token = localStorage.getItem('access_token')
-      if (!token) return
-      const res = await fetch(`${API_BASE}/marketplace/products/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const res = await fetch(`${API_BASE}/marketplace/products/`, { headers })
       if (!res.ok) return
       const data = await res.json()
       const list = Array.isArray(data) ? data : (data.results || [])
-      const vendedorMap = {}
-      list.forEach(p => {
-        const nome = p.vendedor || ''
-        if (!nome) return
-        // Tentar obter o ID do vendedor de vários campos possíveis
-        const vid = p.vendedor_id || p.autor_id || p.user_id || null
-        if (!vendedorMap[nome]) {
-          vendedorMap[nome] = { nome, vendedorId: vid, totalNota: 0, count: 0, totalAvaliacoes: 0, numProdutos: 0 }
-        }
-        // Guardar ID se ainda não temos
-        if (!vendedorMap[nome].vendedorId && vid) vendedorMap[nome].vendedorId = vid
-        vendedorMap[nome].numProdutos += 1
-        if (p.media_avaliacao && parseFloat(p.media_avaliacao) > 0) {
-          vendedorMap[nome].totalNota += parseFloat(p.media_avaliacao)
-          vendedorMap[nome].count += 1
-        }
-        vendedorMap[nome].totalAvaliacoes += p.total_avaliacoes || 0
-      })
-      const sorted = Object.values(vendedorMap)
+
+      const normalized = list.map(p => ({
+        id: p.id,
+        nome: p.name || p.nome || '',
+        preco: p.price || p.preco || '0',
+        foto: resolveImg(p.photo || p.foto || p.imagem || null),
+        media: parseFloat(p.average_rating || p.media_avaliacao || 0),
+        totalAvaliacoes: p.ratings_count || p.total_avaliacoes || p.total_ratings || 0,
+      }))
+
+      const sorted = normalized
         .sort((a, b) => {
-          const mediaA = a.count > 0 ? a.totalNota / a.count : 0
-          const mediaB = b.count > 0 ? b.totalNota / b.count : 0
-          if (mediaB !== mediaA) return mediaB - mediaA
-          return b.numProdutos - a.numProdutos
+          // Com avaliações primeiro, depois por média, depois por total
+          if (b.media !== a.media) return b.media - a.media
+          return b.totalAvaliacoes - a.totalAvaliacoes
         })
         .slice(0, 5)
-      setTopVendedores(sorted)
+
+      setTopProdutos(sorted)
     } catch (_) {}
   }
 
   return (
-    <aside className="hidden xl:flex flex-col w-80 flex-shrink-0 py-6 pl-6">
+    <aside className="hidden xl:flex flex-col w-80 flex-shrink-0 sticky top-[90px] h-[calc(100vh-90px)] overflow-y-auto py-6 pl-6 scrollbar-hide">
       {/* Perfil rápido */}
       {isLoggedIn ? (
         <div className="flex items-center gap-3 mb-6">
@@ -199,48 +203,58 @@ function FeedRightPanel({ isLoggedIn }) {
         </div>
       )}
 
-      {/* Sugestões de conexões — removido */}
-
-      {/* Top 5 Vendedores */}
+      {/* Top 5 Produtos em Destaque */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <p className="font-bold text-gray-900 text-sm">🏆 Top Vendedores</p>
+          <p className="font-bold text-gray-900 text-sm">🛒 Produtos em Destaque</p>
           <button onClick={() => navigate('/marketplace')}
             className="text-xs text-green-600 font-semibold hover:text-green-700">
             Ver mercado
           </button>
         </div>
-        {topVendedores.length === 0 ? (
-          <p className="text-gray-400 text-xs text-center py-4">Sem vendedores ainda</p>
+
+        {topProdutos.length === 0 ? (
+          <p className="text-gray-400 text-xs text-center py-4">Sem produtos ainda</p>
         ) : (
           <div className="space-y-2">
-            {topVendedores.map((v, i) => {
-              const media = v.count > 0 ? (v.totalNota / v.count).toFixed(1) : null
+            {topProdutos.map((p, i) => {
               const medals = ['🥇', '🥈', '🥉', '4.', '5.']
-              const handleClick = () => {
-                if (v.vendedorId) navigate(`/profile/${v.vendedorId}`)
-                else navigate('/marketplace')
-              }
               return (
-                <button key={v.nome} onClick={handleClick}
-                  className="w-full flex items-center gap-3 p-2.5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-green-300 hover:shadow-md transition-all text-left">
+                <button
+                  key={p.id}
+                  onClick={() => navigate(`/product/${p.id}`)}
+                  className="w-full flex items-center gap-3 p-2.5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-green-300 hover:shadow-md transition-all text-left group"
+                >
                   <span className="text-base flex-shrink-0 w-6 text-center">{medals[i]}</span>
-                  <Avatar name={v.nome} foto={null} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 text-xs truncate">{v.nome}</p>
-                    <p className="text-gray-400 text-[11px]">
-                      {v.numProdutos} produto{v.numProdutos !== 1 ? 's' : ''}
-                      {v.totalAvaliacoes > 0 ? ` · ${v.totalAvaliacoes} aval.` : ''}
-                    </p>
+
+                  {/* Foto do produto */}
+                  {p.foto ? (
+                    <img
+                      src={p.foto}
+                      alt={p.nome}
+                      className="w-11 h-11 rounded-xl object-cover flex-shrink-0 border border-gray-100 group-hover:scale-105 transition-transform"
+                      onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+                    />
+                  ) : null}
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br from-green-50 to-green-100 flex-shrink-0 items-center justify-center ${p.foto ? 'hidden' : 'flex'}`}>
+                    <i className="bi bi-bag text-green-400 text-sm"></i>
                   </div>
-                  {media ? (
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
-                      <i className="bi bi-star-fill text-yellow-400 text-xs"></i>
-                      <span className="text-xs font-bold text-gray-700">{media}</span>
-                    </div>
-                  ) : (
-                    <span className="text-[10px] text-gray-300 flex-shrink-0">Novo</span>
-                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-xs truncate leading-tight">{p.nome}</p>
+                    <p className="text-green-700 font-bold text-[11px] mt-0.5">{p.preco} MZN</p>
+                    {p.media > 0 ? (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <StarRow value={p.media} />
+                        <span className="text-[10px] text-gray-400">
+                          {p.media.toFixed(1)}
+                          {p.totalAvaliacoes > 0 ? ` (${p.totalAvaliacoes})` : ''}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-300">Novo</span>
+                    )}
+                  </div>
                 </button>
               )
             })}
@@ -249,7 +263,7 @@ function FeedRightPanel({ isLoggedIn }) {
       </div>
 
       {/* Links */}
-      <div className="text-xs text-gray-400 leading-relaxed mt-auto">
+      <div className="text-xs text-gray-400 leading-relaxed mt-auto pt-4">
         <p className="flex flex-wrap gap-x-2 gap-y-1">
           {['Sobre', 'Ajuda', 'Privacidade', 'Termos'].map(l => (
             <span key={l} className="hover:underline cursor-pointer">{l}</span>
