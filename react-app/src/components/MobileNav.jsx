@@ -22,10 +22,12 @@ function MobileNav() {
     { path: '/profile',          icon: 'bi-list',         label: 'Menu' },
   ]
 
+  // "+" contextual: publica produto se estiver no Mercado, senão publica no Feed
+  // (produtor tem acesso às duas coisas, ver handleContextualPlus)
   const producerNavItems = [
     { path: '/feed',                 icon: 'bi-house-fill',    label: 'Início' },
     { path: '/marketplace',          icon: 'bi-box-seam',      label: 'Produtos' },
-    { path: '/create-post',          icon: null,               label: 'Publicar', isPlus: true },
+    { path: '#',                     icon: null,               label: 'Publicar', isPlus: true, isContextual: true },
     { path: '/producer/dashboard',   icon: 'bi-speedometer2',  label: 'Painel' },
     { path: '/profile',              icon: 'bi-list',          label: 'Menu' },
   ]
@@ -63,7 +65,14 @@ function MobileNav() {
 
   const handleContextualPlus = () => {
     const currentPath = location.pathname
-    
+
+    if (isProducer) {
+      // Produtor tem acesso a publicar produtos (Mercado) e posts (Feed) — o botão
+      // segue o contexto em que está.
+      navigate(currentPath.includes('/marketplace') ? '/create-product' : '/create-post')
+      return
+    }
+
     if (currentPath.includes('/feed')) {
       alert('Apenas produtores podem publicar no Feed. Upgrade para produtor para aceder a esta funcionalidade.')
     } else if (currentPath.includes('/marketplace')) {

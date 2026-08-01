@@ -64,7 +64,12 @@ function SellerDashboardLayout() {
         // Tentar buscar dados completos do perfil para confirmação
         let fullProfile = null
         try {
-          fullProfile = await api.getFullProfile()
+          const raw = await api.getFullProfile()
+          // getFullProfile() devolve { user: {...}, producer_profile, seller_profile } —
+          // achata tudo num só objeto para os consumidores (aqui e em SellerDashboardProfile).
+          fullProfile = raw?.user
+            ? { ...raw.user, ...(raw.producer_profile || {}), ...(raw.seller_profile || {}) }
+            : raw
         } catch (err) {
           // Se não conseguir, usar dados do localStorage
           fullProfile = {

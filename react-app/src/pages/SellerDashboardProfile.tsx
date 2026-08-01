@@ -26,13 +26,19 @@ function SellerDashboardProfile() {
   const district = profile?.district?.name || profile?.distrito || profile?.location || 'Não definido'
   const gender = profile?.gender === 'M' ? 'Masculino' : profile?.gender === 'F' ? 'Feminino' : profile?.gender === 'O' ? 'Outro' : 'Não definido'
 
+  const isSeller = profile?.role?.toUpperCase() === 'SELLER'
+  const isProducer = profile?.role?.toUpperCase() === 'PRODUCER'
+  const role = isSeller ? 'Vendedor' : isProducer ? 'Produtor' : 'Utilizador'
+  const canSell = profile?.can_sell ? 'Sim' : 'Não'
+
   // Dados de vendedor
   const storeType = profile?.seller_type || 'Não definido'
   const storeName = profile?.store_name || 'Não definido'
   const nuit = profile?.nuit || 'Não definido'
   const storeAddress = profile?.store_address || 'Não definido'
-  const canSell = profile?.can_sell ? 'Sim' : 'Não'
-  const role = profile?.role?.toUpperCase() === 'SELLER' ? 'Vendedor' : profile?.role?.toUpperCase() === 'PRODUCER' ? 'Produtor' : 'Utilizador'
+
+  // Dados de produtor
+  const farmAddress = profile?.farm_address || 'Não definido'
 
   return (
     <div className="space-y-6">
@@ -60,17 +66,30 @@ function SellerDashboardProfile() {
         </div>
       </div>
 
-      {/* ─── Informações da Loja ─── */}
-      <div>
-        <h3 className="font-bold text-gray-900 text-sm mb-4 px-1 uppercase tracking-[0.1em]">Informações da Loja</h3>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <ProfileDetail label="Nome da Loja" value={storeName} icon="bi-shop" />
-          <ProfileDetail label="Tipo de Vendedor" value={storeType} icon="bi-tag" />
-          <ProfileDetail label="NUIT" value={nuit} icon="bi-card-text" />
-          <ProfileDetail label="Endereço da Loja" value={storeAddress} icon="bi-house-door" />
-          <ProfileDetail label="Permissão de Venda" value={canSell} icon="bi-check-circle" />
+      {/* ─── Informações da Loja (vendedor) ─── */}
+      {isSeller && (
+        <div>
+          <h3 className="font-bold text-gray-900 text-sm mb-4 px-1 uppercase tracking-[0.1em]">Informações da Loja</h3>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ProfileDetail label="Nome da Loja" value={storeName} icon="bi-shop" />
+            <ProfileDetail label="Tipo de Vendedor" value={storeType} icon="bi-tag" />
+            <ProfileDetail label="NUIT" value={nuit} icon="bi-card-text" />
+            <ProfileDetail label="Endereço da Loja" value={storeAddress} icon="bi-house-door" />
+            <ProfileDetail label="Permissão de Venda" value={canSell} icon="bi-check-circle" />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ─── Informações da Exploração (produtor) ─── */}
+      {isProducer && (
+        <div>
+          <h3 className="font-bold text-gray-900 text-sm mb-4 px-1 uppercase tracking-[0.1em]">Informações da Exploração</h3>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ProfileDetail label="Endereço da Exploração" value={farmAddress} icon="bi-house-door" />
+            <ProfileDetail label="Permissão de Venda" value={canSell} icon="bi-check-circle" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -48,7 +48,7 @@ function PostGallery({ images, alt }) {
             <ImageViewer
               src={src}
               alt={`${alt || 'Imagem do post'} (${i + 1}/${images.length})`}
-              imgClassName="w-full object-contain max-h-[380px] bg-black/5"
+              imgClassName="w-full object-contain max-h-[600px] bg-black/5"
             />
           </div>
         ))}
@@ -651,7 +651,7 @@ function Feed() {
                         <ImageViewer
                           src={images[0]}
                           alt={post.title || 'Imagem do post'}
-                          imgClassName="w-full object-contain max-h-[380px] bg-black/5"
+                          imgClassName="w-full object-contain max-h-[600px] bg-black/5"
                         />
                       ) : (
                         <PostGallery images={images} alt={post.title} />
