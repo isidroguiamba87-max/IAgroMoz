@@ -26,13 +26,42 @@ const REACTIONS = [
   { key: 'zangado',  emoji: '😡', label: 'Zangado',  color: 'text-orange-600' },
 ]
 
-const CATEGORIES = [
-  { id: '',            label: 'Todos',       icon: 'bi-grid' },
-  { id: 'AGRICULTURE', label: 'Agricultura', icon: 'bi-flower1' },
-  { id: 'LIVESTOCK',   label: 'Pecuária',    icon: 'bi-heart' },
-]
-
 // normalizeUserDisplayName, normalizeComment, resolveMediaUrl importadas de utils/normalizers
+
+// ─── Galeria de fotos do post — carrossel com indicadores, uma foto ou várias ──
+function PostGallery({ images, alt }) {
+  const [active, setActive] = useState(0)
+  const scrollerRef = useRef(null)
+
+  const handleScroll = () => {
+    const el = scrollerRef.current
+    if (!el) return
+    setActive(Math.round(el.scrollLeft / el.clientWidth))
+  }
+
+  return (
+    <div className="relative">
+      <div ref={scrollerRef} onScroll={handleScroll} className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+        {images.map((src, i) => (
+          <div key={i} className="w-full flex-shrink-0 snap-center">
+            <ImageViewer
+              src={src}
+              alt={`${alt || 'Imagem do post'} (${i + 1}/${images.length})`}
+              imgClassName="w-full object-contain max-h-[600px] bg-black/5"
+            />
+          </div>
+        ))}
+      </div>
+      {images.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
+          {images.map((_, i) => (
+            <span key={i} className={`h-1.5 rounded-full transition-all ${i === active ? 'bg-white w-4' : 'bg-white/50 w-1.5'}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Componente principal ──────────────────────────────────────────────────────
 function Feed() {
@@ -59,9 +88,13 @@ function Feed() {
   const [userFotos, setUserFotos] = useState({})
   const [userNames, setUserNames] = useState({})
 
-  // ─ Estado: Categorias
-  const [activeCategory, setActiveCategory] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  // ─ Estado: Filtro por localização (província)
+  const [provinces, setProvinces] = useState([])
+  const [selectedProvince, setSelectedProvince] = useState(null) // null = todas
+  const [provinceDistricts, setProvinceDistricts] = useState({}) // { [provinceId]: string[] nomes de distrito }
+  const [showLocationMenu, setShowLocationMenu] = useState(false)
 
   // ─ Estado: Interações com posts (reações, comentários)
   const [postReactions, setPostReactions] = useState({})
@@ -86,14 +119,36 @@ function Feed() {
     const token = localStorage.getItem('access_token')
     setIsLoggedIn(!!token)
     loadPosts()
+    api.getProvinces().then(setProvinces).catch(() => {})
   }, [])
 
+  const handleSelectProvince = async (province) => {
+    setShowLocationMenu(false)
+    if (!province) { setSelectedProvince(null); return }
+    setSelectedProvince(province)
+    if (!provinceDistricts[province.id]) {
+      try {
+        const districts = await api.getDistricts(province.id)
+        const names = districts.map(d => (d.name || d.nome || '').toLowerCase().trim()).filter(Boolean)
+        setProvinceDistricts(prev => ({ ...prev, [province.id]: names }))
+      } catch (_) { /* falha silenciosa — filtro fica inativo para esta província */ }
+    }
+  }
+
+  const matchesSelectedProvince = (post) => {
+    if (!selectedProvince) return true
+    const names = provinceDistricts[selectedProvince.id]
+    if (!names) return true // ainda a carregar — não esconder resultados
+    const postDistrict = (post.distrito || '').toLowerCase().trim()
+    return postDistrict && names.includes(postDistrict)
+  }
+
   useEffect(() => {
-    if (!showPostMenu && !showReactionPanel) return
-    const close = () => { setShowPostMenu(null); setShowReactionPanel(null) }
+    if (!showPostMenu && !showReactionPanel && !showLocationMenu) return
+    const close = () => { setShowPostMenu(null); setShowReactionPanel(null); setShowLocationMenu(false) }
     const timer = setTimeout(() => { document.addEventListener('mousedown', close) }, 0)
     return () => { clearTimeout(timer); document.removeEventListener('mousedown', close) }
-  }, [showPostMenu, showReactionPanel])
+  }, [showPostMenu, showReactionPanel, showLocationMenu])
 
   const requireAuth = () => {
     if (!localStorage.getItem('access_token')) { navigate('/register'); return false }
@@ -217,6 +272,9 @@ function Feed() {
             return API_MEDIA + (foto.startsWith('/') ? foto : '/' + foto)
           })(),
           created_at: p.criado_em || p.created_at,
+          distrito: p.distrito || p.district || p.author?.district?.name || null,
+          tipo_cultura: p.tipo_cultura || p.crop_type || p.categoria_label || null,
+          in_market: Boolean(p.produto || p.product || p.produto_id || p.product_id || p.marketplace_product_id || p.em_mercado || p.is_market),
           answers_count: Array.isArray(p.comments) ? p.comments.length : (p.answers_count || 0),
           likes_count: p.total_likes ?? p.likes_count ?? 0,
           gostou: p.gostou === true,
@@ -225,6 +283,20 @@ function Feed() {
             if (!img) return null
             if (img.startsWith('http')) return img
             return `${API_MEDIA}/media/` + img.replace(/^\/?(media\/)?/, '')
+          })(),
+          // Suporte a múltiplas fotos por post — usa o array se a API já o devolver,
+          // senão cai para a imagem única (compatibilidade com o formato atual).
+          images: (() => {
+            const raw = p.imagens || p.images || p.fotos || p.photos
+            if (!Array.isArray(raw) || raw.length === 0) return null
+            return raw
+              .map(item => {
+                const img = typeof item === 'string' ? item : (item?.imagem || item?.image || item?.url || item?.foto)
+                if (!img) return null
+                if (img.startsWith('http')) return img
+                return `${API_MEDIA}/media/` + img.replace(/^\/?(media\/)?/, '')
+              })
+              .filter(Boolean)
           })(),
         }
       }) : []
@@ -328,6 +400,33 @@ function Feed() {
   const shareToTwitter = (post) => { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(post.title + ' - Via IAgroMOZ'), '_blank'); setShowShareModal(null) }
   const copyLink = (postId) => { navigator.clipboard.writeText(window.location.origin + '/post/' + postId); alert('Link copiado!'); setShowShareModal(null) }
 
+  // ─ Filtro por localização — botão + menu suspenso de províncias ─
+  const LocationFilter = ({ compact = false }) => (
+    <div className="relative flex-shrink-0" onMouseDown={e => e.stopPropagation()}>
+      <button
+        onClick={() => setShowLocationMenu(v => !v)}
+        className={`flex items-center gap-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold transition-colors ${compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'}`}>
+        <i className="bi bi-geo-alt-fill text-green-600"></i>
+        <span className="truncate max-w-[9rem]">{selectedProvince ? selectedProvince.name : 'Todas as províncias'}</span>
+        <i className={`bi bi-chevron-down text-[10px] text-gray-400 transition-transform ${showLocationMenu ? 'rotate-180' : ''}`}></i>
+      </button>
+      {showLocationMenu && (
+        <div className="absolute left-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-40 py-2 max-h-72 overflow-y-auto">
+          <button onClick={() => handleSelectProvince(null)}
+            className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50 ${!selectedProvince ? 'text-green-700 font-semibold' : 'text-gray-700'}`}>
+            <i className="bi bi-globe-americas"></i> Todas as províncias
+          </button>
+          {provinces.map(p => (
+            <button key={p.id} onClick={() => handleSelectProvince(p)}
+              className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50 ${selectedProvince?.id === p.id ? 'text-green-700 font-semibold' : 'text-gray-700'}`}>
+              <i className="bi bi-geo-alt"></i> {p.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-[#F8FAF8] flex">
       {/* ── Sidebar desktop ── */}
@@ -354,52 +453,27 @@ function Feed() {
               )}
             </div>
           </div>
-          {/* Filtros de categoria — mobile */}
-          <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide">
-            {CATEGORIES.map(cat => (
-              <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeCategory === cat.id
-                    ? 'bg-green-600 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}>
-                <i className={`bi ${cat.icon} text-xs`}></i>
-                {cat.label}
-              </button>
-            ))}
+          {/* Filtro por localização — mobile */}
+          <div className="px-4 pb-3">
+            <LocationFilter compact />
           </div>
         </header>
 
         {/* ── Header desktop ── */}
         <header className="hidden lg:flex glass-effect sticky top-0 z-40 border-b border-gray-100">
-          <div className="w-full px-4 py-3 flex flex-col gap-2">
-            <div className="flex items-center justify-end">
-              <div className="flex items-center gap-2">
-                {isLoggedIn && (
-                  <button onClick={handleCreatePost} className="btn-primary text-white px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2">
-                    <i className="bi bi-plus-lg"></i> Nova publicação
-                  </button>
-                )}
-                {isLoggedIn && (
-                  <button onClick={() => navigate('/profile')} className="flex-shrink-0">
-                    <Avatar name={localStorage.getItem('userName')} size="sm" />
-                  </button>
-                )}
-              </div>
-            </div>
-            {/* ── Filtros de categoria ── */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-              {CATEGORIES.map(cat => (
-                <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-                  className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                    activeCategory === cat.id
-                      ? 'bg-green-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}>
-                  <i className={`bi ${cat.icon} text-sm`}></i>
-                  {cat.label}
+          <div className="w-full px-4 py-3 flex items-center justify-between gap-3">
+            <LocationFilter />
+            <div className="flex items-center gap-2">
+              {isLoggedIn && (
+                <button onClick={handleCreatePost} className="btn-primary text-white px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2">
+                  <i className="bi bi-plus-lg"></i> Nova publicação
                 </button>
-              ))}
+              )}
+              {isLoggedIn && (
+                <button onClick={() => navigate('/profile')} className="flex-shrink-0">
+                  <Avatar name={localStorage.getItem('userName')} size="sm" />
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -423,20 +497,34 @@ function Feed() {
             )}
 
             {isLoggedIn && (
-              <div className="mx-4 mt-4 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-3">
+              <div className="mx-4 mt-4 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 p-4">
                   <Avatar name={localStorage.getItem('userName')} size="md" />
-                  <button onClick={handleCreatePost} className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2.5 text-sm text-gray-400 text-left hover:bg-gray-100">
-                    Partilhe a sua experiência agrícola...
+                  <button onClick={handleCreatePost} className="flex-1 text-left bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full px-4 py-2.5 text-sm text-gray-500 transition-colors truncate">
+                    No que está a trabalhar hoje?
                   </button>
-                  <button onClick={handleCreatePost} className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-green-600 hover:bg-green-100">
-                    <i className="bi bi-image text-lg"></i>
+                </div>
+                <div className="flex items-center gap-1 px-3 py-2.5 border-t border-gray-100">
+                  <button onClick={handleCreatePost} className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-gray-500 hover:bg-gray-50 text-sm font-medium transition-colors">
+                    <i className="bi bi-camera-fill text-green-600"></i>
+                    <span className="hidden sm:inline">Foto/Vídeo</span>
+                  </button>
+                  <button onClick={handleCreatePost} className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-gray-500 hover:bg-gray-50 text-sm font-medium transition-colors">
+                    <i className="bi bi-geo-alt-fill text-red-500"></i>
+                    <span className="hidden sm:inline">Localização</span>
+                  </button>
+                  <button onClick={handleCreatePost} className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-gray-500 hover:bg-gray-50 text-sm font-medium transition-colors">
+                    <i className="bi bi-flower1 text-amber-600"></i>
+                    <span className="hidden sm:inline">Cultura</span>
+                  </button>
+                  <button onClick={handleCreatePost} className="ml-auto btn-primary text-white px-5 py-2 rounded-full text-sm font-bold flex-shrink-0">
+                    Publicar
                   </button>
                 </div>
               </div>
             )}
 
-            <div className="mt-3">
+            <div className="mt-4 px-4 space-y-4">
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-24">
                   <img src="/logo.png" alt="IAgroMOZ" className="w-10 h-10 object-contain opacity-80 mb-3" />
@@ -457,11 +545,8 @@ function Feed() {
                   <p className="text-gray-400 text-sm">Seja o primeiro a partilhar!</p>
                 </div>
               ) : posts.map(post => {
-                // Filtrar por categoria
-                if (activeCategory !== 'todos' && post.tipo_cultura) {
-                  const cat = post.tipo_cultura.toLowerCase()
-                  if (!cat.includes(activeCategory)) return null
-                }
+                // Filtrar por província selecionada
+                if (!matchesSelectedProvince(post)) return null
                 const reaction = postReactions[post.id] || null
                 const reactionData = REACTIONS.find(r => r.key === reaction)
                 // gostou vem da API (persistente) — reaction é overlay visual de emoji
@@ -474,10 +559,11 @@ function Feed() {
                 const currentUserId = localStorage.getItem('userId')
                 const isOwner = isLoggedIn && currentUserId && String(post.author_id) === String(currentUserId)
                 const canEdit = isOwner && post.created_at && (Date.now() - new Date(post.created_at).getTime()) < 10 * 60 * 1000
+                const images = post.images && post.images.length > 0 ? post.images : (post.image ? [post.image] : [])
                 return (
-                  <article key={post.id} className="bg-white border-b border-gray-100 mb-1">
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <div className="flex items-center gap-3">
+                  <article key={post.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between px-4 pt-4 pb-1">
+                      <div className="flex items-center gap-3 min-w-0">
                         <button
                           onClick={() => post.author_id && navigate(`/profile/${post.author_id}`)}
                           className={`flex-shrink-0 ${post.author_id ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}>
@@ -491,70 +577,82 @@ function Feed() {
                             size="md"
                           />
                         </button>
-                        <div>
+                        <div className="min-w-0">
                           <button
                             onClick={() => post.author_id && navigate(`/profile/${post.author_id}`)}
-                            className={`font-bold text-gray-900 text-sm leading-tight block text-left ${post.author_id ? 'hover:text-green-700 hover:underline' : ''}`}>
+                            className={`font-bold text-gray-900 text-sm leading-tight block text-left truncate ${post.author_id ? 'hover:text-green-700 hover:underline' : ''}`}>
                             {renderAuthorName(post)}
                           </button>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs text-gray-400">{post.created_at ? new Date(post.created_at).toLocaleString('pt-PT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</p>
-                          </div>
+                          <p className="text-xs text-gray-400 flex items-center gap-1 truncate">
+                            {post.distrito && <span className="truncate">{post.distrito}</span>}
+                            {post.distrito && <span>·</span>}
+                            <span>{post.created_at ? new Date(post.created_at).toLocaleString('pt-PT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                            <i className="bi bi-globe-americas text-[10px]"></i>
+                          </p>
                         </div>
                       </div>
-                      {isLoggedIn && (
-                        <div className="relative">
-                          <button onClick={() => setShowPostMenu(showPostMenu === post.id ? null : post.id)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400">
-                            <i className="bi bi-three-dots text-lg"></i>
-                          </button>
-                          {showPostMenu === post.id && (
-                            <div className="absolute right-0 top-9 bg-white rounded-2xl shadow-xl border border-gray-100 z-40 min-w-[160px] p-2" onMouseDown={e => e.stopPropagation()}>
-                              {isOwner ? (
-                                <>
-                                  {canEdit && <button onMouseDown={e => e.stopPropagation()} onClick={() => { navigate('/create-post', { state: { post } }); setShowPostMenu(null) }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl"><i className="bi bi-pencil text-blue-500"></i> Editar post</button>}
-                                  <button onMouseDown={e => e.stopPropagation()} onClick={() => { setConfirmDelete(post.id); setShowPostMenu(null) }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl"><i className="bi bi-trash"></i> Apagar post</button>
-                                </>
-                              ) : <p className="px-3 py-2 text-sm text-gray-400">Sem opções</p>}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {isLoggedIn && (
+                          <div className="relative">
+                            <button onClick={() => setShowPostMenu(showPostMenu === post.id ? null : post.id)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400">
+                              <i className="bi bi-three-dots text-lg"></i>
+                            </button>
+                            {showPostMenu === post.id && (
+                              <div className="absolute right-0 top-9 bg-white rounded-2xl shadow-xl border border-gray-100 z-40 min-w-[160px] p-2" onMouseDown={e => e.stopPropagation()}>
+                                {isOwner ? (
+                                  <>
+                                    {canEdit && <button onMouseDown={e => e.stopPropagation()} onClick={() => { navigate('/create-post', { state: { post } }); setShowPostMenu(null) }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl"><i className="bi bi-pencil text-blue-500"></i> Editar post</button>}
+                                    <button onMouseDown={e => e.stopPropagation()} onClick={() => { setConfirmDelete(post.id); setShowPostMenu(null) }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl"><i className="bi bi-trash"></i> Apagar post</button>
+                                  </>
+                                ) : <p className="px-3 py-2 text-sm text-gray-400">Sem opções</p>}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="px-4 pb-3">
-                      {/* Badges de localização e categoria */}
-                      {(post.tipo_cultura || post.distrito) && (
+                    <div className="px-4 pb-3 pt-2">
+                      {/* Badges de localização/cultura e estado de mercado */}
+                      {(post.tipo_cultura || post.distrito || post.in_market) && (
                         <div className="flex items-center gap-2 mb-2">
-                          {post.distrito && (
+                          {(post.distrito || post.tipo_cultura) && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-700 text-white">
                               {post.distrito}
-                              {post.tipo_cultura && ` – ${post.tipo_cultura}`}
+                              {post.distrito && post.tipo_cultura && ' – '}
+                              {post.tipo_cultura}
                             </span>
                           )}
-                          {post.tipo_cultura && !post.distrito && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                              <i className="bi bi-flower1 text-xs"></i> {post.tipo_cultura}
-                            </span>
-                          )}
-                          {post.tipo_cultura && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200 ml-auto">
-                              <i className="bi bi-flower1 text-xs"></i> Plantação
-                            </span>
-                          )}
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ml-auto ${
+                            post.in_market
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-green-50 text-green-700 border-green-200'
+                          }`}>
+                            <i className={`bi ${post.in_market ? 'bi-cart3' : 'bi-flower1'} text-xs`}></i>
+                            {post.in_market ? 'Mercado' : 'Produção'}
+                          </span>
                         </div>
                       )}
-                      {post.title && <p className="font-bold text-gray-900 text-sm mb-1">{post.title}</p>}
-                      <p className="text-gray-700 text-sm leading-relaxed">{post.body}</p>
+                      {post.title && <p className="font-bold text-gray-900 text-base leading-snug">{post.title}</p>}
                     </div>
-                    {post.image && (
-                      <ImageViewer
-                        src={post.image}
-                        alt={post.title || 'Imagem do post'}
-                        imgClassName="w-full object-contain max-h-[600px] bg-black/5"
-                      />
+                    {images.length > 0 && (
+                      images.length === 1 ? (
+                        <ImageViewer
+                          src={images[0]}
+                          alt={post.title || 'Imagem do post'}
+                          imgClassName="w-full object-contain max-h-[600px] bg-black/5"
+                        />
+                      ) : (
+                        <PostGallery images={images} alt={post.title} />
+                      )
+                    )}
+                    {post.body && (
+                      <div className="px-4 pt-3 pb-1">
+                        <p className="text-gray-700 text-sm leading-relaxed">{post.body}</p>
+                      </div>
                     )}
                     {(likesCount > 0 || post.answers_count > 0) && (
                       <div className="px-4 py-2 flex items-center justify-between text-xs text-gray-400">
-                        {likesCount > 0 && <span className="flex items-center gap-1"><span className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"><i className="bi bi-hand-thumbs-up-fill text-white text-[10px]"></i></span>{likesCount}</span>}
+                        {likesCount > 0 && <span className="flex items-center gap-1"><span className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center"><i className="bi bi-hand-thumbs-up-fill text-white text-[10px]"></i></span>{likesCount}</span>}
                         {post.answers_count > 0 && <button onClick={() => toggleComments(post.id)} className="hover:underline ml-auto">{post.answers_count} comentário{post.answers_count !== 1 ? 's' : ''}</button>}
                       </div>
                     )}
@@ -564,20 +662,26 @@ function Feed() {
                           <div className="absolute bottom-full left-0 mb-2 bg-white rounded-full shadow-xl border border-gray-100 px-3 py-2 flex gap-3 z-30">
                             {REACTIONS.map(r => (
                               <button key={r.key} onClick={() => handleReaction(post.id, r.key)} className="flex flex-col items-center gap-0.5 hover:scale-125 transition-transform" title={r.label}>
-                                {r.emoji ? <span className="text-2xl leading-none">{r.emoji}</span> : <i className="bi bi-hand-thumbs-up-fill text-2xl text-blue-500"></i>}
+                                {r.emoji ? <span className="text-2xl leading-none">{r.emoji}</span> : <i className="bi bi-hand-thumbs-up-fill text-2xl text-green-600"></i>}
                                 <span className="text-[9px] text-gray-400">{r.label}</span>
                               </button>
                             ))}
                           </div>
                         )}
                         <button onClick={() => handleLike(post.id)} onMouseDown={() => handlePressStart(post.id)} onMouseUp={handlePressEnd} onMouseLeave={handlePressEnd} onTouchStart={() => handlePressStart(post.id)} onTouchEnd={handlePressEnd}
-                          className={`w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-semibold ${isLiked ? 'text-blue-600' : 'text-gray-500'}`}>
-                          {reactionData?.emoji ? <span className="text-lg">{reactionData.emoji}</span> : <i className={`bi ${isLiked ? 'bi-hand-thumbs-up-fill text-blue-500' : 'bi-hand-thumbs-up'} text-lg`}></i>}
-                          <span>{reactionData ? reactionData.label : 'Gostar'}</span>
+                          className={`w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isLiked ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-gray-500 hover:bg-gray-50'}`}>
+                          {reactionData?.emoji ? <span className="text-lg">{reactionData.emoji}</span> : <i className={`bi ${isLiked ? 'bi-hand-thumbs-up-fill' : 'bi-hand-thumbs-up'} text-lg`}></i>}
+                          <span>{reactionData ? reactionData.label : 'Curtir'}</span>
                         </button>
                       </div>
-                      <button onClick={() => toggleComments(post.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl hover:bg-gray-50 text-gray-500 text-sm font-semibold"><i className="bi bi-chat text-lg"></i> Comentar</button>
-                      <button onClick={() => handleShare(post.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl hover:bg-gray-50 text-gray-500 text-sm font-semibold"><i className="bi bi-share text-lg"></i> Partilhar</button>
+                      <button onClick={() => toggleComments(post.id)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${commentsExpanded ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-gray-500 hover:bg-gray-50'}`}>
+                        <i className={`bi ${commentsExpanded ? 'bi-chat-fill' : 'bi-chat'} text-lg`}></i> Comentar
+                      </button>
+                      <button onClick={() => handleShare(post.id)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${showShareModal === post.id ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-gray-500 hover:bg-gray-50'}`}>
+                        <i className="bi bi-share text-lg"></i> Partilhar
+                      </button>
                     </div>
                     {commentsExpanded && (
                       <div className="border-t border-gray-100 bg-gray-50/50">

@@ -199,6 +199,9 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0, 109, 63, 0.2); border-radius: 4px; }
 
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* ── Chip / filter pill ───────────────────────────── */
 .chip-active {
   background: linear-gradient(135deg, var(--green-dark), var(--green-primary));
