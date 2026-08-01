@@ -16,6 +16,7 @@ import { API_BASE, API_MEDIA } from '../config/api'
 // ─── Constantes globais ───────────────────────────────────────────────────────
 const _userFotoCache = {}
 const _userNameCache = {}
+const _userDistrictCache = {}
 
 const REACTIONS = [
   { key: 'gosto',    emoji: null, label: 'Gosto',    color: 'text-blue-500' },
@@ -218,7 +219,8 @@ function Feed() {
       postList
         .filter(p => p.author_id && (
           (!p.author_foto && !_userFotoCache[p.author_id]) ||
-          (!p.author_name && !_userNameCache[p.author_id])
+          (!p.author_name && !_userNameCache[p.author_id]) ||
+          (!p.distrito && !_userDistrictCache[p.author_id])
         ))
         .map(p => p.author_id)
     )]
@@ -241,6 +243,9 @@ function Feed() {
           }
           const name = normalizeUserDisplayName(u)
           if (name) _userNameCache[userId] = name
+          // Localização de registo — usada quando o post em si não tem localização própria
+          const district = u.district?.name || u.district?.nome || u.distrito?.name || u.distrito?.nome || u.distrito || null
+          if (district) _userDistrictCache[userId] = district
         } catch (_) {
           // ignore failed lookups
         }
@@ -262,7 +267,7 @@ function Feed() {
         return {
           id: p.id,
           title: p.titulo || p.title || '',
-          body: p.conteudo || p.body || '',
+          body: p.content || p.conteudo || p.body || p.texto || p.description || '',
           author_name: authorName,
           author_id: author?.id || p.autor?.id || p.autor || p.author?.id || p.author || p.autor_id || p.author_id || null,
           author_foto: (() => {
@@ -309,6 +314,12 @@ function Feed() {
         ...p,
         author_name: p.author_name || (p.author_id ? _userNameCache[p.author_id] : null),
         author_foto: p.author_foto || (p.author_id ? _userFotoCache[p.author_id] : null),
+        // Se o post não tem localização própria, usa a localização de registo do autor
+        // (a própria, se for o post do utilizador atual — sem precisar de pedido extra).
+        distrito: p.distrito
+          || (String(p.author_id) === String(userId) ? localStorage.getItem('userDistrictName') : null)
+          || (p.author_id ? _userDistrictCache[p.author_id] : null)
+          || null,
       }))
       setPosts(enriched)
     } catch (err) { console.error(err); setPosts([]) }

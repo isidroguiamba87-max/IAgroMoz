@@ -46,10 +46,14 @@ function CreatePost() {
   const [postCategories, setPostCategories] = useState(DEFAULT_POST_CATEGORIES)
 
   const [formData, setFormData] = useState({
-    title:    editPost?.title    || editPost?.titulo    || '',
-    content:  editPost?.body     || editPost?.conteudo  || '',
-    image:    null,
-    category: editPost?.category || '',
+    title:        editPost?.title       || editPost?.titulo       || '',
+    content:      editPost?.body        || editPost?.conteudo     || '',
+    image:        null,
+    category:     editPost?.category    || '',
+    // Localização vem pré-preenchida com a que o utilizador indicou no registo;
+    // fica editável para o caso de o post ser sobre outro local.
+    distrito:     editPost?.distrito    || localStorage.getItem('userDistrictName') || '',
+    tipo_cultura: editPost?.tipo_cultura || '',
   })
 
   const handleChange = (e) => {
@@ -102,12 +106,14 @@ function CreatePost() {
     setLoading(true)
     try {
       // POST /api/feed/posts/  — multipart/form-data
-      // Campos: title (obrigatório), content, image, category
+      // Campos: title (obrigatório), content, image, category, distrito, tipo_cultura
       const postData = new FormData()
       postData.append('title', formData.title.trim())
       postData.append('content', formData.content.trim())
       if (formData.image) postData.append('image', formData.image)
       if (formData.category) postData.append('category', formData.category)
+      if (formData.distrito.trim()) postData.append('distrito', formData.distrito.trim())
+      if (formData.tipo_cultura.trim()) postData.append('tipo_cultura', formData.tipo_cultura.trim())
 
       if (isEditing) {
         // PATCH /api/feed/posts/{id}/  (autor, dentro de 10 min)
@@ -235,6 +241,41 @@ function CreatePost() {
                 <i className="bi bi-info-circle"></i> Selecione uma categoria para o seu post
               </p>
             )}
+          </div>
+
+          {/* ── Localização e Cultura ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <i className="bi bi-geo-alt text-red-500"></i> Localização
+                </label>
+                <input
+                  type="text"
+                  name="distrito"
+                  value={formData.distrito}
+                  onChange={handleChange}
+                  className="form-input w-full px-4 py-3 rounded-xl text-sm"
+                  placeholder="Ex: Manica"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <i className="bi bi-flower1 text-amber-600"></i> Cultura
+                </label>
+                <input
+                  type="text"
+                  name="tipo_cultura"
+                  value={formData.tipo_cultura}
+                  onChange={handleChange}
+                  className="form-input w-full px-4 py-3 rounded-xl text-sm"
+                  placeholder="Ex: Milho"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+              <i className="bi bi-info-circle"></i> A localização vem preenchida com a que indicou no registo — pode alterar se este post for sobre outro local.
+            </p>
           </div>
 
           {/* ── Título ── */}
