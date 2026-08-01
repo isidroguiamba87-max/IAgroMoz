@@ -48,7 +48,7 @@ function PostGallery({ images, alt }) {
             <ImageViewer
               src={src}
               alt={`${alt || 'Imagem do post'} (${i + 1}/${images.length})`}
-              imgClassName="w-full object-contain max-h-[600px] bg-black/5"
+              imgClassName="w-full object-contain max-h-[380px] bg-black/5"
             />
           </div>
         ))}
@@ -623,15 +623,19 @@ function Feed() {
                       </div>
                     </div>
                     <div className="px-4 pb-3 pt-2">
-                      {/* Badges de localização/cultura e estado de mercado — o estado é sempre mostrado */}
-                      <div className="flex items-center gap-2 mb-2">
-                        {(post.distrito || post.tipo_cultura) && (
+                      {/* Badge de localização/cultura — só quando o post tem essa informação */}
+                      {(post.distrito || post.tipo_cultura) && (
+                        <div className="mb-1.5">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-700 text-white min-w-0 truncate">
                             {post.distrito}
                             {post.distrito && post.tipo_cultura && ' – '}
                             {post.tipo_cultura}
                           </span>
-                        )}
+                        </div>
+                      )}
+                      {/* Título e estado (Produção/Mercado) na mesma linha */}
+                      <div className="flex items-center gap-2">
+                        {post.title && <p className="font-bold text-gray-900 text-base leading-snug min-w-0 truncate">{post.title}</p>}
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ml-auto flex-shrink-0 ${
                           post.in_market
                             ? 'bg-blue-50 text-blue-700 border-blue-200'
@@ -641,14 +645,13 @@ function Feed() {
                           {post.in_market ? 'Mercado' : 'Produção'}
                         </span>
                       </div>
-                      {post.title && <p className="font-bold text-gray-900 text-base leading-snug">{post.title}</p>}
                     </div>
                     {images.length > 0 && (
                       images.length === 1 ? (
                         <ImageViewer
                           src={images[0]}
                           alt={post.title || 'Imagem do post'}
-                          imgClassName="w-full object-contain max-h-[600px] bg-black/5"
+                          imgClassName="w-full object-contain max-h-[380px] bg-black/5"
                         />
                       ) : (
                         <PostGallery images={images} alt={post.title} />
