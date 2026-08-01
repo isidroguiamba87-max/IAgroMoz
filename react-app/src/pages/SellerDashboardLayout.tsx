@@ -16,6 +16,9 @@ function SellerDashboardLayout() {
   const dashboardBase = getDashboardPath('', userRole)
   const dashboardLabel = getDashboardLabel(userRole)
   const isProducerDashboard = userRole === 'producer' || dashboardLabel.toLowerCase().includes('produtor')
+  const location = useLocation()
+  // A Visão Geral já mostra a saudação personalizada — o título genérico aqui seria redundante.
+  const isOverviewIndex = location.pathname.replace(/\/+$/, '') === dashboardBase
   const SECTIONS = [
     { label: 'Pedidos', path: `${dashboardBase}/pedidos`, icon: 'bi-receipt' },
     { label: 'Meus Produtos', path: `${dashboardBase}/produtos`, icon: 'bi-box-seam' },
@@ -27,7 +30,6 @@ function SellerDashboardLayout() {
   const [loading, setLoading] = useState(true)
   const [unauthorized, setUnauthorized] = useState(false)
   const [deniedReason, setDeniedReason] = useState('')
-  const location = useLocation()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -220,32 +222,37 @@ function SellerDashboardLayout() {
               <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl text-gray-600">
                 <i className="bi bi-list text-2xl"></i>
               </button>
-              <div>
-                <h1 className="text-2xl font-black text-gray-900">{dashboardLabel}</h1>
-                <p className="text-sm text-gray-500">Acompanhe estatísticas, pedidos e produtos em um só lugar.</p>
-              </div>
-            </div>
-            <div className="hidden lg:flex items-center gap-3">
-              {isProducerDashboard ? (
-                <>
-                  <button onClick={() => navigate(dashboardBase)}
-                    className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                    <i className="bi bi-grid-3x3-gap text-lg"></i>
-                    Visão Geral
-                  </button>
-                  <button onClick={() => navigate('/feed')}
-                    className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                    <i className="bi bi-arrow-left-short text-lg"></i>
-                    Voltar ao Feed
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span className="rounded-full bg-green-50 px-3 py-2 font-semibold text-green-700">{formatRole(profile.role)}</span>
-                  <span className="text-gray-400">{profile.email}</span>
-                </>
+              {!isOverviewIndex && (
+                <div>
+                  <h1 className="text-2xl font-black text-gray-900">{dashboardLabel}</h1>
+                  <p className="text-sm text-gray-500">Acompanhe estatísticas, pedidos e produtos em um só lugar.</p>
+                </div>
               )}
             </div>
+            {/* No topo da Visão Geral, estes botões ficam na mesma linha da saudação (ver SellerDashboardOverview) */}
+            {!(isProducerDashboard && isOverviewIndex) && (
+              <div className="hidden lg:flex items-center gap-3">
+                {isProducerDashboard ? (
+                  <>
+                    <button onClick={() => navigate(dashboardBase)}
+                      className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                      <i className="bi bi-grid-3x3-gap text-lg"></i>
+                      Visão Geral
+                    </button>
+                    <button onClick={() => navigate('/feed')}
+                      className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                      <i className="bi bi-arrow-left-short text-lg"></i>
+                      Voltar ao Feed
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="rounded-full bg-green-50 px-3 py-2 font-semibold text-green-700">{formatRole(profile.role)}</span>
+                    <span className="text-gray-400">{profile.email}</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </header>
 
