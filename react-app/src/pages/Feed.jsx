@@ -616,13 +616,13 @@ function Feed() {
                       {(post.tipo_cultura || post.distrito || post.in_market) && (
                         <div className="flex items-center gap-2 mb-2">
                           {(post.distrito || post.tipo_cultura) && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-700 text-white">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-700 text-white min-w-0 truncate">
                               {post.distrito}
                               {post.distrito && post.tipo_cultura && ' – '}
                               {post.tipo_cultura}
                             </span>
                           )}
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ml-auto ${
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ml-auto flex-shrink-0 ${
                             post.in_market
                               ? 'bg-blue-50 text-blue-700 border-blue-200'
                               : 'bg-green-50 text-green-700 border-green-200'
