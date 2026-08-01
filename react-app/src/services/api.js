@@ -239,9 +239,35 @@ class APIService {
     localStorage.setItem('access_token', data.access);
     localStorage.setItem('refresh_token', data.refresh);
     if (data.user?.id) localStorage.setItem('userId', data.user.id);
-    // Após login, buscar perfil completo para guardar nome e role
-    try { await this.getUserProfile(); } catch (e) { console.warn('getUserProfile após login falhou:', e) }
+    // Após login, buscar perfil completo para guardar nome, role e dados de registo
+    try {
+      await this.getUserProfile();
+      await this._cacheRoleProfile();
+    } catch (e) { console.warn('Profile cache após login falhou:', e) }
     return data;
+  }
+
+  // Carrega e guarda dados específicos do role (produtor/vendedor) no localStorage
+  async _cacheRoleProfile() {
+    const role = (localStorage.getItem('userRole') || '').toLowerCase()
+    try {
+      if (role === 'producer') {
+        const p = await this.getProducerProfile().catch(() => null)
+        if (p) {
+          if (p.contact)      localStorage.setItem('userContact',     p.contact)
+          if (p.farm_address) localStorage.setItem('userFarmAddress', p.farm_address)
+        }
+      } else if (role === 'seller') {
+        const s = await this.getSellerProfile().catch(() => null)
+        if (s) {
+          if (s.contact)       localStorage.setItem('userContact',      s.contact)
+          if (s.store_name)    localStorage.setItem('userStoreName',    s.store_name)
+          if (s.store_address) localStorage.setItem('userStoreAddress', s.store_address)
+          if (s.nuit)          localStorage.setItem('userNuit',         s.nuit)
+          if (s.seller_type)   localStorage.setItem('userSellerType',   s.seller_type)
+        }
+      }
+    } catch (_) {}
   }
 
   refreshToken() {
@@ -323,6 +349,17 @@ class APIService {
       const contact = profile.contact || profile.phone || profile.whatsapp || ''
       if (contact) localStorage.setItem('userContact', contact)
       else localStorage.removeItem('userContact')
+
+      // Cache alargado — dados do registo para auto-preenchimento em toda a plataforma
+      if (profile.email)    localStorage.setItem('userEmail',    profile.email)
+      if (profile.username) localStorage.setItem('userUsername', profile.username)
+      if (profile.gender)   localStorage.setItem('userGender',   profile.gender)
+      const dist = profile.district || profile.distrito
+      if (dist?.id)   localStorage.setItem('userDistrictId',   String(dist.id))
+      if (dist?.name || dist?.nome) localStorage.setItem('userDistrictName', dist.name || dist.nome)
+      const prov = dist?.province || dist?.provincia
+      if (prov?.id)   localStorage.setItem('userProvinceId',   String(prov.id))
+      if (prov?.name || prov?.nome) localStorage.setItem('userProvinceName', prov.name || prov.nome)
 
       // Notificação de aprovação — se passou de 'user' para 'seller'/'producer'/'admin'
       const newRole = localStorage.getItem('userRole')

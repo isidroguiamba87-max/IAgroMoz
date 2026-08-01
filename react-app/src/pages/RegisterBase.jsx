@@ -8,32 +8,29 @@ const API_BASE = _API_BASE
 // ─── Layout partilhado para todos os formulários de registo ──────────────────
 export function RegisterLayout({ title, subtitle, icon, children, onSubmit, loading, error, linkText, linkTo, linkLabel }) {
   return (
-    <div
-      className="min-h-screen relative flex flex-col items-center justify-end pb-0"
-      style={{ background: "linear-gradient(160deg, #003D20 0%, #006D3F 40%, #00A846 100%)" }}
-    >
-      {/* Hero image */}
+    <div className="min-h-screen relative flex flex-col items-center justify-center gap-5 px-4 py-8">
+      {/* Imagem de fundo a 100% */}
       <div className="absolute inset-0 overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80"
           alt="Campo agrícola"
-          className="w-full h-full object-cover opacity-30"
+          className="w-full h-full object-cover"
         />
         <div className="hero-overlay absolute inset-0" />
       </div>
 
       {/* Logo */}
-      <div className="relative z-10 text-center pt-10 pb-4 px-6 flex-1 flex flex-col items-center justify-center">
-        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center mb-3 shadow-2xl overflow-hidden">
+      <div className="relative z-10 text-center">
+        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center mx-auto mb-3 shadow-2xl overflow-hidden">
           <img src="/logo.png" alt="IAgroMOZ" className="w-10 h-10 object-contain" />
         </div>
         <h1 className="text-3xl font-black text-white tracking-tight mb-1">IAgroMOZ</h1>
-        <p className="text-green-200 text-sm font-medium">Agricultura Inteligente para Moçambique</p>
+        <p className="text-white/80 text-sm font-medium">Agricultura Inteligente para Moçambique</p>
       </div>
 
       {/* Card */}
       <div className="relative z-10 w-full max-w-lg">
-        <div className="bg-white rounded-t-[32px] px-6 pt-6 pb-10 shadow-2xl max-h-[82vh] overflow-y-auto">
+        <div className="bg-white rounded-3xl px-6 pt-6 pb-8 shadow-2xl max-h-[75vh] overflow-y-auto">
           {/* Header do formulário */}
           <div className="flex items-center gap-3 mb-5">
             <div className="w-11 h-11 rounded-2xl bg-green-100 flex items-center justify-center flex-shrink-0">

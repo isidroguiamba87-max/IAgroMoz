@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext'
 import { FieldInput, FieldSelect } from './RegisterBase'
 import { getConnections, addConnection, removeConnection, isConnected } from '../components/FeedRightPanel'
 import { API_BASE, API_MEDIA } from '../config/api'
+import { getUserCache, genderLabel, roleLabel, setUserCache } from '../utils/userCache'
 
 // Normaliza a URL de uma imagem — garante URL absoluta
 const resolveImg = (url) => {
@@ -36,16 +37,47 @@ function Profile() {
   const [products, setProducts] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(false)
 
-  // Edição
-  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', username: '', email: '', foto_perfil: null })
-  const [editFotoPreview, setEditFotoPreview] = useState(null)
+  // Técnicas / Recomendações
+  const [techniques, setTechniques] = useState([])
+  const [loadingTechniques, setLoadingTechniques] = useState(false)
+
+  // Edição — pré-preenchido imediatamente a partir do cache local
+  const [editForm, setEditForm] = useState(() => {
+    const c = getUserCache()
+    const nameParts = (c.name || '').split(' ')
+    return {
+      first_name: nameParts[0] || '',
+      last_name:  nameParts.slice(1).join(' ') || '',
+      username:   c.username || '',
+      email:      c.email    || '',
+      gender:     c.gender   || '',
+      contact:    c.contact  || '',
+      location:   c.districtName || '',
+      foto_perfil: null,
+    }
+  })
+  const [editFotoPreview, setEditFotoPreview] = useState(() => getUserCache().foto || null)
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
   const [editSuccess, setEditSuccess] = useState('')
 
-  // Producer / Seller profiles
-  const [producerProfile, setProducerProfile] = useState(null)
-  const [sellerProfile, setSellerProfile] = useState(null)
+  // Producer / Seller profiles — pré-preenchido do cache enquanto API não responde
+  const [producerProfile, setProducerProfile] = useState(() => {
+    const c = getUserCache()
+    if (c.role?.toLowerCase() !== 'producer') return null
+    return { contact: c.contact || '', farm_address: c.farmAddress || '' }
+  })
+  const [sellerProfile, setSellerProfile] = useState(() => {
+    const c = getUserCache()
+    if (c.role?.toLowerCase() !== 'seller') return null
+    return {
+      contact:       c.contact     || '',
+      store_name:    c.storeName   || '',
+      store_address: c.storeAddress || '',
+      nuit:          c.nuit        || '',
+      seller_type:   c.sellerType  || 'INDIVIDUAL',
+    }
+  })
   const [psLoading, setPsLoading] = useState(false)
   const [psError, setPsError] = useState('')
   const [upgradeReq, setUpgradeReq] = useState(null)
@@ -83,12 +115,12 @@ function Profile() {
   useEffect(() => {
     if (!profile) return
     const availableTabs = isOwnProfile
-      ? [...(isAuthorized ? ['posts', 'produtos'] : []), 'settings']
-      : [...(isAuthorized ? ['posts', 'produtos'] : []), 'info']
+      ? ['posts', 'produtos', 'recomendacoes', 'settings']
+      : ['posts', 'produtos', 'recomendacoes', 'info']
     if (!availableTabs.includes(activeTab) && !activeTab.startsWith('settings_')) {
       setActiveTab(availableTabs[0])
     }
-  }, [activeTab, isOwnProfile, isAuthorized, profile])
+  }, [activeTab, isOwnProfile, profile])
 
   const { dark, setDark } = useTheme()
   const [myConnections, setMyConnections] = useState(getConnections())
@@ -114,8 +146,22 @@ function Profile() {
       const sell = role === 'SELLER'
         ? await api.getSellerProfile().catch(() => null)
         : null
-      setProducerProfile(prod || null)
-      setSellerProfile(sell || null)
+      // Sobrepõe o estado de cache com dados frescos da API
+      if (prod) {
+        setProducerProfile(prod)
+        setUserCache({ contact: prod.contact || '', farmAddress: prod.farm_address || '' })
+        // Preenche contacto no formulário de edição se ainda estava vazio
+        if (prod.contact) setEditForm(prev => ({ ...prev, contact: prev.contact || prod.contact }))
+      }
+      if (sell) {
+        setSellerProfile(sell)
+        setUserCache({ contact: sell.contact || '', storeName: sell.store_name || '', storeAddress: sell.store_address || '', nuit: sell.nuit || '', sellerType: sell.seller_type || '' })
+        if (sell.contact) setEditForm(prev => ({ ...prev, contact: prev.contact || sell.contact }))
+      }
+      if (!prod && !sell) {
+        setProducerProfile(null)
+        setSellerProfile(null)
+      }
       // Só carregar o estado do pedido de upgrade para utilizadores normais
       if (role !== 'PRODUCER' && role !== 'SELLER') {
         if (localRole !== 'PRODUCER' && localRole !== 'SELLER') {
@@ -154,6 +200,7 @@ function Profile() {
     if (!profile) return
     if (activeTab === 'posts') loadPosts()
     if (activeTab === 'produtos') loadProducts()
+    if (activeTab === 'recomendacoes') loadTechniques()
   }, [activeTab, profile])
 
   const loadProfile = async () => {
@@ -163,17 +210,33 @@ function Profile() {
         ? await api.getFullProfile().catch(async () => await api.getUserProfile())
         : await api.getUserPublicProfile(id)
       setProfile(data)
-      setEditForm({
-        first_name: data.first_name || '',
-        last_name: data.last_name || '',
-        username: data.username || '',
-        email: data.email || '',
-        gender: data.gender || '',
-        contact: data.contact || data.telefone || data.phone || '',
-        location: data.district?.name || data.location || data.store_address || data.farm_address || '',
-        foto_perfil: null
+      // Actualiza o formulário com dados frescos da API (sobrepõe o cache inicial)
+      const contactFromApi = data.contact || data.telefone || data.phone || ''
+      setEditForm(prev => ({
+        first_name:  data.first_name  || prev.first_name  || '',
+        last_name:   data.last_name   || prev.last_name   || '',
+        username:    data.username    || prev.username    || '',
+        email:       data.email       || prev.email       || '',
+        gender:      data.gender      || prev.gender      || '',
+        contact:     contactFromApi   || prev.contact     || '',
+        location:    data.district?.name || data.location || prev.location || '',
+        foto_perfil: null,
+      }))
+      const foto = data.profile_photo || data.foto_perfil
+      if (foto) setEditFotoPreview(foto)
+      // Actualiza cache com dados frescos
+      setUserCache({
+        name:         `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+        email:        data.email    || '',
+        username:     data.username || '',
+        gender:       data.gender   || '',
+        contact:      contactFromApi,
+        districtId:   String(data.district?.id   || ''),
+        districtName: data.district?.name || data.distrito?.nome || '',
+        provinceId:   String(data.district?.province?.id   || ''),
+        provinceName: data.district?.province?.name || data.district?.provincia?.nome || '',
+        foto:         foto || '',
       })
-      setEditFotoPreview(data.profile_photo || data.foto_perfil || null)
       return data
     } catch (err) {
       console.error(err)
@@ -186,66 +249,79 @@ function Profile() {
   const loadPosts = async () => {
     setLoadingPosts(true)
     try {
-      // GET /feed/posts/ — filtra pelo autor no frontend (API não tem filtro por autor)
-      const data = await api.getFeedPosts()
-      const list = Array.isArray(data) ? data : (data.results || [])
-      const userName = profile?.nome_completo || `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
-      const userNameNormalized = normalizeText(userName)
-      const filtered = list.filter(p => {
-        const authorId = p.autor?.id || p.autor_id || p.author_id || p.autor || p.author?.id || null
-        if (authorId && profileId && String(authorId) === String(profileId)) return true
-        if (!userNameNormalized) return false
-
-        const autorNome = p.nome_completo || p.autor_nome || p.author_name
-          || p.autor?.nome_completo
-          || (p.autor?.first_name && p.autor?.last_name ? `${p.autor.first_name} ${p.autor.last_name}`.trim() : null)
-          || p.autor?.first_name
-          || p.autor?.username
-          || (p.autor?.email ? p.autor.email.split('@')[0] : null)
-          || ''
-
-        const autorNomeNormalized = normalizeText(autorNome)
-        if (!autorNomeNormalized) return false
-        return autorNomeNormalized === userNameNormalized
-      })
-      setPosts(filtered)
+      // Tenta filtrar pelo ID do autor via query param
+      let list = []
+      if (profileId) {
+        const byAuthor = await api.getFeedPosts({ author: profileId }).catch(() => null)
+        list = Array.isArray(byAuthor) ? byAuthor : (byAuthor?.results || [])
+        // Se a API não suporta o filtro (devolve todos), filtramos no frontend
+        if (list.length === 0 || (byAuthor?.count != null && byAuthor.count > list.length + 5)) {
+          const all = await api.getFeedPosts().catch(() => null)
+          const allList = Array.isArray(all) ? all : (all?.results || [])
+          list = allList.filter(p => {
+            const aid = p.autor?.id ?? p.autor_id ?? p.author_id ?? p.autor ?? p.author?.id
+            return aid && String(aid) === String(profileId)
+          })
+        }
+      } else {
+        const all = await api.getFeedPosts().catch(() => null)
+        list = Array.isArray(all) ? all : (all?.results || [])
+      }
+      setPosts(list)
     } catch (err) { setPosts([]) }
     finally { setLoadingPosts(false) }
   }
 
+  const normalizeProduct = (p) => ({
+    id:        p.id,
+    nome:      p.name  || p.nome  || '',
+    preco:     p.price || p.preco || '0',
+    foto:      resolveImg(p.photo || p.foto || null),
+    seller_id: p.seller?.id ?? p.seller_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id ?? null,
+    vendedor:  p.seller
+      ? `${p.seller.first_name || ''} ${p.seller.last_name || ''}`.trim()
+      : (p.vendedor || ''),
+  })
+
   const loadProducts = async () => {
     setLoadingProducts(true)
     try {
-      const data = await api.getProducts()
-      const list = Array.isArray(data) ? data : (data.results || [])
-
-      // Normalizar campos da API (inglês) e construir URLs absolutas
-      const normalized = list.map(p => ({
-        id:    p.id,
-        nome:  p.name  || p.nome  || '',
-        preco: p.price || p.preco || '0',
-        foto:  resolveImg(p.photo || p.foto || null),
-        seller_id: p.seller?.id || p.seller_id || p.vendedor_id || p.user_id || p.owner_id || null,
-        vendedor:  p.seller
-          ? `${p.seller.first_name || ''} ${p.seller.last_name || ''}`.trim()
-          : (p.vendedor || ''),
-      }))
-
-      // Filtrar pelos produtos do utilizador do perfil
       const targetId = profileId || localStorage.getItem('userId')
-      const userName = profile?.nome_completo || `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
-      const userNameNormalized = normalizeText(userName)
-
-      const filtered = normalized.filter(p => {
-        if (targetId && p.seller_id && String(p.seller_id) === String(targetId)) return true
-        if (!userNameNormalized) return false
-        const vendedorNormalized = normalizeText(p.vendedor)
-        return vendedorNormalized && vendedorNormalized === userNameNormalized
-      })
-
-      setProducts(filtered)
+      let list = []
+      if (targetId) {
+        // Tenta filtrar server-side por seller id
+        const bySeller = await api.getProducts({ seller: targetId }).catch(() => null)
+        list = Array.isArray(bySeller) ? bySeller : (bySeller?.results || [])
+        // Se vierem todos (sem filtro) → filtra no frontend
+        if (list.length === 0) {
+          const all = await api.getProducts().catch(() => null)
+          const allList = Array.isArray(all) ? all : (all?.results || [])
+          list = allList.filter(p => {
+            const sid = p.seller?.id ?? p.seller_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id
+            return sid && String(sid) === String(targetId)
+          })
+        }
+      }
+      setProducts(list.map(normalizeProduct))
     } catch (err) { setProducts([]) }
     finally { setLoadingProducts(false) }
+  }
+
+  const loadTechniques = async () => {
+    setLoadingTechniques(true)
+    try {
+      const targetId = profileId || localStorage.getItem('userId')
+      const data = await api.getTechniques().catch(() => null)
+      const all = Array.isArray(data) ? data : (data?.results || [])
+      const filtered = targetId
+        ? all.filter(t => {
+            const aid = t.autor?.id ?? t.author?.id ?? t.autor_id ?? t.author_id ?? t.created_by?.id ?? t.created_by
+            return aid && String(aid) === String(targetId)
+          })
+        : all
+      setTechniques(filtered)
+    } catch (err) { setTechniques([]) }
+    finally { setLoadingTechniques(false) }
   }
 
   const handleEditSubmit = async (e) => {
@@ -273,6 +349,7 @@ function Profile() {
       }
       const fullName = `${updated.first_name || ''} ${updated.last_name || ''}`.trim()
       if (fullName) localStorage.setItem('userName', fullName)
+      if (editForm.contact) setUserCache({ contact: editForm.contact })
       setEditSuccess('Perfil atualizado com sucesso.')
     } catch (err) { setEditError(err?.message || 'Erro ao atualizar.') }
     finally { setEditLoading(false) }
@@ -287,6 +364,7 @@ function Profile() {
       }
       const updated = await api.updateProducerProfile(payload)
       setProducerProfile(updated)
+      setUserCache({ contact: updated.contact || '', farmAddress: updated.farm_address || '' })
       setEditSuccess('Perfil de produtor atualizado com sucesso.')
     } catch (err) { setPsError(err?.message || 'Erro ao atualizar perfil de produtor.') }
   }
@@ -303,6 +381,7 @@ function Profile() {
       }
       const updated = await api.updateSellerProfile(payload)
       setSellerProfile(updated)
+      setUserCache({ contact: updated.contact || '', storeName: updated.store_name || '', storeAddress: updated.store_address || '', nuit: updated.nuit || '', sellerType: updated.seller_type || '' })
       setEditSuccess('Perfil de vendedor atualizado com sucesso.')
     } catch (err) { setPsError(err?.message || 'Erro ao atualizar perfil de vendedor.') }
   }
@@ -349,17 +428,19 @@ function Profile() {
     </div>
   )
 
-  // Tabs disponíveis
+  // Tabs disponíveis — todos os utilizadores têm Feed, Mercado e Recomendações
   const tabs = isOwnProfile
     ? [
-        ...(isAuthorized ? [{ id: 'posts', label: 'Publicações', icon: 'bi-grid-3x3' }] : []),
-        ...(isAuthorized ? [{ id: 'produtos', label: 'Produtos', icon: 'bi-shop' }] : []),
-        { id: 'settings', label: 'Definições', icon: 'bi-gear' },
+        { id: 'posts',         label: 'Feed',           icon: 'bi-grid-3x3' },
+        { id: 'produtos',      label: 'Mercado',        icon: 'bi-shop' },
+        { id: 'recomendacoes', label: 'Recomendações',  icon: 'bi-lightbulb' },
+        { id: 'settings',      label: 'Definições',     icon: 'bi-gear' },
       ]
     : [
-        ...(isAuthorized ? [{ id: 'posts', label: 'Publicações', icon: 'bi-grid-3x3' }] : []),
-        ...(isAuthorized ? [{ id: 'produtos', label: 'Produtos', icon: 'bi-shop' }] : []),
-        { id: 'info', label: 'Info', icon: 'bi-person' },
+        { id: 'posts',         label: 'Feed',           icon: 'bi-grid-3x3' },
+        { id: 'produtos',      label: 'Mercado',        icon: 'bi-shop' },
+        { id: 'recomendacoes', label: 'Recomendações',  icon: 'bi-lightbulb' },
+        { id: 'info',          label: 'Info',           icon: 'bi-person' },
       ]
 
   return (
@@ -572,6 +653,48 @@ function Profile() {
             </div>
           )}
 
+          {/* Tab: Recomendações / Técnicas */}
+          {activeTab === 'recomendacoes' && (
+            <div>
+              {loadingTechniques ? <LoadingPlant /> : techniques.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                    <i className="bi bi-lightbulb text-3xl text-gray-300"></i>
+                  </div>
+                  <p className="text-gray-500 text-sm">Nenhuma recomendação publicada</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {techniques.map(t => {
+                    const img = (() => {
+                      const i = t.imagem || t.image || t.foto || t.photo
+                      if (!i) return null
+                      if (i.startsWith('http')) return i
+                      return `${API_MEDIA}/media/` + i.replace(/^\/?(media\/)?/, '')
+                    })()
+                    const nome = t.nome || t.titulo || t.title || t.name || 'Sem título'
+                    const desc = t.descricao || t.description || t.conteudo || t.body || ''
+                    const categoria = t.categoria || t.category || t.tipo || t.type || ''
+                    return (
+                      <div key={t.id}
+                        className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all"
+                        onClick={() => navigate(`/technique/${t.id}`)}>
+                        {img && <img src={img} alt={nome} className="w-full h-40 object-cover" />}
+                        <div className="p-4">
+                          {categoria && (
+                            <span className="inline-block mb-2 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">{categoria}</span>
+                          )}
+                          <p className="font-bold text-gray-900 text-sm mb-1">{nome}</p>
+                          {desc && <p className="text-gray-500 text-sm line-clamp-2">{desc}</p>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Tab: Info */}
           {activeTab === 'info' && (
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-3">
@@ -768,31 +891,57 @@ function Profile() {
           )}
 
           {/* Sub-tab: Informações */}
-          {activeTab === 'settings_info' && isOwnProfile && (
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-3">
-              <div className="flex items-center gap-2 mb-4">
-                <button onClick={() => setActiveTab('settings')} className="text-gray-400 hover:text-gray-600">
-                  <i className="bi bi-arrow-left"></i>
-                </button>
-                <h2 className="font-bold text-gray-800">Informações</h2>
-              </div>
+          {activeTab === 'settings_info' && isOwnProfile && (() => {
+            const cache = getUserCache()
+            const contact = profile.contact || profile.telefone || profile.phone || producerProfile?.contact || sellerProfile?.contact || cache.contact || ''
+            const districtName = profile.district?.name || profile.distrito?.nome || cache.districtName || ''
+            const provinceName = profile.district?.province?.name || cache.provinceName || ''
+            const gender = profile.gender || cache.gender || ''
+            const farmAddress = producerProfile?.farm_address || cache.farmAddress || ''
+            const storeName = sellerProfile?.store_name || cache.storeName || ''
+            const storeAddress = sellerProfile?.store_address || cache.storeAddress || ''
+            const nuit = sellerProfile?.nuit || cache.nuit || ''
+            const sellerTypeRaw = sellerProfile?.seller_type || cache.sellerType || ''
+            const sellerTypeLabel = { INDIVIDUAL: 'Individual', COMPANY: 'Empresa', COOPERATIVE: 'Cooperativa' }[sellerTypeRaw] || sellerTypeRaw
 
-              {/* Mostrar apenas os campos fornecidos no registo */}
-              {[
-                { label: 'Nome Completo', value: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Não definido' },
-                { label: 'Email', value: profile.email || 'Não definido' },
-                { label: 'Contacto', value: profile.contact || profile.telefone || profile.phone || 'Não definido' },
-                { label: 'Localização', value: profile.district?.name || profile.distrito?.nome || profile.location || 'Não definido' },
-                { label: 'Nome de utilizador', value: profile.username || 'Não definido' },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                  <span className="text-gray-500 text-sm">{label}</span>
-                  <span className="font-medium text-gray-800 text-sm">{value}</span>
+            const rows = [
+              { label: 'Nome Completo', value: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || '' },
+              { label: 'Nome de utilizador', value: profile.username || cache.username || '' },
+              { label: 'Email', value: profile.email || cache.email || '' },
+              { label: 'Género', value: genderLabel(gender) },
+              { label: 'Contacto', value: contact },
+              { label: 'Distrito', value: districtName },
+              { label: 'Província', value: provinceName },
+              { label: 'Tipo de conta', value: roleLabel(cache.role) },
+              ...(farmAddress ? [{ label: 'Exploração agrícola', value: farmAddress }] : []),
+              ...(storeName    ? [{ label: 'Nome da loja',        value: storeName }]    : []),
+              ...(storeAddress ? [{ label: 'Endereço da loja',    value: storeAddress }] : []),
+              ...(nuit         ? [{ label: 'NUIT',                value: nuit }]         : []),
+              ...(sellerTypeLabel && sellerTypeRaw ? [{ label: 'Tipo de vendedor', value: sellerTypeLabel }] : []),
+            ].filter(r => r.value)
+
+            return (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-5">
+                  <button onClick={() => setActiveTab('settings')} className="text-gray-400 hover:text-gray-600">
+                    <i className="bi bi-arrow-left"></i>
+                  </button>
+                  <h2 className="font-bold text-gray-800">Informações</h2>
                 </div>
-              ))}
-
-            </div>
-          )}
+                <div className="space-y-0">
+                  {rows.map(({ label, value }) => (
+                    <div key={label} className="flex justify-between items-start py-2.5 border-b border-gray-100 last:border-0 gap-3">
+                      <span className="text-gray-500 text-sm flex-shrink-0">{label}</span>
+                      <span className="font-medium text-gray-800 text-sm text-right">{value}</span>
+                    </div>
+                  ))}
+                  {rows.length === 0 && (
+                    <p className="text-gray-400 text-sm text-center py-4">Sem informações disponíveis</p>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Sub-tab: Editar */}
           {activeTab === 'settings_edit' && isOwnProfile && (
@@ -828,23 +977,60 @@ function Profile() {
                     </label>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-gray-700 font-medium mb-1 text-sm">Primeiro nome</label>
-                  <input type="text" value={editForm.first_name}
-                    onChange={e => setEditForm(p => ({ ...p, first_name: e.target.value }))}
-                    className="form-input w-full px-3 py-2.5 rounded-xl text-sm" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1 text-sm">Primeiro nome</label>
+                    <input type="text" value={editForm.first_name}
+                      onChange={e => setEditForm(p => ({ ...p, first_name: e.target.value }))}
+                      className="form-input w-full px-3 py-2.5 rounded-xl text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1 text-sm">Apelido</label>
+                    <input type="text" value={editForm.last_name}
+                      onChange={e => setEditForm(p => ({ ...p, last_name: e.target.value }))}
+                      className="form-input w-full px-3 py-2.5 rounded-xl text-sm" />
+                  </div>
                 </div>
+                {/* Contacto — apenas leitura se vem do registo */}
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1 text-sm">Apelido</label>
-                  <input type="text" value={editForm.last_name}
-                    onChange={e => setEditForm(p => ({ ...p, last_name: e.target.value }))}
-                    className="form-input w-full px-3 py-2.5 rounded-xl text-sm" />
+                  <label className="block text-gray-700 font-medium mb-1 text-sm">Contacto</label>
+                  <div className="relative">
+                    <i className="bi bi-telephone absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="tel" value={editForm.contact || ''}
+                      onChange={e => setEditForm(p => ({ ...p, contact: e.target.value }))}
+                      className="form-input w-full pl-9 pr-3 py-2.5 rounded-xl text-sm"
+                      placeholder="+258 84 XXX XXXX" />
+                  </div>
                 </div>
                 <button type="submit" disabled={editLoading}
                   className="w-full btn-primary text-white py-2.5 rounded-xl font-semibold text-sm disabled:opacity-50">
                   {editLoading ? 'A guardar...' : 'Guardar alterações'}
                 </button>
               </form>
+
+              {/* Produtor / Vendedor — edição de dados específicos */}
+              {producerProfile && (
+                <form onSubmit={handleProducerSubmit} className="mt-4 space-y-3 pt-4 border-t border-gray-100">
+                  <p className="text-xs font-bold text-green-700 flex items-center gap-1.5">
+                    <i className="bi bi-tree-fill"></i> Dados da Exploração Agrícola
+                  </p>
+                  <FieldInput label="Contacto" value={producerProfile.contact || ''} onChange={e => setProducerProfile(p => ({ ...p, contact: e.target.value }))} placeholder="+258841234567" icon="bi-telephone" />
+                  <FieldInput label="Endereço da exploração" value={producerProfile.farm_address || ''} onChange={e => setProducerProfile(p => ({ ...p, farm_address: e.target.value }))} placeholder="Bairro Central, Manica" icon="bi-geo-alt" />
+                  <button type="submit" className="w-full btn-primary text-white py-2.5 rounded-xl font-semibold text-sm">Guardar dados do Produtor</button>
+                </form>
+              )}
+              {sellerProfile && (
+                <form onSubmit={handleSellerSubmit} className="mt-4 space-y-3 pt-4 border-t border-gray-100">
+                  <p className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
+                    <i className="bi bi-shop-window"></i> Dados da Loja
+                  </p>
+                  <FieldInput label="Nome da loja" value={sellerProfile.store_name || ''} onChange={e => setSellerProfile(p => ({ ...p, store_name: e.target.value }))} placeholder="Loja do Carlos" icon="bi-shop" />
+                  <FieldInput label="Contacto" value={sellerProfile.contact || ''} onChange={e => setSellerProfile(p => ({ ...p, contact: e.target.value }))} placeholder="+258841234567" icon="bi-telephone" />
+                  <FieldInput label="Endereço da loja" value={sellerProfile.store_address || ''} onChange={e => setSellerProfile(p => ({ ...p, store_address: e.target.value }))} placeholder="Av. Eduardo Mondlane" icon="bi-geo-alt" />
+                  <FieldInput label="NUIT (opcional)" value={sellerProfile.nuit || ''} onChange={e => setSellerProfile(p => ({ ...p, nuit: e.target.value }))} placeholder="123456789" icon="bi-card-text" />
+                  <button type="submit" className="w-full btn-primary text-white py-2.5 rounded-xl font-semibold text-sm">Guardar dados da Loja</button>
+                </form>
+              )}
             </div>
           )}
 

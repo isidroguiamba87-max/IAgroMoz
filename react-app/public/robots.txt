@@ -1,16 +1,28 @@
 User-agent: *
+
+# Páginas públicas — permitir indexação
 Allow: /
-Disallow: /feed
+Allow: /feed/
+Allow: /login
+Allow: /register
+Allow: /register/
+Allow: /post/
+Allow: /agricultores
+
+# API e rotas privadas — bloquear rastreamento
+Disallow: /api/
+Disallow: /chat
 Disallow: /marketplace/
+Disallow: /product/
 Disallow: /profile
 Disallow: /notifications
-Disallow: /transactions
-Disallow: /minhas-reservas
+Disallow: /transactions/
+Disallow: /minhas-reservas/
 Disallow: /seller/
 Disallow: /producer/
-Disallow: /admin
-Disallow: /chat
+Disallow: /admin/
 Disallow: /create-post
 Disallow: /create-product
+Disallow: /dashboard
 
 Sitemap: https://www.iagromoz.com/sitemap.xml

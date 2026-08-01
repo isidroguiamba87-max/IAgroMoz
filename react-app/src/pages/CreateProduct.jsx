@@ -4,6 +4,7 @@ import api from "../services/api"
 import DesktopSidebar from "../components/DesktopSidebar"
 import MobileNav from "../components/MobileNav"
 import { API_BASE } from "../config/api"
+import { getUserCache } from "../utils/userCache"
 
 const DEFAULT_CATEGORIES = [
   { value: "AGRICULTURE", label: "Agricultura", icon: "bi-flower1",
@@ -75,6 +76,9 @@ function CreateProduct() {
   const [error, setError] = useState("")
   const [imagePreview, setImagePreview] = useState(null)
 
+  // Pré-preenche campos com dados do registo do utilizador
+  const _cache = getUserCache()
+
   // Campos conforme POST /api/marketplace/products/
   const [form, setForm] = useState({
     name: "",
@@ -84,8 +88,8 @@ function CreateProduct() {
     category: "",
     subcategory: "",
     subcategory_description: "",  // obrigatório se subcategory = "OTHER"
-    district: "",
-    provinceId: "",
+    district: _cache.districtId || "",
+    provinceId: _cache.provinceId || "",
     stock_quantity: "",           // quantidade em stock (unidade base)
     base_unit: "UNIT",            // UNIT | KG | TON | LITER
   })

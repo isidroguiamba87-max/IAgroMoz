@@ -35,33 +35,30 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-end pb-0"
-      style={{
-        background: 'linear-gradient(160deg, #003D20 0%, #006D3F 40%, #00A846 100%)',
-      }}>
+    <div className="min-h-screen relative flex flex-col items-center justify-center gap-6 px-4 py-10">
 
-      {/* Hero image overlay */}
+      {/* Imagem de fundo a 100% */}
       <div className="absolute inset-0 overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80"
           alt="Campo agrícola"
-          className="w-full h-full object-cover opacity-30"
+          className="w-full h-full object-cover"
         />
         <div className="hero-overlay absolute inset-0" />
       </div>
 
       {/* Logo + tagline */}
-      <div className="relative z-10 text-center pt-16 pb-8 px-6 flex-1 flex flex-col items-center justify-center">
-        <div className="w-28 h-28 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center mb-4 shadow-2xl overflow-hidden">
-          <img src="/logo.png" alt="IAgroMOZ" className="w-24 h-24 object-contain" />
+      <div className="relative z-10 text-center">
+        <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center mx-auto mb-3 shadow-2xl overflow-hidden">
+          <img src="/logo.png" alt="IAgroMOZ" className="w-20 h-20 object-contain" />
         </div>
         <h1 className="text-4xl font-black text-white tracking-tight mb-1">IAgroMOZ</h1>
-        <p className="text-green-200 text-base font-medium">Agricultura Inteligente para Moçambique</p>
+        <p className="text-white/80 text-base font-medium">Agricultura Inteligente para Moçambique</p>
       </div>
 
       {/* Card de login */}
-      <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white rounded-t-[32px] px-6 pt-8 pb-10 shadow-2xl">
+      <div className="relative z-10 w-full max-w-sm">
+        <div className="bg-white rounded-3xl px-6 pt-8 pb-8 shadow-2xl">
           <h2 className="text-2xl font-black text-gray-900 mb-1">Bem-vindo de volta <i className="bi bi-hand-wave text-yellow-500"></i></h2>
           <p className="text-gray-500 text-sm mb-6">Entre na sua conta para continuar</p>
 
