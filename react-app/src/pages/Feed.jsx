@@ -5,7 +5,7 @@ import DesktopSidebar from '../components/DesktopSidebar'
 import FeedRightPanel, { getPendingRequestsForMe } from '../components/FeedRightPanel'
 import Comment from '../components/Comment'
 import Avatar from '../components/Avatar'
-import ImageViewer from '../components/ImageViewer'
+import PhotoGallery from '../components/PhotoGallery'
 import api from '../services/api'
 import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
 import { normalizeUserDisplayName, normalizeComment, resolveMediaUrl } from '../utils/normalizers'
@@ -28,41 +28,6 @@ const REACTIONS = [
 ]
 
 // normalizeUserDisplayName, normalizeComment, resolveMediaUrl importadas de utils/normalizers
-
-// ─── Galeria de fotos do post — carrossel com indicadores, uma foto ou várias ──
-function PostGallery({ images, alt }) {
-  const [active, setActive] = useState(0)
-  const scrollerRef = useRef(null)
-
-  const handleScroll = () => {
-    const el = scrollerRef.current
-    if (!el) return
-    setActive(Math.round(el.scrollLeft / el.clientWidth))
-  }
-
-  return (
-    <div className="relative">
-      <div ref={scrollerRef} onScroll={handleScroll} className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide">
-        {images.map((src, i) => (
-          <div key={i} className="w-full flex-shrink-0 snap-center">
-            <ImageViewer
-              src={src}
-              alt={`${alt || 'Imagem do post'} (${i + 1}/${images.length})`}
-              imgClassName="w-full object-contain max-h-[600px] bg-black/5"
-            />
-          </div>
-        ))}
-      </div>
-      {images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
-          {images.map((_, i) => (
-            <span key={i} className={`h-1.5 rounded-full transition-all ${i === active ? 'bg-white w-4' : 'bg-white/50 w-1.5'}`} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─── Componente principal ──────────────────────────────────────────────────────
 function Feed() {
@@ -280,6 +245,7 @@ function Feed() {
           distrito: p.distrito || p.district || p.author?.district?.name || null,
           tipo_cultura: p.tipo_cultura || p.crop_type || p.categoria_label || null,
           in_market: Boolean(p.produto || p.product || p.produto_id || p.product_id || p.marketplace_product_id || p.em_mercado || p.is_market),
+          linked_products: Array.isArray(p.linked_products) ? p.linked_products : [],
           answers_count: Array.isArray(p.comments) ? p.comments.length : (p.answers_count || 0),
           likes_count: p.total_likes ?? p.likes_count ?? 0,
           gostou: p.gostou === true,
@@ -647,19 +613,27 @@ function Feed() {
                       </div>
                     </div>
                     {images.length > 0 && (
-                      images.length === 1 ? (
-                        <ImageViewer
-                          src={images[0]}
-                          alt={post.title || 'Imagem do post'}
-                          imgClassName="w-full object-contain max-h-[600px] bg-black/5"
-                        />
-                      ) : (
-                        <PostGallery images={images} alt={post.title} />
-                      )
+                      <PhotoGallery images={images} alt={post.title} />
                     )}
                     {post.body && (
                       <div className="px-4 pt-3 pb-1">
                         <p className="text-gray-700 text-sm leading-relaxed">{post.body}</p>
+                      </div>
+                    )}
+                    {post.linked_products.length > 0 && (
+                      <div className="px-4 pt-2 flex flex-wrap gap-2">
+                        {post.linked_products.map(lp => {
+                          const productId = lp.product_id ?? lp.id ?? lp.product?.id
+                          const label = lp.label || `Ver produto: ${lp.product_name || lp.product?.name || ''}`.trim()
+                          return (
+                            <button key={productId}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/product/${productId}`) }}
+                              className="inline-flex items-center gap-1.5 bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-full text-xs font-semibold click-scale">
+                              <i className="bi bi-cart3"></i>
+                              {label}
+                            </button>
+                          )
+                        })}
                       </div>
                     )}
                     {(likesCount > 0 || post.answers_count > 0) && (

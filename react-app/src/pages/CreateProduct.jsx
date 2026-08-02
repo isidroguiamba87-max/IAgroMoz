@@ -34,6 +34,10 @@ const DEFAULT_CATEGORIES = [
   },
 ]
 
+const MAX_PHOTOS = 5
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024
+
 // Unidades base conforme GET /api/marketplace/products/base_units/
 const BASE_UNITS = [
   { value: "UNIT",  label: "Unidade",     icon: "bi-box" },
@@ -78,7 +82,7 @@ function CreateProduct({ embedded = false }) {
   const [baseUnits, setBaseUnits] = useState(BASE_UNITS)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [imagePreview, setImagePreview] = useState(null)
+  const [imagePreviews, setImagePreviews] = useState([])
 
   // Pré-preenche campos com dados do registo do utilizador
   const _cache = getUserCache()
@@ -88,7 +92,7 @@ function CreateProduct({ embedded = false }) {
     name: "",
     description: "",
     price: "",
-    photo: null,
+    photos: [],                   // até 5 fotos — a primeira é a capa (campo "photo")
     category: "",
     subcategory: "",
     subcategory_description: "",  // obrigatório se subcategory = "OTHER"
@@ -177,12 +181,30 @@ function CreateProduct({ embedded = false }) {
   }
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setForm(p => ({ ...p, photo: file }))
-    const reader = new FileReader()
-    reader.onloadend = () => setImagePreview(reader.result)
-    reader.readAsDataURL(file)
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    const room = MAX_PHOTOS - form.photos.length
+    const accepted = []
+    let rejected = false
+    for (const file of files) {
+      if (accepted.length >= room) { rejected = true; break }
+      if (!ALLOWED_PHOTO_TYPES.includes(file.type) || file.size > MAX_PHOTO_SIZE) { rejected = true; continue }
+      accepted.push(file)
+    }
+    if (rejected) setError(`Só são aceites até ${MAX_PHOTOS} fotos (jpeg/png/webp, máx. 5MB cada).`)
+    if (!accepted.length) return
+    setForm(p => ({ ...p, photos: [...p.photos, ...accepted] }))
+    accepted.forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => setImagePreviews(prev => [...prev, reader.result])
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeImage = (index) => {
+    setForm(p => ({ ...p, photos: p.photos.filter((_, i) => i !== index) }))
+    setImagePreviews(prev => prev.filter((_, i) => i !== index))
   }
 
   const saveMyProductId = (id) => {
@@ -202,7 +224,7 @@ function CreateProduct({ embedded = false }) {
     }
     if (!form.name.trim()) return setError("O nome do produto é obrigatório.")
     if (!form.price || parseFloat(form.price) <= 0) return setError("O preço deve ser maior que zero.")
-    if (!form.photo) return setError("A foto do produto é obrigatória.")
+    if (!form.photos.length) return setError("A foto do produto é obrigatória.")
     if (!form.category) return setError("Selecione uma categoria.")
     if (!form.subcategory) return setError("Selecione uma subcategoria.")
     if (needsSubcatDesc && !form.subcategory_description.trim()) return setError("Descreva a subcategoria 'Outro'.")
@@ -212,7 +234,7 @@ function CreateProduct({ embedded = false }) {
       const productData = new FormData()
       productData.append("name", form.name.trim())
       productData.append("price", form.price)
-      productData.append("photo", form.photo)
+      productData.append("photo", form.photos[0])
       if (form.description.trim()) productData.append("description", form.description.trim())
       productData.append("category", form.category)
       productData.append("subcategory", form.subcategory)
@@ -222,6 +244,9 @@ function CreateProduct({ embedded = false }) {
       productData.append("base_unit", form.base_unit)
       const result = await api.createProduct(productData)
       if (result?.id) saveMyProductId(result.id)
+      if (result?.id && form.photos.length > 1) {
+        await Promise.allSettled(form.photos.slice(1).map(file => api.addProductPhoto(result.id, file)))
+      }
       navigate(exitPath)
     } catch (err) {
       const msg = err?.data
@@ -244,27 +269,36 @@ function CreateProduct({ embedded = false }) {
 
             {/* ── Foto ── */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <label className="block text-gray-700 font-bold mb-3 text-sm">Foto do produto *</label>
-              {imagePreview ? (
-                <div className="relative mb-3">
-                  <img src={imagePreview} alt="Preview" className="w-full max-h-52 object-cover rounded-xl" />
-                  <button type="button"
-                    onClick={() => { setImagePreview(null); setForm(p => ({ ...p, photo: null })) }}
-                    className="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow">
-                    <i className="bi bi-x-lg text-xs"></i>
-                  </button>
+              <label className="block text-gray-700 font-bold mb-1 text-sm">Fotos do produto *</label>
+              <p className="text-xs text-gray-400 mb-3">Até {MAX_PHOTOS} fotos. A primeira é usada como capa.</p>
+              {imagePreviews.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {imagePreviews.map((src, i) => (
+                    <div key={i} className="relative">
+                      <img src={src} alt={`Foto ${i + 1}`} className="w-full h-24 object-cover rounded-xl" />
+                      {i === 0 && (
+                        <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">Capa</span>
+                      )}
+                      <button type="button" onClick={() => removeImage(i)}
+                        className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow">
+                        <i className="bi bi-x-lg text-[10px]"></i>
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="w-full h-36 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center bg-gray-50 mb-3">
                   <i className="bi bi-camera text-4xl text-gray-300 mb-1"></i>
-                  <p className="text-gray-400 text-xs">Toque para adicionar foto</p>
+                  <p className="text-gray-400 text-xs">Toque para adicionar fotos</p>
                 </div>
               )}
-              <label className="btn-primary text-white px-5 py-2.5 rounded-xl cursor-pointer text-sm flex items-center gap-2 w-fit">
-                <i className="bi bi-upload"></i>
-                {imagePreview ? "Trocar foto" : "Adicionar foto"}
-                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-              </label>
+              {imagePreviews.length < MAX_PHOTOS && (
+                <label className="btn-primary text-white px-5 py-2.5 rounded-xl cursor-pointer text-sm flex items-center gap-2 w-fit">
+                  <i className="bi bi-upload"></i>
+                  {imagePreviews.length ? "Adicionar mais fotos" : "Adicionar fotos"}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleImageChange} className="hidden" />
+                </label>
+              )}
             </div>
 
             {/* ── Informações básicas ── */}

@@ -247,6 +247,30 @@ class APIService {
     return data;
   }
 
+  // POST /auth/google/  { id_token }
+  async loginWithGoogle(idToken) {
+    const data = await this.post('/auth/google/', { id_token: idToken });
+    localStorage.setItem('access_token', data.access);
+    localStorage.setItem('refresh_token', data.refresh);
+    if (data.user?.id) localStorage.setItem('userId', String(data.user.id));
+    try {
+      await this.getUserProfile();
+      await this._cacheRoleProfile();
+    } catch (e) { console.warn('Profile cache após login Google falhou:', e) }
+    return data;
+  }
+
+  // PATCH /users/me/complete-profile/  { first_name, last_name, district_id, phone, ... }
+  async completeProfile(data) {
+    const result = await this.request('/users/me/complete-profile/', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() }
+    });
+    try { await this.getUserProfile() } catch (e) {}
+    return result;
+  }
+
   // Carrega e guarda dados específicos do role (produtor/vendedor) no localStorage
   async _cacheRoleProfile() {
     const role = (localStorage.getItem('userRole') || '').toLowerCase()
@@ -633,6 +657,22 @@ class APIService {
     return this.delete(`/marketplace/products/${id}/`);
   }
 
+  // POST /marketplace/products/{id}/add_photo/ — multipart, campo "image". Máx. 5 fotos, 5MB, jpeg/png/webp.
+  addProductPhoto(productId, file) {
+    const data = new FormData()
+    data.append('image', file)
+    return this.request(`/marketplace/products/${productId}/add_photo/`, {
+      method: 'POST',
+      body: data,
+      headers: { ...this.getAuthHeaders() }
+    });
+  }
+
+  // DELETE /marketplace/products/{id}/remove_photo/{photoId}/
+  removeProductPhoto(productId, photoId) {
+    return this.delete(`/marketplace/products/${productId}/remove_photo/${photoId}/`);
+  }
+
   getProductCategories() {
     return this.get('/marketplace/products/categories/');
   }
@@ -763,6 +803,39 @@ class APIService {
     return this.post(`/marketplace/transactions/${id}/contact/`, { whatsapp });
   }
 
+  // ─── Marketplace — Chat de Negociação ────────────────────────────────────────
+  // Chat criado automaticamente após reserva. Independente do Chat IA
+  // (getChatSessions/sendChatMessage abaixo, que são para /chat/... da IA).
+
+  // GET /marketplace/chats/ — chats ACTIVE do utilizador
+  getNegotiationChats() {
+    return this.get('/marketplace/chats/')
+  }
+
+  // GET /marketplace/chats/{id}/ — inclui last_message e unread_count
+  getNegotiationChat(id) {
+    return this.get(`/marketplace/chats/${id}/`)
+  }
+
+  // GET /marketplace/chats/{id}/messages/ — marca mensagens como lidas
+  getNegotiationMessages(chatId) {
+    return this.get(`/marketplace/chats/${chatId}/messages/`)
+  }
+
+  // POST /marketplace/chats/{id}/messages/ — apenas em chats ACTIVE
+  sendNegotiationMessage(chatId, content) {
+    return this.post(`/marketplace/chats/${chatId}/messages/`, { content })
+  }
+
+  getChatReservations(chatId) {
+    return this.get(`/marketplace/chats/${chatId}/reservations/`)
+  }
+
+  // GET /marketplace/reservations/{transaction_id}/chat/ — obtém o chat da reserva
+  getReservationChat(transactionId) {
+    return this.get(`/marketplace/reservations/${transactionId}/chat/`)
+  }
+
   // ─── Pagamentos ──────────────────────────────────────────────────────────────
 
   // POST /payments/initiate/  { transaction_id, method, provider, phone_number }
@@ -891,6 +964,16 @@ class APIService {
     return this.get('/audit-logs/', params)
   }
 
+  // GET /audit-logs/security/  ?event_type= ?user_email= ?ip_address= ?date_from= ?date_to=
+  getAuditSecurityEvents(params = {}) {
+    return this.get('/audit-logs/security/', params)
+  }
+
+  // GET /audit-logs/stats/
+  getAuditStats() {
+    return this.get('/audit-logs/stats/')
+  }
+
   // ─── Seller Dashboard ────────────────────────────────────────────────────────
 
   // GET /seller-dashboard/  (role = SELLER ou PRODUCER, can_sell = true)
@@ -999,6 +1082,39 @@ class APIService {
 
   deleteFeedPost(id) {
     return this.delete(`/feed/posts/${id}/`);
+  }
+
+  // POST /feed/posts/{id}/add_photo/ — multipart, campo "image". Máx. 5 fotos, 5MB, jpeg/png/webp.
+  addPostPhoto(postId, file) {
+    const data = new FormData()
+    data.append('image', file)
+    return this.request(`/feed/posts/${postId}/add_photo/`, {
+      method: 'POST',
+      body: data,
+      headers: { ...this.getAuthHeaders() }
+    });
+  }
+
+  // DELETE /feed/posts/{id}/remove_photo/{photoId}/
+  removePostPhoto(postId, photoId) {
+    return this.delete(`/feed/posts/${postId}/remove_photo/${photoId}/`);
+  }
+
+  // ─── Feed — Produto vinculado ao post ─────────────────────────────────────────
+
+  // GET /feed/posts/my-products/ — produtos do utilizador com can_sell=True
+  getMyLinkableProducts() {
+    return this.get('/feed/posts/my-products/');
+  }
+
+  // POST /feed/posts/{id}/link-product/  { product_id, label }
+  linkProductToPost(postId, productId, label) {
+    return this.post(`/feed/posts/${postId}/link-product/`, { product_id: productId, label });
+  }
+
+  // DELETE /feed/posts/{id}/unlink-product/{productId}/
+  unlinkProductFromPost(postId, productId) {
+    return this.delete(`/feed/posts/${postId}/unlink-product/${productId}/`);
   }
 
   // ─── Feed — Comentários ───────────────────────────────────────────────────────

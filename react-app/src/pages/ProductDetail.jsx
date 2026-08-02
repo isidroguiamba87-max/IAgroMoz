@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import StarRating from '../components/StarRating'
-import ImageViewer from '../components/ImageViewer'
+import PhotoGallery from '../components/PhotoGallery'
 import DesktopSidebar from '../components/DesktopSidebar'
 import MobileNav from '../components/MobileNav'
 import api from '../services/api'
@@ -391,6 +391,11 @@ function ProductDetail() {
 
   const productName = product.name || product.nome || 'Produto'
   const sellerId = getSellerId(product)
+  const coverImageUrl = product.photo || product.image || product.foto || null
+  const galleryImageUrls = Array.isArray(product.photos)
+    ? product.photos.map(p => p.image || p.photo || p.url || p.file).filter(Boolean)
+    : []
+  const productImages = [coverImageUrl, ...galleryImageUrls].filter((v, i, arr) => v && arr.indexOf(v) === i)
 
   return (
     <div className="min-h-screen bg-[#F8FAF8] flex pb-20 lg:pb-0">
@@ -510,12 +515,10 @@ function ProductDetail() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Image */}
             <div>
-              {(product.photo || product.image || product.foto) ? (
-                <ImageViewer
-                  src={product.photo || product.image || product.foto}
-                  alt={product.name || product.nome}
-                  imgClassName="w-full h-80 object-cover rounded-2xl shadow-lg"
-                />
+              {productImages.length > 0 ? (
+                <div className="rounded-2xl shadow-lg overflow-hidden">
+                  <PhotoGallery images={productImages} alt={product.name || product.nome} />
+                </div>
               ) : (
                 <div className="w-full h-80 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center">
                   <i className="bi bi-box-seam text-green-400" style={{fontSize:'5rem'}}></i>

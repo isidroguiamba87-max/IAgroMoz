@@ -6,6 +6,7 @@ import CancelConfirmModal from '../components/CancelConfirmModal'
 import RejectModal from '../components/RejectModal'
 import ContactForm from '../components/ContactForm'
 import TransactionStatusWheel from '../components/TransactionStatusWheel'
+import NegotiationChatThread from '../components/NegotiationChatThread'
 import api from '../services/api'
 import { addNotification } from './Notifications'
 import { normTx as _normTx, normalizePhoneForWhatsapp, extractApiErrorMessage } from '../utils/normalizers'
@@ -38,6 +39,9 @@ function TransactionDetail() {
   const [rejectTarget, setRejectTarget] = useState<any>(null)
   const [rejectLoading, setRejectLoading] = useState(false)
   const [profileWhatsapp, setProfileWhatsapp] = useState('')
+  const [chatId, setChatId] = useState<number | null>(null)
+  const [chatLoading, setChatLoading] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
 
   const userId = localStorage.getItem('userId')
   const tx = transaction
@@ -151,6 +155,20 @@ function TransactionDetail() {
     }
   }
 
+  const handleOpenChat = async () => {
+    setChatLoading(true)
+    setActionError('')
+    try {
+      const chat: any = await api.getReservationChat(tx.id)
+      setChatId(chat.id)
+      setChatOpen(true)
+    } catch (err) {
+      setActionError(extractApiErrorMessage(err, 'Não foi possível abrir o chat desta reserva.'))
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
   const handleConclude = async (txId: any) => {
     setActionLoading(true)
     setActionError('')
@@ -230,7 +248,22 @@ function TransactionDetail() {
         onConfirm={handleReject}
         onClose={() => setRejectTarget(null)}
       />
-      
+      {chatOpen && chatId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg h-[85vh] max-h-[640px] relative overflow-hidden">
+            <button onClick={() => setChatOpen(false)}
+              className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center text-gray-500 hover:bg-gray-100">
+              <i className="bi bi-x-lg"></i>
+            </button>
+            <NegotiationChatThread
+              chatId={chatId}
+              title={isBuyer ? tx.seller_name : tx.buyer_name}
+              subtitle={`Reserva #${tx.id} — ${tx.product_name}`}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Header */}
         <header className="bg-white sticky top-0 z-40 border-b border-gray-100">
@@ -346,7 +379,24 @@ function TransactionDetail() {
 
             {/* RIGHT: Actions Panel */}
             <div className="space-y-4">
-              
+
+              {/* Chat de negociação — disponível para comprador e vendedor em qualquer estado */}
+              <button onClick={handleOpenChat} disabled={chatLoading}
+                className="w-full flex items-center justify-between gap-3 bg-white rounded-3xl border border-gray-100 shadow-sm px-6 py-4 hover:bg-gray-50 transition disabled:opacity-60">
+                <span className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-700 flex-shrink-0">
+                    <i className="bi bi-chat-dots-fill"></i>
+                  </span>
+                  <span className="text-left">
+                    <span className="block text-sm font-bold text-gray-900">Chat da reserva</span>
+                    <span className="block text-xs text-gray-400">Fale com {isBuyer ? tx.seller_name : tx.buyer_name}</span>
+                  </span>
+                </span>
+                {chatLoading
+                  ? <i className="bi bi-arrow-repeat animate-spin text-gray-400"></i>
+                  : <i className="bi bi-chevron-right text-gray-300"></i>}
+              </button>
+
               {/* SELLER ACTIONS */}
               {isSeller && (
                 <>

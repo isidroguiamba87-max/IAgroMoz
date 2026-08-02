@@ -158,6 +158,10 @@ function DeleteModal({ product, onConfirm, onCancel, loading }) {
 
 // ─── Modal de edição de produto ───────────────────────────────────────────────
 // PATCH /api/marketplace/products/{id}/  — campos: name, description, price, photo, category, subcategory, district
+const EDIT_MAX_PHOTOS = 5
+const EDIT_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
+const EDIT_MAX_SIZE = 5 * 1024 * 1024
+
 function EditModal({ product, onSave, onCancel }) {
   const [form, setForm] = useState({
     name: product.name || "", description: product.description || "",
@@ -165,10 +169,19 @@ function EditModal({ product, onSave, onCancel }) {
     subcategory: product.subcategory || "", photo: null
   })
   const [preview, setPreview] = useState(product.photo || null)
+  const [existingPhotos, setExistingPhotos] = useState(
+    Array.isArray(product.photos) ? product.photos.map(p => ({
+      id: p.id, url: p.image || p.photo || p.url || p.file || null,
+    })).filter(p => p.url) : []
+  )
+  const [newPhotos, setNewPhotos] = useState([])
+  const [newPreviews, setNewPreviews] = useState([])
+  const [removingPhotoId, setRemovingPhotoId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
   const catObj = CATEGORIES.find(c => c.value === form.category)
+  const totalPhotoCount = 1 + existingPhotos.length + newPhotos.length // capa + galeria
 
   const handleImageChange = (e) => {
     const file = e.target.files[0]
@@ -177,6 +190,46 @@ function EditModal({ product, onSave, onCancel }) {
     const reader = new FileReader()
     reader.onloadend = () => setPreview(reader.result)
     reader.readAsDataURL(file)
+  }
+
+  const handleAddGalleryPhotos = (e) => {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    const room = EDIT_MAX_PHOTOS - totalPhotoCount
+    const accepted = []
+    let rejected = false
+    for (const file of files) {
+      if (accepted.length >= room) { rejected = true; break }
+      if (!EDIT_ALLOWED_TYPES.includes(file.type) || file.size > EDIT_MAX_SIZE) { rejected = true; continue }
+      accepted.push(file)
+    }
+    if (rejected) setError(`Só são aceites até ${EDIT_MAX_PHOTOS} fotos no total (jpeg/png/webp, máx. 5MB cada).`)
+    if (!accepted.length) return
+    setNewPhotos(prev => [...prev, ...accepted])
+    accepted.forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => setNewPreviews(prev => [...prev, reader.result])
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeNewPhoto = (index) => {
+    setNewPhotos(prev => prev.filter((_, i) => i !== index))
+    setNewPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const removeExistingPhoto = async (photoId) => {
+    setRemovingPhotoId(photoId)
+    setError("")
+    try {
+      await api.removeProductPhoto(product.id, photoId)
+      setExistingPhotos(prev => prev.filter(p => p.id !== photoId))
+    } catch (err) {
+      setError(extractApiErrorMessage(err, "Erro ao remover foto."))
+    } finally {
+      setRemovingPhotoId(null)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -198,6 +251,9 @@ function EditModal({ product, onSave, onCancel }) {
       })
       const result = await res.json()
       if (!res.ok) throw new Error(Object.entries(result).map(([k, v]) => `${Array.isArray(v) ? v.join(", ") : v}`).join(" | "))
+      if (newPhotos.length > 0) {
+        await Promise.allSettled(newPhotos.map(file => api.addProductPhoto(product.id, file)))
+      }
       onSave(norm(result))
     } catch (err) { setError(err.message || "Erro ao atualizar.") }
     finally { setLoading(false) }
@@ -205,7 +261,7 @@ function EditModal({ product, onSave, onCancel }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-800">Editar produto</h3>
           <button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><i className="bi bi-x-lg text-xl"></i></button>
@@ -213,12 +269,43 @@ function EditModal({ product, onSave, onCancel }) {
         {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl mb-3 text-sm">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-gray-700 font-medium mb-1 text-sm">Foto</label>
+            <label className="block text-gray-700 font-medium mb-1 text-sm">Foto de capa</label>
             {preview && <img src={preview} alt="preview" className="w-full h-32 object-cover rounded-xl mb-2" />}
             <label className="btn-primary text-white px-4 py-2 rounded-xl cursor-pointer text-sm flex items-center gap-2 w-fit">
               <i className="bi bi-upload"></i> {preview ? "Trocar foto" : "Adicionar foto"}
               <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
             </label>
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium mb-1 text-sm">Galeria (até {EDIT_MAX_PHOTOS} fotos no total)</label>
+            {(existingPhotos.length > 0 || newPreviews.length > 0) && (
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {existingPhotos.map(p => (
+                  <div key={p.id} className="relative">
+                    <img src={p.url} alt="Foto da galeria" className="w-full h-16 object-cover rounded-lg" />
+                    <button type="button" onClick={() => removeExistingPhoto(p.id)} disabled={removingPhotoId === p.id}
+                      className="absolute top-0.5 right-0.5 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow disabled:opacity-50">
+                      <i className={`bi ${removingPhotoId === p.id ? 'bi-arrow-repeat animate-spin' : 'bi-x-lg'} text-[9px]`}></i>
+                    </button>
+                  </div>
+                ))}
+                {newPreviews.map((src, i) => (
+                  <div key={`new-${i}`} className="relative">
+                    <img src={src} alt="Nova foto" className="w-full h-16 object-cover rounded-lg" />
+                    <button type="button" onClick={() => removeNewPhoto(i)}
+                      className="absolute top-0.5 right-0.5 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow">
+                      <i className="bi bi-x-lg text-[9px]"></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {totalPhotoCount < EDIT_MAX_PHOTOS && (
+              <label className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 cursor-pointer hover:text-green-800">
+                <i className="bi bi-plus-circle"></i> Adicionar à galeria
+                <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleAddGalleryPhotos} className="hidden" />
+              </label>
+            )}
           </div>
           <div>
             <label className="block text-gray-700 font-medium mb-1 text-sm">Nome *</label>

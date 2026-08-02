@@ -8,6 +8,7 @@ import { RouteErrorBoundaryWithNav } from './components/RouteErrorBoundary'
 import { captureError } from './utils/errorTracking'
 
 const Login = lazy(() => import('./pages/Login'))
+const CompleteProfile = lazy(() => import('./pages/CompleteProfile'))
 const Register = lazy(() => import('./pages/Register'))
 const RegisterNormal = lazy(() => import('./pages/RegisterNormal'))
 const RegisterProducer = lazy(() => import('./pages/RegisterProducer'))
@@ -132,6 +133,7 @@ function App() {
           <Route path="/producer/*" element={<Navigate replace to="/feed" />} />
           <Route path="/agricultores" element={<AdminRouteBlocker><Feed /></AdminRouteBlocker>} />
           <Route path="/login" element={<AdminRouteBlocker><Login /></AdminRouteBlocker>} />
+          <Route path="/complete-profile" element={<AdminRouteBlocker><CompleteProfile /></AdminRouteBlocker>} />
           <Route path="/register" element={<AdminRouteBlocker><Register /></AdminRouteBlocker>} />
           <Route path="/register/normal" element={<AdminRouteBlocker><RegisterNormal /></AdminRouteBlocker>} />
           <Route path="/register/producer" element={<AdminRouteBlocker><RegisterProducer /></AdminRouteBlocker>} />

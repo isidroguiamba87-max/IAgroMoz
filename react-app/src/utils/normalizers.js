@@ -38,6 +38,7 @@ export function normProduct(p) {
     description:   p.description || p.descricao || '',
     price:         p.price || p.preco || '0',
     photo:         p.photo || p.foto || null,
+    photos:        Array.isArray(p.photos) ? p.photos : [],
     category:      p.category || p.categoria || '',
     subcategory:   p.subcategory || '',
     district:      p.district?.name || p.district || p.distrito || '',
@@ -48,6 +49,40 @@ export function normProduct(p) {
     avg_rating:    parseFloat(p.average_rating || p.media_avaliacao || 0),
     total_ratings: p.total_ratings || p.total_avaliacoes || 0,
     created_at:    p.created_at || p.criado_em || '',
+  }
+}
+
+// ─── Chat de Negociação (marketplace/chats) ────────────────────────────────────
+
+export function normNegotiationChat(c) {
+  const myId = String(localStorage.getItem('userId') || '')
+  const buyerId = String(c.buyer_id ?? c.buyer?.id ?? c.buyer ?? '')
+  const isBuyer = !!myId && buyerId === myId
+  const lastMessage = c.last_message
+  return {
+    id: c.id,
+    status: c.status || 'ACTIVE',
+    productId: c.product_id ?? c.product?.id ?? c.reservation?.product_id ?? null,
+    productName: c.product_name || c.product?.name || c.reservation?.product_name || '',
+    otherName: isBuyer
+      ? (c.seller_name || c.seller?.store_name || `${c.seller?.first_name || ''} ${c.seller?.last_name || ''}`.trim() || c.seller?.username || 'Vendedor')
+      : (c.buyer_name || `${c.buyer?.first_name || ''} ${c.buyer?.last_name || ''}`.trim() || c.buyer?.username || 'Comprador'),
+    otherPhoto: isBuyer ? (c.seller?.profile_photo || null) : (c.buyer?.profile_photo || null),
+    lastMessage: typeof lastMessage === 'string' ? lastMessage : (lastMessage?.content || ''),
+    lastMessageAt: (typeof lastMessage === 'object' && lastMessage?.created_at) || c.updated_at || c.created_at || null,
+    unreadCount: c.unread_count ?? 0,
+  }
+}
+
+export function normNegotiationMessage(m) {
+  const myId = String(localStorage.getItem('userId') || '')
+  const senderId = String(m.sender_id ?? m.sender?.id ?? m.sender ?? m.user_id ?? '')
+  return {
+    id: m.id,
+    content: m.content || m.message || '',
+    fromMe: !!myId && senderId === myId,
+    senderName: m.sender_name || m.sender?.username || '',
+    createdAt: m.created_at || m.timestamp || null,
   }
 }
 

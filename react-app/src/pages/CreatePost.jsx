@@ -4,6 +4,10 @@ import api from '../services/api'
 import Logo from '../components/Logo'
 import ImageEditor from '../components/ImageEditor'
 
+const MAX_POST_PHOTOS = 5
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024
+
 const DEFAULT_POST_CATEGORIES = [
   { value: 'AGRICULTURE', label: 'Agricultura', icon: 'bi-flower1', color: 'border-green-400 bg-green-50 text-green-700' },
   { value: 'LIVESTOCK',   label: 'Pecuária',    icon: 'bi-heart-fill', color: 'border-orange-400 bg-orange-50 text-orange-700' },
@@ -44,6 +48,18 @@ function CreatePost() {
   const [imagePreview, setImagePreview] = useState(editPost?.image || null)
   const [showEditor, setShowEditor] = useState(false)
   const [postCategories, setPostCategories] = useState(DEFAULT_POST_CATEGORIES)
+  const [extraPhotos, setExtraPhotos] = useState([])
+  const [extraPreviews, setExtraPreviews] = useState([])
+  const [linkableProducts, setLinkableProducts] = useState([])
+  const [linkedProductId, setLinkedProductId] = useState('')
+
+  useEffect(() => {
+    if (userRole !== 'producer') return
+    api.getMyLinkableProducts().then(data => {
+      const list = Array.isArray(data) ? data : (data.results || [])
+      setLinkableProducts(list)
+    }).catch(() => {})
+  }, [])
 
   const [formData, setFormData] = useState({
     title:        editPost?.title       || editPost?.titulo       || '',
@@ -92,6 +108,33 @@ function CreatePost() {
     loadEnums()
   }, [])
 
+  const handleExtraPhotosChange = (e) => {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    const room = MAX_POST_PHOTOS - 1 - extraPhotos.length
+    const accepted = []
+    let rejected = false
+    for (const file of files) {
+      if (accepted.length >= room) { rejected = true; break }
+      if (!ALLOWED_PHOTO_TYPES.includes(file.type) || file.size > MAX_PHOTO_SIZE) { rejected = true; continue }
+      accepted.push(file)
+    }
+    if (rejected) setError(`Só são aceites até ${MAX_POST_PHOTOS} fotos no total (jpeg/png/webp, máx. 5MB cada).`)
+    if (!accepted.length) return
+    setExtraPhotos(prev => [...prev, ...accepted])
+    accepted.forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => setExtraPreviews(prev => [...prev, reader.result])
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeExtraPhoto = (index) => {
+    setExtraPhotos(prev => prev.filter((_, i) => i !== index))
+    setExtraPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleEditorSave = (editedFile, previewUrl) => {
     setFormData(p => ({ ...p, image: editedFile }))
     setImagePreview(previewUrl)
@@ -115,11 +158,19 @@ function CreatePost() {
       if (formData.distrito.trim()) postData.append('distrito', formData.distrito.trim())
       if (formData.tipo_cultura.trim()) postData.append('tipo_cultura', formData.tipo_cultura.trim())
 
+      let postId = editPost?.id
       if (isEditing) {
         // PATCH /api/feed/posts/{id}/  (autor, dentro de 10 min)
         await api.updateFeedPost(editPost.id, postData)
       } else {
-        await api.createFeedPost(postData)
+        const created = await api.createFeedPost(postData)
+        postId = created?.id
+      }
+      if (postId && extraPhotos.length > 0) {
+        await Promise.allSettled(extraPhotos.map(file => api.addPostPhoto(postId, file)))
+      }
+      if (postId && linkedProductId) {
+        await api.linkProductToPost(postId, linkedProductId, 'Ver produto no marketplace').catch(() => {})
       }
       navigate('/feed')
     } catch (err) {
@@ -214,6 +265,34 @@ function CreatePost() {
             )}
           </div>
 
+          {/* ── Mais fotos (opcional) ── */}
+          {(extraPreviews.length > 0 || (imagePreview && extraPhotos.length < MAX_POST_PHOTOS - 1)) && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <i className="bi bi-images text-green-600"></i> Mais fotos (opcional, até {MAX_POST_PHOTOS} no total)
+              </p>
+              {extraPreviews.length > 0 && (
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  {extraPreviews.map((src, i) => (
+                    <div key={i} className="relative">
+                      <img src={src} alt={`Foto extra ${i + 1}`} className="w-full h-20 object-cover rounded-xl" />
+                      <button type="button" onClick={() => removeExtraPhoto(i)}
+                        className="absolute top-1 right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow">
+                        <i className="bi bi-x-lg text-[9px]"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {extraPhotos.length < MAX_POST_PHOTOS - 1 && (
+                <label className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 cursor-pointer hover:text-green-800">
+                  <i className="bi bi-plus-circle"></i> Adicionar mais fotos
+                  <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleExtraPhotosChange} className="hidden" />
+                </label>
+              )}
+            </div>
+          )}
+
           {/* ── Categoria ── */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -277,6 +356,25 @@ function CreatePost() {
               <i className="bi bi-info-circle"></i> A localização vem preenchida com a que indicou no registo — pode alterar se este post for sobre outro local.
             </p>
           </div>
+
+          {/* ── Vincular produto do marketplace (opcional, produtores) ── */}
+          {userRole === 'producer' && linkableProducts.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <i className="bi bi-cart3 text-green-600"></i> Vincular ao meu produto (opcional)
+              </label>
+              <select value={linkedProductId} onChange={e => setLinkedProductId(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl text-sm border-2 border-gray-200 bg-white text-gray-900">
+                <option value="">Nenhum</option>
+                {linkableProducts.map(p => (
+                  <option key={p.id} value={p.id}>{p.name || p.nome}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                <i className="bi bi-info-circle"></i> Mostra um botão "Ver no Mercado" na publicação.
+              </p>
+            </div>
+          )}
 
           {/* ── Título ── */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">

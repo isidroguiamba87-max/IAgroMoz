@@ -1,7 +1,35 @@
-﻿import { useNavigate, Link } from "react-router-dom"
+﻿import { useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
+import { GoogleLogin } from '@react-oauth/google'
+import api from "../services/api"
+
+const GOOGLE_ERROR_MESSAGES = {
+  invalid_google_token: 'Token Google inválido. Tente novamente.',
+  expired_google_token: 'A sessão do Google expirou. Tente novamente.',
+  invalid_audience: 'Configuração do Google inválida. Contacte o suporte.',
+  email_not_verified: 'O seu email Google não está verificado.',
+  account_locked: 'Conta bloqueada. Tente novamente mais tarde.',
+}
 
 function Register() {
   const navigate = useNavigate()
+  const [googleError, setGoogleError] = useState('')
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setGoogleError('')
+    try {
+      const data = await api.loginWithGoogle(credentialResponse.credential)
+      if (data.profile_completed === false) {
+        navigate('/complete-profile', { replace: true, state: { missingFields: data.missing_fields || [] } })
+        return
+      }
+      const userRole = localStorage.getItem('userRole')
+      navigate(userRole === 'seller' ? '/seller/dashboard' : '/feed', { replace: true })
+    } catch (err) {
+      setGoogleError(GOOGLE_ERROR_MESSAGES[err?.data?.error] || err?.data?.detail || 'Não foi possível continuar com Google.')
+    }
+  }
 
   const types = [
     {
@@ -83,6 +111,30 @@ function Register() {
               </button>
             ))}
           </div>
+
+          {googleClientId && (
+            <>
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-gray-200"></div>
+                <span className="text-xs text-gray-400 font-medium">ou</span>
+                <div className="flex-1 h-px bg-gray-200"></div>
+              </div>
+              {googleError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-3 text-sm flex items-center gap-2">
+                  <i className="bi bi-exclamation-circle-fill"></i> {googleError}
+                </div>
+              )}
+              <div className="flex justify-center [&>div]:w-full">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setGoogleError('Não foi possível continuar com Google.')}
+                  locale="pt"
+                  width="100%"
+                  text="signup_with"
+                />
+              </div>
+            </>
+          )}
 
           <div className="mt-6 text-center">
             <p className="text-gray-500 text-sm">

@@ -1,6 +1,20 @@
-﻿import { useState } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
 import api from '../services/api'
+
+const GOOGLE_ERROR_MESSAGES = {
+  invalid_google_token: 'Token Google inválido. Tente novamente.',
+  expired_google_token: 'A sessão do Google expirou. Tente novamente.',
+  invalid_audience: 'Configuração do Google inválida. Contacte o suporte.',
+  email_not_verified: 'O seu email Google não está verificado.',
+}
+
+const formatCountdown = (seconds) => {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
 
 function Login() {
   const navigate = useNavigate()
@@ -9,13 +23,31 @@ function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [lockedUntil, setLockedUntil] = useState(null) // timestamp ms
+  const [secondsLeft, setSecondsLeft] = useState(0)
+  const intervalRef = useRef(null)
 
   // Destino após login — usa ?next= ou /feed por defeito
   const nextPath = new URLSearchParams(location.search).get('next') || '/feed'
   const registerSuccess = location.state?.registerSuccess
 
+  useEffect(() => {
+    if (!lockedUntil) return
+    intervalRef.current = setInterval(() => {
+      const left = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000))
+      setSecondsLeft(left)
+      if (left <= 0) {
+        clearInterval(intervalRef.current)
+        setLockedUntil(null)
+        setError('')
+      }
+    }, 1000)
+    return () => clearInterval(intervalRef.current)
+  }, [lockedUntil])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (lockedUntil) return
     setError('')
     setLoading(true)
     try {
@@ -27,12 +59,51 @@ function Login() {
       } else {
         navigate(nextPath, { replace: true })
       }
-    } catch {
-      setError('Email ou senha incorretos. Tente novamente.')
+    } catch (err) {
+      if (err?.data?.error === 'account_locked') {
+        const retryAfter = Number(err.data.retry_after) || 0
+        setError(err.data.detail || 'Conta bloqueada. Tente novamente mais tarde.')
+        setLockedUntil(Date.now() + retryAfter * 1000)
+        setSecondsLeft(retryAfter)
+      } else {
+        setError('Email ou senha incorretos. Tente novamente.')
+      }
     } finally {
       setLoading(false)
     }
   }
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError('')
+    setLoading(true)
+    try {
+      const idToken = credentialResponse.credential
+      const data = await api.loginWithGoogle(idToken)
+      if (data.profile_completed === false) {
+        navigate('/complete-profile', { replace: true, state: { missingFields: data.missing_fields || [] } })
+        return
+      }
+      const userRole = localStorage.getItem('userRole')
+      if (userRole === 'seller') {
+        navigate('/seller/dashboard', { replace: true })
+      } else {
+        navigate(nextPath, { replace: true })
+      }
+    } catch (err) {
+      if (err?.data?.error === 'account_locked') {
+        const retryAfter = Number(err.data.retry_after) || 0
+        setError(err.data.detail || 'Conta bloqueada. Tente novamente mais tarde.')
+        setLockedUntil(Date.now() + retryAfter * 1000)
+        setSecondsLeft(retryAfter)
+      } else {
+        setError(GOOGLE_ERROR_MESSAGES[err?.data?.error] || err?.data?.detail || 'Não foi possível entrar com Google.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
   return (
     <div className="min-h-screen relative flex flex-col items-center justify-center gap-6 px-4 py-10">
@@ -70,7 +141,13 @@ function Login() {
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl mb-4 text-sm flex items-center gap-2">
-              <i className="bi bi-exclamation-circle-fill"></i> {error}
+              <i className={`bi ${lockedUntil ? 'bi-lock-fill' : 'bi-exclamation-circle-fill'}`}></i>
+              <span>
+                {error}
+                {lockedUntil && secondsLeft > 0 && (
+                  <span className="font-bold"> Tente novamente em {formatCountdown(secondsLeft)}.</span>
+                )}
+              </span>
             </div>
           )}
 
@@ -109,13 +186,34 @@ function Login() {
               </div>
             </div>
 
-            <button type="submit" disabled={loading}
+            <button type="submit" disabled={loading || !!lockedUntil}
               className="btn-primary w-full text-white py-4 rounded-2xl font-bold text-base disabled:opacity-60 mt-2">
-              {loading
-                ? <span className="flex items-center justify-center gap-2"><i className="bi bi-arrow-repeat animate-spin"></i> A entrar...</span>
-                : 'Entrar'}
+              {lockedUntil
+                ? <span className="flex items-center justify-center gap-2"><i className="bi bi-lock-fill"></i> Bloqueado ({formatCountdown(secondsLeft)})</span>
+                : loading
+                  ? <span className="flex items-center justify-center gap-2"><i className="bi bi-arrow-repeat animate-spin"></i> A entrar...</span>
+                  : 'Entrar'}
             </button>
           </form>
+
+          {googleClientId && (
+            <>
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-gray-200"></div>
+                <span className="text-xs text-gray-400 font-medium">ou</span>
+                <div className="flex-1 h-px bg-gray-200"></div>
+              </div>
+              <div className="flex justify-center [&>div]:w-full">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Não foi possível entrar com Google.')}
+                  locale="pt"
+                  width="100%"
+                  text="signin_with"
+                />
+              </div>
+            </>
+          )}
 
           <div className="mt-6 text-center">
             <p className="text-gray-500 text-sm">

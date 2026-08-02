@@ -131,11 +131,23 @@ function PostDetail() {
   }
 
   const postTitle = post.titulo || post.title || ''
-  const postBody = post.primeira_mensagem || post.conteudo || post.body || ''
+  const postBody = post.content || post.primeira_mensagem || post.conteudo || post.body || ''
   const postAuthor = post.nome_completo || post.author_name || 'Utilizador'
   const postDate = post.criado_em || post.created_at
   const postImage = post.primeira_imagem || post.imagem || post.image || null
   const mainComments = comments.filter(c => !c.parent_message && !c.parent)
+  const linkedProducts = Array.isArray(post.linked_products) ? post.linked_products : []
+  const isAuthor = userId && String(post.author_id ?? post.autor_id ?? post.user_id ?? post.author?.id ?? '') === String(userId)
+
+  const handleUnlinkProduct = async (productId) => {
+    try {
+      await api.unlinkProductFromPost(id, productId)
+      loadPost()
+    } catch (err) {
+      console.error('Erro ao remover vínculo do produto:', err)
+      alert('Erro ao remover o vínculo do produto.')
+    }
+  }
 
   return (
     <div className="min-h-screen soil-texture pb-8">
@@ -179,15 +191,29 @@ function PostDetail() {
           <h1 className="text-2xl font-bold text-gray-800 mb-3">{postTitle}</h1>
           <p className="text-gray-700 leading-relaxed whitespace-pre-wrap mb-4">{postBody}</p>
 
-          {post.is_product_available && post.linked_product && (
-            <button
-              onClick={() => navigate(`/product/${post.product_id}`)}
-              className="inline-flex items-center gap-2 bg-green-100 hover:bg-green-200 text-green-700 px-4 py-2 rounded-full text-sm font-semibold click-scale mb-4"
-            >
-              <span>🛒</span>
-              <span>Ver no Mercado: {post.product_name}</span>
-              <span>→</span>
-            </button>
+          {linkedProducts.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {linkedProducts.map(lp => {
+                const productId = lp.product_id ?? lp.id ?? lp.product?.id
+                const label = lp.label || `Ver no Mercado: ${lp.product_name || lp.product?.name || ''}`.trim()
+                return (
+                  <div key={productId} className="inline-flex items-center gap-1 bg-green-100 rounded-full pl-4 pr-1 py-1">
+                    <button onClick={() => navigate(`/product/${productId}`)}
+                      className="inline-flex items-center gap-2 text-green-700 text-sm font-semibold click-scale py-1">
+                      <span>🛒</span>
+                      <span>{label}</span>
+                      <span>→</span>
+                    </button>
+                    {isAuthor && (
+                      <button onClick={() => handleUnlinkProduct(productId)} title="Remover vínculo"
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-green-700 hover:bg-green-200 flex-shrink-0">
+                        <i className="bi bi-x-lg text-xs"></i>
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           )}
 
           <div className="flex items-center gap-6 pt-4 border-t border-gray-200 text-sm text-gray-600">
