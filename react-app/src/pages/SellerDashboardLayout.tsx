@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import Avatar from '../components/Avatar'
 import { SellerProfileProvider } from '../context/SellerProfileContext'
 import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
 
@@ -33,6 +34,7 @@ function SellerDashboardLayout() {
   const [deniedReason, setDeniedReason] = useState('')
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const fullName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || profile?.username || 'Utilizador'
 
   const handleLogout = () => {
     // Limpar localStorage
@@ -217,43 +219,64 @@ function SellerDashboardLayout() {
       </aside>
 
       <div className="flex-1 min-w-0">
-        <header className="bg-white border-b border-gray-100 px-4 py-4 lg:px-6">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl text-gray-600">
-                <i className="bi bi-list text-2xl"></i>
+        <header className="bg-white border-b border-gray-100 px-4 py-3 lg:py-4 lg:px-6">
+          <div className="max-w-7xl mx-auto">
+
+            {/* ── Barra de marca — só mobile: menu + logo à esquerda, avatar à direita ── */}
+            <div className="flex items-center justify-between lg:hidden pb-3 mb-3 border-b border-gray-50">
+              <div className="flex items-center gap-2 min-w-0">
+                <button onClick={() => setMobileMenuOpen(true)} className="w-9 h-9 -ml-1.5 flex items-center justify-center rounded-xl text-gray-600 flex-shrink-0">
+                  <i className="bi bi-list text-2xl"></i>
+                </button>
+                <img src="/logo.png" alt="" className="w-10 h-10 object-contain flex-shrink-0" />
+                <span className="text-lg font-black text-gray-900 truncate">IAgroMoz</span>
+              </div>
+              <button onClick={() => navigate(`${dashboardBase}/perfil`)} className="flex-shrink-0" title="O meu perfil">
+                <Avatar name={fullName} foto={profile?.profile_photo} size="sm" />
               </button>
-              {!isOverviewIndex && (
-                <div>
-                  <h1 className="text-2xl font-black text-gray-900">{dashboardLabel}</h1>
-                  <p className="text-sm text-gray-500">Acompanhe estatísticas, pedidos e produtos em um só lugar.</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Seta para voltar à Visão Geral — só mobile, em qualquer ecrã do painel */}
+                {!isOverviewIndex && (
+                  <button onClick={() => navigate(dashboardBase)}
+                    className="lg:hidden w-9 h-9 -ml-1.5 flex items-center justify-center rounded-xl text-gray-600 flex-shrink-0">
+                    <i className="bi bi-arrow-left text-xl"></i>
+                  </button>
+                )}
+                {!isOverviewIndex && (
+                  <div className="min-w-0">
+                    <h1 className="text-lg lg:text-2xl font-black text-gray-900 truncate">{dashboardLabel}</h1>
+                    <p className="hidden lg:block text-sm text-gray-500">Acompanhe estatísticas, pedidos e produtos em um só lugar.</p>
+                  </div>
+                )}
+              </div>
+              {/* No topo da Visão Geral (desktop), estes botões ficam na mesma linha da saudação (ver SellerDashboardOverview) */}
+              {!(isProducerDashboard && isOverviewIndex) && (
+                <div className="hidden lg:flex items-center gap-3">
+                  {isProducerDashboard ? (
+                    <>
+                      <button onClick={() => navigate(dashboardBase)}
+                        className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                        <i className="bi bi-grid-3x3-gap text-lg"></i>
+                        Visão Geral
+                      </button>
+                      <button onClick={() => navigate('/feed')}
+                        className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                        <i className="bi bi-arrow-left-short text-lg"></i>
+                        Voltar ao Feed
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="rounded-full bg-green-50 px-3 py-2 font-semibold text-green-700">{formatRole(profile.role)}</span>
+                      <span className="text-gray-400">{profile.email}</span>
+                    </>
+                  )}
                 </div>
               )}
             </div>
-            {/* No topo da Visão Geral, estes botões ficam na mesma linha da saudação (ver SellerDashboardOverview) */}
-            {!(isProducerDashboard && isOverviewIndex) && (
-              <div className="hidden lg:flex items-center gap-3">
-                {isProducerDashboard ? (
-                  <>
-                    <button onClick={() => navigate(dashboardBase)}
-                      className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                      <i className="bi bi-grid-3x3-gap text-lg"></i>
-                      Visão Geral
-                    </button>
-                    <button onClick={() => navigate('/feed')}
-                      className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                      <i className="bi bi-arrow-left-short text-lg"></i>
-                      Voltar ao Feed
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="rounded-full bg-green-50 px-3 py-2 font-semibold text-green-700">{formatRole(profile.role)}</span>
-                    <span className="text-gray-400">{profile.email}</span>
-                  </>
-                )}
-              </div>
-            )}
           </div>
         </header>
 
@@ -263,19 +286,32 @@ function SellerDashboardLayout() {
             <div className="absolute inset-0 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
             <div className="relative w-80 max-w-[85%] h-full bg-white shadow-lg p-4 overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-3xl bg-green-50 flex items-center justify-center text-green-700 text-2xl">
-                    <i className="bi bi-shop"></i>
+                <button onClick={() => { setMobileMenuOpen(false); navigate(`${dashboardBase}/perfil`) }}
+                  className="flex items-center gap-3 min-w-0 text-left">
+                  <Avatar name={fullName} foto={profile?.profile_photo} size="md" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{fullName}</p>
+                    <p className="text-xs text-gray-500">{formatRole(profile?.role)}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{profile?.store_name || 'Minha Loja'}</p>
-                    <p className="text-xs text-gray-500 truncate">{`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()}</p>
-                  </div>
-                </div>
-                <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-gray-600 rounded-lg">
+                </button>
+                <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-gray-600 rounded-lg flex-shrink-0">
                   <i className="bi bi-x-lg text-xl"></i>
                 </button>
               </div>
+              {isProducerDashboard && (
+                <div className="flex items-center gap-2 mb-4">
+                  <button onClick={() => { setMobileMenuOpen(false); navigate(dashboardBase) }}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl border border-gray-200 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
+                    <i className="bi bi-grid-3x3-gap"></i>
+                    Visão Geral
+                  </button>
+                  <button onClick={() => { setMobileMenuOpen(false); navigate('/feed') }}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl border border-gray-200 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
+                    <i className="bi bi-arrow-left-short"></i>
+                    Voltar ao Feed
+                  </button>
+                </div>
+              )}
               <nav className="space-y-2">
                 {SECTIONS.map(section => (
                   <NavLink key={section.path} to={section.path} onClick={() => setMobileMenuOpen(false)}

@@ -6,6 +6,7 @@ import TransactionCard from '../components/TransactionCard'
 import CancelConfirmModal from '../components/CancelConfirmModal'
 import RejectModal from '../components/RejectModal'
 import RatingModal from '../components/RatingModal'
+import NegotiationChatThread from '../components/NegotiationChatThread'
 import api from '../services/api'
 import { addNotification } from './Notifications'
 import { normTx, extractApiErrorMessage } from '../utils/normalizers'
@@ -25,6 +26,9 @@ function Transactions() {
   const [rejectTarget, setRejectTarget]   = useState(null)
   const [rejectLoading, setRejectLoading] = useState(false)
   const [ratingTarget, setRatingTarget]   = useState(null)
+  const [chatTarget, setChatTarget]       = useState(null)
+  const [chatId, setChatId]               = useState(null)
+  const [chatLoading, setChatLoading]     = useState(false)
 
   const userId = localStorage.getItem('userId')
   const prevTransactionsRef = useRef(null)
@@ -82,9 +86,17 @@ function Transactions() {
   const updateTxStatus = (txId, newStatus) =>
     setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, status: newStatus } : tx))
 
-  const handleShareWhatsapp = async (txId, whatsapp) => {
-    await api.shareTransactionContact(txId, whatsapp)
-    setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, buyer_whatsapp: whatsapp } : tx))
+  const handleOpenChat = async (tx) => {
+    setChatLoading(true); setActionError('')
+    try {
+      const chat = await api.getReservationChat(tx.id)
+      setChatTarget(tx)
+      setChatId(chat.id)
+    } catch (err) {
+      setActionError(extractApiErrorMessage(err, 'Não foi possível abrir o chat desta reserva.'))
+    } finally {
+      setChatLoading(false)
+    }
   }
 
   const handleConfirm = async (txId) => {
@@ -167,6 +179,21 @@ function Transactions() {
           sellerName={ratingTarget.seller_name}
           onClose={() => setRatingTarget(null)}
         />
+      )}
+      {chatTarget && chatId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg h-[85dvh] max-h-[640px] relative overflow-hidden">
+            <button onClick={() => { setChatTarget(null); setChatId(null) }}
+              className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center text-gray-500 hover:bg-gray-100">
+              <i className="bi bi-x-lg"></i>
+            </button>
+            <NegotiationChatThread
+              chatId={chatId}
+              title={String(chatTarget.buyer_id) === String(userId) ? chatTarget.seller_name : chatTarget.buyer_name}
+              subtitle={`Reserva #${chatTarget.id} — ${chatTarget.product_name}`}
+            />
+          </div>
+        </div>
       )}
 
       <div className="flex-1 min-w-0 flex flex-col">
@@ -255,7 +282,8 @@ function Transactions() {
                         onCancelRequest={setCancelTarget}
                         onRejectRequest={setRejectTarget}
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
-                        onShareWhatsapp={handleShareWhatsapp}
+                        onChatRequest={handleOpenChat}
+                        chatLoading={chatLoading}
                         onRateRequest={setRatingTarget}
                       />
                     )
@@ -284,7 +312,8 @@ function Transactions() {
                         onCancelRequest={setCancelTarget}
                         onRejectRequest={setRejectTarget}
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
-                        onShareWhatsapp={handleShareWhatsapp}
+                        onChatRequest={handleOpenChat}
+                        chatLoading={chatLoading}
                         onRateRequest={setRatingTarget}
                       />
                     )

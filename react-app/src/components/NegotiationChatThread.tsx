@@ -3,7 +3,7 @@ import api from '../services/api'
 import { normNegotiationMessage, normTx, extractApiErrorMessage } from '../utils/normalizers'
 import Avatar from './Avatar'
 
-const POLL_MS = 15000
+const POLL_MS = 4000
 
 interface NegotiationChatThreadProps {
   chatId: number
@@ -81,13 +81,20 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     const content = draft.trim()
-    if (!content || sending) return
+    if (!content) return
     setSending(true)
     setDraft('')
+    setError('')
+
+    // Envio otimista — mostra a mensagem de imediato, antes da resposta do servidor.
+    const tempId = `temp-${Date.now()}`
+    setMessages(prev => [...prev, { id: tempId, content, fromMe: true, senderName: '', createdAt: new Date().toISOString(), pending: true }])
+
     try {
       await api.sendNegotiationMessage(chatId, content)
       await load(true)
     } catch (err) {
+      setMessages(prev => prev.filter(m => m.id !== tempId))
       setError(extractApiErrorMessage(err, 'Não foi possível enviar a mensagem.'))
       setDraft(content)
     } finally {
@@ -132,8 +139,9 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
         ) : (
           messages.map(m => (
             <div key={m.id} className={`flex ${m.fromMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] text-sm ${m.fromMe ? 'chat-user-message' : 'chat-ai-message'}`}>
-                {m.content}
+              <div className={`max-w-[75%] text-sm flex items-end gap-1.5 ${m.fromMe ? 'chat-user-message' : 'chat-ai-message'} ${m.pending ? 'opacity-60' : ''}`}>
+                <span>{m.content}</span>
+                {m.pending && <i className="bi bi-clock text-[10px] flex-shrink-0"></i>}
               </div>
             </div>
           ))
@@ -143,9 +151,9 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
 
       <form onSubmit={handleSend} className="flex items-center gap-2 px-4 py-3 border-t border-gray-100 flex-shrink-0">
         <input type="text" value={draft} onChange={e => setDraft(e.target.value)}
-          placeholder="Escreva uma mensagem..." disabled={sending}
+          placeholder="Escreva uma mensagem..."
           className="form-input flex-1 px-4 py-2.5 rounded-full text-sm" />
-        <button type="submit" disabled={sending || !draft.trim()}
+        <button type="submit" disabled={!draft.trim()}
           className="w-10 h-10 flex-shrink-0 rounded-full btn-primary text-white flex items-center justify-center disabled:opacity-50">
           <i className="bi bi-send-fill text-sm"></i>
         </button>

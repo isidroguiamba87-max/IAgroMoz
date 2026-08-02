@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import { normalizePhoneForWhatsapp, extractApiErrorMessage } from '../utils/normalizers'
 
 // Menu "..." por reserva — hoje só "Cancelar reserva", pronto para ganhar
 // mais acções (ex: editar quantidade) sem mudar de estrutura outra vez.
@@ -51,14 +50,14 @@ const STATUS_CONFIG = {
 const CONTEXT_MSG = {
   buyer: {
     RESERVED:         { icon: 'bi-hourglass-split', text: 'Aguarda confirmação do vendedor.', color: 'text-amber-700 bg-amber-50 border-amber-200' },
-    AWAITING_PAYMENT: { icon: 'bi-whatsapp',         text: 'Vendedor confirmou! Envia o teu número de WhatsApp para combinar a entrega.', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+    AWAITING_PAYMENT: { icon: 'bi-chat-dots-fill',   text: 'Vendedor confirmou! Fala com ele no chat da reserva para combinar a entrega.', color: 'text-blue-700 bg-blue-50 border-blue-200' },
     PAID:             { icon: 'bi-cash-coin',         text: 'Pagamento recebido. Aguarda a entrega do vendedor.', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
     COMPLETED:        { icon: 'bi-patch-check-fill',  text: 'Transação concluída com sucesso!', color: 'text-gray-600 bg-gray-50 border-gray-200' },
     CANCELLED:        { icon: 'bi-x-circle',          text: 'Reserva cancelada. O stock foi devolvido.', color: 'text-red-600 bg-red-50 border-red-200' },
   },
   seller: {
     RESERVED:         { icon: 'bi-bell-fill',         text: 'Nova reserva! Confirma se tens o produto disponível.', color: 'text-amber-700 bg-amber-50 border-amber-200' },
-    AWAITING_PAYMENT: { icon: 'bi-whatsapp',          text: 'Confirmado! Aguarda o WhatsApp do comprador para combinar a entrega.', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+    AWAITING_PAYMENT: { icon: 'bi-chat-dots-fill',    text: 'Confirmado! Fala com o comprador no chat da reserva para combinar a entrega.', color: 'text-blue-700 bg-blue-50 border-blue-200' },
     PAID:             { icon: 'bi-cash-coin',          text: 'Pagamento recebido. Conclui a transação após a entrega.', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
     COMPLETED:        { icon: 'bi-patch-check-fill',  text: 'Transação concluída. Receita registada.', color: 'text-gray-600 bg-gray-50 border-gray-200' },
     CANCELLED:        { icon: 'bi-x-circle',          text: 'Transação cancelada. Stock devolvido automaticamente.', color: 'text-red-600 bg-red-50 border-red-200' },
@@ -75,32 +74,16 @@ function TransactionCard({
   onCancelRequest,
   onRejectRequest,
   onViewDetails,
-  onShareWhatsapp,
+  onChatRequest,
   onRateRequest,
+  chatLoading,
 }) {
   const tx     = transaction
   const status = STATUS_CONFIG[tx.status] || { label: tx.status, color: 'bg-gray-100 text-gray-600', icon: 'bi-question', dot: 'bg-gray-400' }
   const role   = isBuyer ? 'buyer' : 'seller'
   const ctx    = CONTEXT_MSG[role]?.[tx.status]
   const isActive = !['COMPLETED', 'CANCELLED'].includes(tx.status)
-
-  const [waInput, setWaInput]   = useState('')
-  const [waSending, setWaSending] = useState(false)
-  const [waError, setWaError]   = useState('')
-  const profileContact = localStorage.getItem('userContact') || ''
-
-  const handleSendWa = async (number) => {
-    const clean = String(number || '').replace(/\s+/g, '').replace(/^\+/, '')
-    if (!clean || !onShareWhatsapp) return
-    setWaSending(true); setWaError('')
-    try {
-      await onShareWhatsapp(tx.id, clean)
-    } catch (err) {
-      setWaError(extractApiErrorMessage(err, 'Erro ao enviar número.'))
-    } finally {
-      setWaSending(false)
-    }
-  }
+  const canChat = onChatRequest && !['RESERVED', 'CANCELLED'].includes(tx.status)
 
   return (
     <div className={`bg-white rounded-2xl border shadow-sm mb-3 overflow-hidden ${isActive ? 'border-gray-200' : 'border-gray-100 opacity-80'}`}>
@@ -145,66 +128,16 @@ function TransactionCard({
           </div>
         )}
 
-        {/* ── WhatsApp lado do VENDEDOR ── */}
-        {isSeller && tx.status === 'AWAITING_PAYMENT' && (
-          tx.buyer_whatsapp ? (
-            <a
-              href={normalizePhoneForWhatsapp(tx.buyer_whatsapp)}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="mb-3 flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors">
-              <span className="flex items-center gap-2"><i className="bi bi-whatsapp text-sm"></i> {tx.buyer_whatsapp}</span>
-              <span className="underline">Iniciar conversa no WhatsApp</span>
-            </a>
-          ) : (
-            <div className="mb-3 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-medium">
-              <i className="bi bi-hourglass-split text-sm animate-pulse"></i>
-              A aguardar o número do comprador
-            </div>
-          )
-        )}
-
-        {/* ── WhatsApp lado do COMPRADOR ── */}
-        {isBuyer && tx.status === 'AWAITING_PAYMENT' && (
-          tx.buyer_whatsapp ? (
-            <div className="mb-3 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-medium">
-              <i className="bi bi-check2-circle text-sm"></i>
-              Número enviado. O vendedor irá contactá-lo pelo WhatsApp.
-            </div>
-          ) : (
-            <div className="mb-3 rounded-xl border border-green-200 bg-green-50 p-3">
-              <p className="text-xs font-semibold text-green-800 mb-2 flex items-center gap-1.5">
-                <i className="bi bi-whatsapp text-sm"></i>
-                Digite o seu número de WhatsApp para interação com o vendedor.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="tel"
-                  value={waInput}
-                  onChange={e => setWaInput(e.target.value)}
-                  placeholder="+258 84 XXX XXXX"
-                  className="flex-1 px-3 py-2 rounded-lg border border-green-300 bg-white text-sm focus:outline-none focus:border-green-500 min-w-0"
-                  disabled={waSending}
-                />
-                <button
-                  onClick={() => handleSendWa(waInput)}
-                  disabled={waSending || !waInput.trim()}
-                  className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold disabled:opacity-50 transition-colors flex-shrink-0">
-                  {waSending ? <i className="bi bi-arrow-repeat animate-spin"></i> : 'Enviar'}
-                </button>
-              </div>
-              {profileContact && (
-                <button
-                  onClick={() => handleSendWa(profileContact)}
-                  disabled={waSending}
-                  className="mt-2 w-full py-2 rounded-lg border border-green-300 text-xs font-semibold text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50">
-                  <i className="bi bi-person-check mr-1.5"></i>
-                  Enviar número da plataforma ({profileContact})
-                </button>
-              )}
-              {waError && <p className="mt-1.5 text-xs text-red-600">{waError}</p>}
-            </div>
-          )
+        {/* ── Chat da reserva — disponível assim que confirmada ── */}
+        {canChat && (
+          <button onClick={() => onChatRequest(tx)} disabled={chatLoading}
+            className="w-full mb-3 flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100 transition-colors disabled:opacity-60">
+            <span className="flex items-center gap-2">
+              <i className="bi bi-chat-dots-fill text-sm"></i>
+              Chat com {isBuyer ? tx.seller_name : tx.buyer_name}
+            </span>
+            {chatLoading ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-chevron-right"></i>}
+          </button>
         )}
 
         {/* ── Botões de ação ── */}

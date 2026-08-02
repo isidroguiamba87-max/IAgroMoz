@@ -42,7 +42,7 @@ function SellerDashboardMessages() {
 
   return (
     <div className="rounded-3xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-      <div className="flex h-[calc(100vh-11rem)] min-h-[26rem]">
+      <div className="flex h-[calc(100dvh-11rem)] min-h-[26rem]">
         {/* Lista de conversas */}
         <div className={`w-full sm:w-80 flex-shrink-0 border-r border-gray-100 flex flex-col ${activeConversation ? 'hidden sm:flex' : 'flex'}`}>
           <div className="p-4 border-b border-gray-100">

@@ -136,8 +136,14 @@ function SellerDashboardOverview() {
 
   return (
     <div className="space-y-4">
-      {/* ── Saudação ── */}
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-6">
+      {/* ── Saudação: mobile compacta (sem foto, sem avaliação, sem atalhos — já estão na barra de topo/menu) ── */}
+      <div className="lg:hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
+        <p className="text-lg font-black text-gray-900 truncate">Olá, {profile?.first_name || fullName}! 👋</p>
+        <p className="text-xs text-gray-500 mt-0.5">Gerencie a sua {detailLabel} e aumente as suas vendas.</p>
+      </div>
+
+      {/* ── Saudação: desktop completa ── */}
+      <div className="hidden lg:block bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-6">
         <div className="flex items-center gap-4">
           <Avatar name={fullName} foto={profile?.profile_photo} size="lg" />
           <div className="min-w-0 flex-1">
@@ -149,7 +155,7 @@ function SellerDashboardOverview() {
             </p>
           </div>
           {userRole === 'producer' && (
-            <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <button onClick={() => navigate(getDashboardPath(''))}
                 className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
                 <i className="bi bi-grid-3x3-gap text-lg"></i>
