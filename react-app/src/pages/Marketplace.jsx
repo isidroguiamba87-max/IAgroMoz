@@ -6,7 +6,7 @@ import LoadingPlant from "../components/LoadingPlant"
 import LazyImage from "../components/LazyImage"
 import api from "../services/api"
 import { API_BASE } from "../config/api"
-import { normProduct as norm, extractApiErrorMessage } from "../utils/normalizers"
+import { normProduct as norm, extractApiErrorMessage, resolveMediaUrl } from "../utils/normalizers"
 import { getDashboardPath } from "../utils/dashboardPaths"
 
 // ─── Categorias e subcategorias conforme GET /api/enums/ ─────────────────────
@@ -171,7 +171,7 @@ function EditModal({ product, onSave, onCancel }) {
   const [preview, setPreview] = useState(product.photo || null)
   const [existingPhotos, setExistingPhotos] = useState(
     Array.isArray(product.photos) ? product.photos.map(p => ({
-      id: p.id, url: p.image || p.photo || p.url || p.file || null,
+      id: p.id, url: resolveMediaUrl(p.image || p.photo || p.url || p.file),
     })).filter(p => p.url) : []
   )
   const [newPhotos, setNewPhotos] = useState([])

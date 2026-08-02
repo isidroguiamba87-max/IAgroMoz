@@ -17,6 +17,10 @@ export function normTx(tx) {
     buyer_name:             tx.buyer_name || (tx.buyer?.first_name ? `${tx.buyer.first_name} ${tx.buyer.last_name || ''}`.trim() : null) || 'Comprador',
     seller_id:              tx.seller?.id ?? tx.seller_id ?? tx.product?.seller?.id ?? tx.product?.seller_id ?? (Number.isFinite(tx.seller) ? tx.seller : null),
     seller_name:            tx.seller_name || (tx.seller?.first_name ? `${tx.seller.first_name} ${tx.seller.last_name || ''}`.trim() : null) || 'Vendedor',
+    // ID do PERFIL de vendedor/produtor (não o user.id) — é o que a API espera em
+    // POST /marketplace/ratings/{seller_id}/rate_seller/. Distinto de seller_id acima,
+    // que compara contra localStorage.userId (um user.id) para saber "sou eu o vendedor?".
+    seller_profile_id:      tx.product?.seller?.id ?? tx.product?.producer?.id ?? tx.seller_profile_id ?? tx.producer_profile_id ?? null,
     buyer_contact_name:     tx.buyer_contact_name || tx.buyer_name || '',
     buyer_contact_phone:    tx.buyer_contact_phone || tx.buyer_phone || tx.buyer?.contact || '',
     buyer_contact_whatsapp: tx.buyer_contact_whatsapp || tx.buyer_contact_phone || tx.buyer_phone || tx.buyer?.contact || '',
@@ -37,7 +41,7 @@ export function normProduct(p) {
     name:          p.name || p.nome || '',
     description:   p.description || p.descricao || '',
     price:         p.price || p.preco || '0',
-    photo:         p.photo || p.foto || null,
+    photo:         resolveMediaUrl(p.photo || p.foto),
     photos:        Array.isArray(p.photos) ? p.photos : [],
     category:      p.category || p.categoria || '',
     subcategory:   p.subcategory || '',
@@ -152,10 +156,14 @@ export function resolveMediaUrl(path) {
   if (!path) return null
   // Converter URLs absolutas do backend para caminhos relativos (evita mixed content em HTTPS)
   for (const origin of BACKEND_HTTP_ORIGINS) {
-    if (path.startsWith(origin)) return path.slice(origin.length)
+    if (path.startsWith(origin)) { path = path.slice(origin.length); break }
   }
   if (path.startsWith('http')) return path
-  return API_MEDIA + (path.startsWith('/') ? path : '/' + path)
+  // O backend devolve o caminho dos ficheiros de media sem o prefixo "media/"
+  // (ex: "products/x.jpg"), por isso é preciso acrescentá-lo aqui.
+  const clean = path.replace(/^\/+/, '')
+  const withMediaPrefix = clean.startsWith('media/') ? clean : `media/${clean}`
+  return `${API_MEDIA}/${withMediaPrefix}`
 }
 
 // ─── Telefone → WhatsApp URL ──────────────────────────────────────────────────

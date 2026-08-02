@@ -4,7 +4,9 @@ import Logo from '../components/Logo'
 import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
 import LoadingPlant from '../components/LoadingPlant'
 import Comment from '../components/Comment'
+import PhotoGallery from '../components/PhotoGallery'
 import api from '../services/api'
+import { resolveMediaUrl } from '../utils/normalizers'
 
 function PostDetail() {
   const { id } = useParams()
@@ -50,7 +52,7 @@ function PostDetail() {
       const data = await api.getFeedPost(id)
       setPost(data)
       const answers = await api.getFeedComments(id)
-      setComments(Array.isArray(answers) ? answers : [])
+      setComments(Array.isArray(answers) ? answers : (answers?.results || []))
     } catch (err) {
       console.error('Erro ao carregar post:', err)
     } finally {
@@ -134,7 +136,15 @@ function PostDetail() {
   const postBody = post.content || post.primeira_mensagem || post.conteudo || post.body || ''
   const postAuthor = post.nome_completo || post.author_name || 'Utilizador'
   const postDate = post.criado_em || post.created_at
-  const postImage = post.primeira_imagem || post.imagem || post.image || null
+  const postImages = (() => {
+    const raw = post.imagens || post.images || post.fotos || post.photos
+    const arr = Array.isArray(raw) && raw.length > 0
+      ? raw.map(item => resolveMediaUrl(typeof item === 'string' ? item : (item?.imagem || item?.image || item?.url || item?.foto))).filter(Boolean)
+      : []
+    if (arr.length > 0) return arr
+    const single = resolveMediaUrl(post.primeira_imagem || post.imagem || post.image)
+    return single ? [single] : []
+  })()
   const mainComments = comments.filter(c => !c.parent_message && !c.parent)
   const linkedProducts = Array.isArray(post.linked_products) ? post.linked_products : []
   const isAuthor = userId && String(post.author_id ?? post.autor_id ?? post.user_id ?? post.author?.id ?? '') === String(userId)
@@ -168,12 +178,10 @@ function PostDetail() {
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="agro-card p-6 mb-6">
-          {postImage && (
-            <img 
-              src={postImage} 
-              alt={postTitle}
-              className="w-full h-96 object-cover rounded-xl mb-6"
-            />
+          {postImages.length > 0 && (
+            <div className="rounded-xl overflow-hidden mb-6">
+              <PhotoGallery images={postImages} alt={postTitle} />
+            </div>
           )}
 
           <div className="flex items-center gap-3 mb-4">

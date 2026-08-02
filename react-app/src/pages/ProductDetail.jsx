@@ -8,6 +8,7 @@ import MobileNav from '../components/MobileNav'
 import api from '../services/api'
 
 import { API_BASE } from '../config/api'
+import { resolveMediaUrl } from '../utils/normalizers'
 
 function ProductDetail() {
   const { id } = useParams()
@@ -178,7 +179,7 @@ function ProductDetail() {
         preco: data.preco || data.price || '',
         foto: null
       })
-      setEditPreview(data.foto || data.photo || data.image || null)
+      setEditPreview(resolveMediaUrl(data.foto || data.photo || data.image))
     } catch (err) {
       console.error('Erro ao carregar produto:', err)
     } finally {
@@ -391,9 +392,9 @@ function ProductDetail() {
 
   const productName = product.name || product.nome || 'Produto'
   const sellerId = getSellerId(product)
-  const coverImageUrl = product.photo || product.image || product.foto || null
+  const coverImageUrl = resolveMediaUrl(product.photo || product.image || product.foto)
   const galleryImageUrls = Array.isArray(product.photos)
-    ? product.photos.map(p => p.image || p.photo || p.url || p.file).filter(Boolean)
+    ? product.photos.map(p => resolveMediaUrl(p.image || p.photo || p.url || p.file)).filter(Boolean)
     : []
   const productImages = [coverImageUrl, ...galleryImageUrls].filter((v, i, arr) => v && arr.indexOf(v) === i)
 

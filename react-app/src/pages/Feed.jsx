@@ -5,13 +5,12 @@ import DesktopSidebar from '../components/DesktopSidebar'
 import FeedRightPanel, { getPendingRequestsForMe } from '../components/FeedRightPanel'
 import Comment from '../components/Comment'
 import Avatar from '../components/Avatar'
-import PhotoGallery from '../components/PhotoGallery'
 import api from '../services/api'
 import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
 import { normalizeUserDisplayName, normalizeComment, resolveMediaUrl } from '../utils/normalizers'
 import { createKeyedThrottle } from '../utils/debounce'
 
-import { API_BASE, API_MEDIA } from '../config/api'
+import { API_BASE } from '../config/api'
 
 // ─── Constantes globais ───────────────────────────────────────────────────────
 const _userFotoCache = {}
@@ -28,6 +27,48 @@ const REACTIONS = [
 ]
 
 // normalizeUserDisplayName, normalizeComment, resolveMediaUrl importadas de utils/normalizers
+
+// ─── Preview organizado de fotos no card do feed ───────────────────────────────
+// Até 5 fotos por post, mas não expõe todas ao mesmo tempo — mostra no máximo 3
+// organizadas; para ver todas (com scroll horizontal) a pessoa abre a publicação.
+function FeedPhotoPreview({ images, alt, onOpen }) {
+  if (!images || images.length === 0) return null
+
+  if (images.length === 1) {
+    return (
+      <div className="cursor-pointer" onClick={onOpen}>
+        <img src={images[0]} alt={alt || 'Imagem do post'} className="w-full object-cover max-h-[500px]" loading="lazy" decoding="async" />
+      </div>
+    )
+  }
+
+  if (images.length === 2) {
+    return (
+      <div className="grid grid-cols-2 gap-0.5 cursor-pointer" onClick={onOpen}>
+        {images.map((src, i) => (
+          <img key={i} src={src} alt={`${alt || 'Imagem do post'} (${i + 1})`} className="w-full h-56 object-cover" loading="lazy" decoding="async" />
+        ))}
+      </div>
+    )
+  }
+
+  const shown = images.slice(0, 3)
+  const extra = images.length - shown.length
+  return (
+    <div className="grid grid-cols-3 gap-0.5 cursor-pointer" onClick={onOpen}>
+      {shown.map((src, i) => (
+        <div key={i} className="relative">
+          <img src={src} alt={`${alt || 'Imagem do post'} (${i + 1})`} className="w-full h-32 object-cover" loading="lazy" decoding="async" />
+          {i === shown.length - 1 && extra > 0 && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <span className="text-white font-bold text-lg">+{extra}</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 // ─── Componente principal ──────────────────────────────────────────────────────
 function Feed() {
@@ -203,8 +244,7 @@ function Feed() {
           const u = await res.json()
           const foto = u.foto_perfil || u.profile_photo || u.imagem || u.photo
           if (foto) {
-            const url = foto.startsWith('http') ? foto : API_MEDIA + (foto.startsWith('/') ? foto : '/' + foto)
-            _userFotoCache[userId] = url
+            _userFotoCache[userId] = resolveMediaUrl(foto)
           }
           const name = normalizeUserDisplayName(u)
           if (name) _userNameCache[userId] = name
@@ -225,7 +265,8 @@ function Feed() {
     try {
       setLoading(true)
       const data = await api.getCommunitySessions()
-      const normalized = Array.isArray(data) ? data.map(p => {
+      const rawPosts = Array.isArray(data) ? data : (data?.results || [])
+      const normalized = rawPosts.map(p => {
         const author = resolveAuthor(p)
         // don't default to 'Utilizador' here — try to compute, keep null if unknown
         const authorName = extractAuthorName(p, author) || null
@@ -235,12 +276,7 @@ function Feed() {
           body: p.content || p.conteudo || p.body || p.texto || p.description || '',
           author_name: authorName,
           author_id: author?.id || p.autor?.id || p.autor || p.author?.id || p.author || p.autor_id || p.author_id || null,
-          author_foto: (() => {
-            const foto = author?.foto_perfil || author?.profile_photo || author?.photo || author?.imagem || p.autor_foto || p.author_foto || null
-            if (!foto) return null
-            if (foto.startsWith('http')) return foto
-            return API_MEDIA + (foto.startsWith('/') ? foto : '/' + foto)
-          })(),
+          author_foto: resolveMediaUrl(author?.foto_perfil || author?.profile_photo || author?.photo || author?.imagem || p.autor_foto || p.author_foto),
           created_at: p.criado_em || p.created_at,
           distrito: p.distrito || p.district || p.author?.district?.name || null,
           tipo_cultura: p.tipo_cultura || p.crop_type || p.categoria_label || null,
@@ -249,28 +285,18 @@ function Feed() {
           answers_count: Array.isArray(p.comments) ? p.comments.length : (p.answers_count || 0),
           likes_count: p.total_likes ?? p.likes_count ?? 0,
           gostou: p.gostou === true,
-          image: (() => {
-            const img = p.imagem || p.image
-            if (!img) return null
-            if (img.startsWith('http')) return img
-            return `${API_MEDIA}/media/` + img.replace(/^\/?(media\/)?/, '')
-          })(),
+          image: resolveMediaUrl(p.imagem || p.image),
           // Suporte a múltiplas fotos por post — usa o array se a API já o devolver,
           // senão cai para a imagem única (compatibilidade com o formato atual).
           images: (() => {
             const raw = p.imagens || p.images || p.fotos || p.photos
             if (!Array.isArray(raw) || raw.length === 0) return null
             return raw
-              .map(item => {
-                const img = typeof item === 'string' ? item : (item?.imagem || item?.image || item?.url || item?.foto)
-                if (!img) return null
-                if (img.startsWith('http')) return img
-                return `${API_MEDIA}/media/` + img.replace(/^\/?(media\/)?/, '')
-              })
+              .map(item => resolveMediaUrl(typeof item === 'string' ? item : (item?.imagem || item?.image || item?.url || item?.foto)))
               .filter(Boolean)
           })(),
         }
-      }) : []
+      })
 
       if (token) {
         await fetchMissingFotos(normalized)
@@ -296,7 +322,7 @@ function Feed() {
     try {
       setLoadingComments(prev => ({ ...prev, [postId]: true }))
       const data = await api.getCommunityMessages(postId)
-      const list = Array.isArray(data) ? data : []
+      const list = Array.isArray(data) ? data : (data?.results || [])
       setPostComments(prev => ({ ...prev, [postId]: list.map(normalizeComment) }))
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, answers_count: list.length } : p))
     } catch (err) {
@@ -613,7 +639,7 @@ function Feed() {
                       </div>
                     </div>
                     {images.length > 0 && (
-                      <PhotoGallery images={images} alt={post.title} />
+                      <FeedPhotoPreview images={images} alt={post.title} onOpen={() => navigate(`/post/${post.id}`)} />
                     )}
                     {post.body && (
                       <div className="px-4 pt-3 pb-1">

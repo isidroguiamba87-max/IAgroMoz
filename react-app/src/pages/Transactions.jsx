@@ -162,7 +162,7 @@ function Transactions() {
       {ratingTarget && (
         <RatingModal
           productId={ratingTarget.product_id}
-          sellerId={ratingTarget.seller_id}
+          sellerId={ratingTarget.seller_profile_id || ratingTarget.seller_id}
           productName={ratingTarget.product_name}
           sellerName={ratingTarget.seller_name}
           onClose={() => setRatingTarget(null)}

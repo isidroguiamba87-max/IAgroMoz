@@ -10,8 +10,8 @@ import { addNotification } from './Notifications'
 import { useTheme } from '../context/ThemeContext'
 import { FieldInput, FieldSelect } from './RegisterBase'
 import { getConnections, addConnection, removeConnection, isConnected } from '../components/FeedRightPanel'
-import { API_BASE, API_MEDIA } from '../config/api'
 import { getUserCache, genderLabel, roleLabel, setUserCache } from '../utils/userCache'
+import { resolveMediaUrl } from '../utils/normalizers'
 
 // Comprime imagem no cliente antes do upload para evitar 413
 function compressImage(file, maxWidth = 1024, quality = 0.82) {
@@ -34,13 +34,6 @@ function compressImage(file, maxWidth = 1024, quality = 0.82) {
     }
     reader.readAsDataURL(file)
   })
-}
-
-// Normaliza a URL de uma imagem — garante URL absoluta
-const resolveImg = (url) => {
-  if (!url) return null
-  if (url.startsWith('http')) return url
-  return `${API_MEDIA}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
 function Profile() {
@@ -274,29 +267,30 @@ function Profile() {
 
   const normalizeText = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
 
+  // GET /feed/posts/?author= não é um filtro documentado pela API — percorre as
+  // páginas da lista geral e filtra pelo autor no cliente (mesmo padrão de loadProducts).
   const loadPosts = async () => {
     setLoadingPosts(true); setPostsError('')
+    const MAX_PAGES = 15
     try {
-      let list = []
-      let failed = false
-      if (profileId) {
-        const byAuthor = await api.getFeedPosts({ author: profileId }).catch(() => null)
-        list = Array.isArray(byAuthor) ? byAuthor : (byAuthor?.results || [])
-        if (list.length === 0 || (byAuthor?.count != null && byAuthor.count > list.length + 5)) {
-          const all = await api.getFeedPosts().catch(() => { failed = true; return null })
-          if (failed) { setPostsError('Erro ao carregar publicações. Tente novamente.'); setPosts([]); return }
-          const allList = Array.isArray(all) ? all : (all?.results || [])
-          list = allList.filter(p => {
-            const aid = p.autor?.id ?? p.autor_id ?? p.author_id ?? p.autor ?? p.author?.id
-            return aid && String(aid) === String(profileId)
-          })
+      const matches = []
+      let page = 1
+      let firstPageFailed = false
+      while (page <= MAX_PAGES) {
+        const data = await api.getFeedPosts({ page }).catch(() => null)
+        if (!data) { firstPageFailed = page === 1; break }
+        const pageList = Array.isArray(data) ? data : (data.results || [])
+        for (const p of pageList) {
+          if (!profileId) { matches.push(p); continue }
+          const aid = p.autor?.id ?? p.autor_id ?? p.author_id ?? p.autor ?? p.author?.id
+          if (aid && String(aid) === String(profileId)) matches.push(p)
         }
-      } else {
-        const all = await api.getFeedPosts().catch(() => { failed = true; return null })
-        if (failed) { setPostsError('Erro ao carregar publicações. Tente novamente.'); setPosts([]); return }
-        list = Array.isArray(all) ? all : (all?.results || [])
+        const hasNext = !Array.isArray(data) && !!data.next
+        if (!hasNext) break
+        page += 1
       }
-      setPosts(list)
+      if (firstPageFailed) { setPostsError('Erro ao carregar publicações. Tente novamente.'); setPosts([]); return }
+      setPosts(matches)
     } catch (err) { setPostsError('Erro ao carregar publicações. Tente novamente.'); setPosts([]) }
     finally { setLoadingPosts(false) }
   }
@@ -305,33 +299,40 @@ function Profile() {
     id:        p.id,
     nome:      p.name  || p.nome  || '',
     preco:     p.price || p.preco || '0',
-    foto:      resolveImg(p.photo || p.foto || null),
+    foto:      resolveMediaUrl(p.photo || p.foto),
     seller_id: p.seller?.id ?? p.seller_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id ?? null,
     vendedor:  p.seller
       ? `${p.seller.first_name || ''} ${p.seller.last_name || ''}`.trim()
       : (p.vendedor || ''),
   })
 
+  // GET /marketplace/products/?seller= não é um filtro suportado pela API —
+  // percorre as páginas da lista geral e filtra pelo vendedor/produtor no
+  // cliente (a "banca" do vendedor no perfil dele). Limitado a MAX_PAGES para
+  // não ficar a percorrer o catálogo inteiro indefinidamente.
   const loadProducts = async () => {
     setLoadingProducts(true); setProductsError('')
+    const MAX_PAGES = 15
     try {
       const targetId = profileId || localStorage.getItem('userId')
-      let list = []
-      let failed = false
-      if (targetId) {
-        const bySeller = await api.getProducts({ seller: targetId }).catch(() => null)
-        list = Array.isArray(bySeller) ? bySeller : (bySeller?.results || [])
-        if (list.length === 0) {
-          const all = await api.getProducts().catch(() => { failed = true; return null })
-          if (failed) { setProductsError('Erro ao carregar produtos. Tente novamente.'); setProducts([]); return }
-          const allList = Array.isArray(all) ? all : (all?.results || [])
-          list = allList.filter(p => {
-            const sid = p.seller?.id ?? p.seller_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id
-            return sid && String(sid) === String(targetId)
-          })
+      if (!targetId) { setProducts([]); return }
+      const matches = []
+      let page = 1
+      let firstPageFailed = false
+      while (page <= MAX_PAGES) {
+        const data = await api.getProducts({ page }).catch(() => null)
+        if (!data) { firstPageFailed = page === 1; break }
+        const pageList = Array.isArray(data) ? data : (data.results || [])
+        for (const p of pageList) {
+          const sid = p.seller?.id ?? p.seller_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id
+          if (sid && String(sid) === String(targetId)) matches.push(p)
         }
+        const hasNext = !Array.isArray(data) && !!data.next
+        if (!hasNext) break
+        page += 1
       }
-      setProducts(list.map(normalizeProduct))
+      if (firstPageFailed) { setProductsError('Erro ao carregar produtos. Tente novamente.'); setProducts([]); return }
+      setProducts(matches.map(normalizeProduct))
     } catch (err) { setProductsError('Erro ao carregar produtos. Tente novamente.'); setProducts([]) }
     finally { setLoadingProducts(false) }
   }
@@ -589,12 +590,7 @@ function Profile() {
               ) : (
                 <div className="space-y-3">
                   {posts.map(post => {
-                    const img = (() => {
-                      const i = post.imagem || post.image
-                      if (!i) return null
-                      if (i.startsWith('http')) return i
-                      return `${API_MEDIA}/media/` + i.replace(/^\/?(media\/)?/, '')
-                    })()
+                    const img = resolveMediaUrl(post.imagem || post.image)
                     return (
                       <div key={post.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                         {/* Header */}
@@ -703,12 +699,7 @@ function Profile() {
               ) : (
                 <div className="space-y-3">
                   {techniques.map(t => {
-                    const img = (() => {
-                      const i = t.imagem || t.image || t.foto || t.photo
-                      if (!i) return null
-                      if (i.startsWith('http')) return i
-                      return `${API_MEDIA}/media/` + i.replace(/^\/?(media\/)?/, '')
-                    })()
+                    const img = resolveMediaUrl(t.imagem || t.image || t.foto || t.photo)
                     const nome = t.nome || t.titulo || t.title || t.name || 'Sem título'
                     const desc = t.descricao || t.description || t.conteudo || t.body || ''
                     const categoria = t.categoria || t.category || t.tipo || t.type || ''
