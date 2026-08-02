@@ -477,8 +477,15 @@ function Profile() {
     <div className="min-h-screen bg-[#F8FAF8] flex">
       <DesktopSidebar />
       <div className="flex-1 min-w-0">
-        <header className="glass-effect sticky top-0 z-40 border-b border-gray-100">
-          <div className="max-w-2xl mx-auto px-4 py-3" />
+        <header className="glass-effect sticky top-0 z-40 border-b border-gray-100 lg:hidden">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-end">
+            {isOwnProfile && (
+              <button onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors">
+                <i className="bi bi-box-arrow-right"></i> Sair
+              </button>
+            )}
+          </div>
         </header>
 
         <main className="max-w-4xl mx-auto px-4 py-6 pb-24 lg:pb-6">

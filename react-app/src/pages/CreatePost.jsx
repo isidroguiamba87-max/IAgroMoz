@@ -77,9 +77,15 @@ function CreatePost() {
     setFormData(p => ({ ...p, [name]: value }))
   }
 
+  // Aceita seleção múltipla logo na primeira foto: a 1ª vai para a capa (com
+  // recorte via ImageEditor, como já era), as restantes entram directamente
+  // como "mais fotos" — antes era preciso adicionar a capa primeiro para a
+  // secção de fotos extra sequer aparecer, o que não era óbvio.
   const handleImageChange = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    const [file, ...rest] = files
     setFormData(p => ({ ...p, image: file }))
     const reader = new FileReader()
     reader.onloadend = () => {
@@ -87,6 +93,7 @@ function CreatePost() {
       setShowEditor(true)
     }
     reader.readAsDataURL(file)
+    if (rest.length) addExtraPhotos(rest)
   }
 
   useEffect(() => {
@@ -108,26 +115,32 @@ function CreatePost() {
     loadEnums()
   }, [])
 
+  const addExtraPhotos = (files) => {
+    setExtraPhotos(prevExtra => {
+      const room = MAX_POST_PHOTOS - 1 - prevExtra.length
+      const accepted = []
+      let rejected = false
+      for (const file of files) {
+        if (accepted.length >= room) { rejected = true; break }
+        if (!ALLOWED_PHOTO_TYPES.includes(file.type) || file.size > MAX_PHOTO_SIZE) { rejected = true; continue }
+        accepted.push(file)
+      }
+      if (rejected) setError(`Só são aceites até ${MAX_POST_PHOTOS} fotos no total (jpeg/png/webp, máx. 5MB cada).`)
+      if (!accepted.length) return prevExtra
+      accepted.forEach(file => {
+        const reader = new FileReader()
+        reader.onloadend = () => setExtraPreviews(prev => [...prev, reader.result])
+        reader.readAsDataURL(file)
+      })
+      return [...prevExtra, ...accepted]
+    })
+  }
+
   const handleExtraPhotosChange = (e) => {
     const files = Array.from(e.target.files || [])
     e.target.value = ''
     if (!files.length) return
-    const room = MAX_POST_PHOTOS - 1 - extraPhotos.length
-    const accepted = []
-    let rejected = false
-    for (const file of files) {
-      if (accepted.length >= room) { rejected = true; break }
-      if (!ALLOWED_PHOTO_TYPES.includes(file.type) || file.size > MAX_PHOTO_SIZE) { rejected = true; continue }
-      accepted.push(file)
-    }
-    if (rejected) setError(`Só são aceites até ${MAX_POST_PHOTOS} fotos no total (jpeg/png/webp, máx. 5MB cada).`)
-    if (!accepted.length) return
-    setExtraPhotos(prev => [...prev, ...accepted])
-    accepted.forEach(file => {
-      const reader = new FileReader()
-      reader.onloadend = () => setExtraPreviews(prev => [...prev, reader.result])
-      reader.readAsDataURL(file)
-    })
+    addExtraPhotos(files)
   }
 
   const removeExtraPhoto = (index) => {
@@ -258,9 +271,9 @@ function CreatePost() {
             ) : (
               <label className="flex flex-col items-center justify-center h-36 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-green-400 hover:bg-green-50 transition-all group">
                 <i className="bi bi-cloud-upload text-3xl text-gray-300 group-hover:text-green-500 mb-2 transition-colors"></i>
-                <p className="text-sm font-semibold text-gray-400 group-hover:text-green-600 transition-colors">Clique para adicionar foto</p>
-                <p className="text-xs text-gray-300 mt-0.5">JPG, PNG, WEBP</p>
-                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                <p className="text-sm font-semibold text-gray-400 group-hover:text-green-600 transition-colors">Clique para adicionar fotos</p>
+                <p className="text-xs text-gray-300 mt-0.5">Até {MAX_POST_PHOTOS} fotos — JPG, PNG, WEBP</p>
+                <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
               </label>
             )}
           </div>

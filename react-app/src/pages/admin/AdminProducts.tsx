@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../services/api'
 import { SectionHeader, Table } from './AdminComponents'
+import { resolveMediaUrl } from '../../utils/normalizers'
 
 function AdminProducts() {
   const [products, setProducts] = useState([])
@@ -63,7 +64,7 @@ function AdminProducts() {
           empty="Nenhum produto encontrado."
           cols={[
             { key: 'id', label: 'ID' },
-            { key: 'photo', label: 'Foto', render: row => row.photo ? <img src={row.photo} alt={row.name || ''} className="h-12 w-12 rounded-2xl object-cover" /> : <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400"><i className="bi bi-image" /></div> },
+            { key: 'photo', label: 'Foto', render: row => row.photo ? <img src={resolveMediaUrl(row.photo)} alt={row.name || ''} className="h-12 w-12 rounded-2xl object-cover" /> : <div className="h-12 w-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400"><i className="bi bi-image" /></div> },
             { key: 'name', label: 'Nome' },
             { key: 'price', label: 'Preço', render: row => row.price ? `${row.price} MT` : '—' },
             { key: 'category', label: 'Categoria' },

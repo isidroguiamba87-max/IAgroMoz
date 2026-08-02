@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 
-import { API_BASE, API_MEDIA } from '../config/api'
+import { API_BASE } from '../config/api'
+import { resolveMediaUrl } from '../utils/normalizers'
 
 // Gestão de conexões via localStorage
 export const getConnections = () => {
@@ -108,11 +109,6 @@ export const getPendingRequestsForMe = () => {
   return getConnectionRequests().filter(r => String(r.toId) === String(myId) && r.status === 'pending')
 }
 
-const resolveImg = (url) => {
-  if (!url) return null
-  if (url.startsWith('http')) return url
-  return `${API_MEDIA}${url.startsWith('/') ? '' : '/'}${url}`
-}
 
 function StarRow({ value, max = 5 }) {
   const stars = []
@@ -154,7 +150,7 @@ function FeedRightPanel({ isLoggedIn }) {
         id: p.id,
         nome: p.name || p.nome || '',
         preco: p.price || p.preco || '0',
-        foto: resolveImg(p.photo || p.foto || p.imagem || null),
+        foto: resolveMediaUrl(p.photo || p.foto || p.imagem),
         media: parseFloat(p.average_rating || p.media_avaliacao || 0),
         totalAvaliacoes: p.ratings_count || p.total_avaliacoes || p.total_ratings || 0,
       }))

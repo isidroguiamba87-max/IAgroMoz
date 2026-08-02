@@ -52,18 +52,23 @@ function SellerDashboardOverview() {
   useEffect(() => {
     loadDashboard()
     loadMyProducts()
+    // Actualiza sozinho — uma venda pode ser concluída a partir do chat de
+    // negociação ou de "Minhas Reservas", páginas fora deste painel, por isso
+    // os valores (receita, pedidos) precisam de se refrescar sem F5 manual.
+    const interval = setInterval(() => { loadDashboard(true); loadMyProducts() }, 20000)
+    return () => clearInterval(interval)
   }, [])
 
-  const loadDashboard = async () => {
-    setLoading(true)
-    setError('')
+  const loadDashboard = async (silent = false) => {
+    if (!silent) setLoading(true)
+    if (!silent) setError('')
     try {
       const result = await api.getSellerDashboard()
       setData(result)
     } catch (err) {
-      setError('Não foi possível carregar o painel. Tente mais tarde.')
+      if (!silent) setError('Não foi possível carregar o painel. Tente mais tarde.')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
