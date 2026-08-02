@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DesktopSidebar from '../components/DesktopSidebar'
 import MobileNav from '../components/MobileNav'
 import TransactionCard from '../components/TransactionCard'
 import CancelConfirmModal from '../components/CancelConfirmModal'
 import RejectModal from '../components/RejectModal'
+import RatingModal from '../components/RatingModal'
 import api from '../services/api'
 import { addNotification } from './Notifications'
 import { normTx, extractApiErrorMessage } from '../utils/normalizers'
+
+const POLL_MS = 15000
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 function Transactions() {
@@ -21,23 +24,58 @@ function Transactions() {
   const [cancelLoading, setCancelLoading] = useState(false)
   const [rejectTarget, setRejectTarget]   = useState(null)
   const [rejectLoading, setRejectLoading] = useState(false)
+  const [ratingTarget, setRatingTarget]   = useState(null)
 
   const userId = localStorage.getItem('userId')
+  const prevTransactionsRef = useRef(null)
+
+  // Guarda os IDs de reservas para as quais já mostrámos o popup automático de
+  // avaliação, para não voltar a aparecer sozinho sempre que a página recarrega.
+  const seenRatingKey = `rated_prompt_seen_${userId}`
+  const getSeenRatingIds = () => {
+    try { return new Set(JSON.parse(localStorage.getItem(seenRatingKey) || '[]')) } catch { return new Set() }
+  }
+  const markRatingSeen = (txId) => {
+    const seen = getSeenRatingIds()
+    seen.add(txId)
+    localStorage.setItem(seenRatingKey, JSON.stringify([...seen]))
+  }
 
   useEffect(() => {
     loadTransactions()
+    const interval = setInterval(() => loadTransactions(true), POLL_MS)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadTransactions = async () => {
+  const loadTransactions = async (silent = false) => {
     try {
-      setLoading(true); setError('')
+      if (!silent) { setLoading(true); setError('') }
       const txData = await api.getTransactions()
       const list   = Array.isArray(txData) ? txData : (txData.results || [])
-      setTransactions(list.map(normTx))
+      const normalized = list.map(normTx)
+
+      // Detecta reservas onde sou comprador e o estado passou a COMPLETED
+      // desde o último load — dispara o popup de avaliação automaticamente.
+      const prev = prevTransactionsRef.current
+      if (prev && !ratingTarget) {
+        const seen = getSeenRatingIds()
+        for (const tx of normalized) {
+          const wasCompleted = prev.find(p => p.id === tx.id)?.status === 'COMPLETED'
+          const isBuyerOfTx = String(tx.buyer_id) === String(userId)
+          if (isBuyerOfTx && tx.status === 'COMPLETED' && !wasCompleted && !seen.has(tx.id)) {
+            markRatingSeen(tx.id)
+            setRatingTarget(tx)
+            break
+          }
+        }
+      }
+      prevTransactionsRef.current = normalized
+      setTransactions(normalized)
     } catch {
-      setError('Não foi possível carregar as suas reservas.')
+      if (!silent) setError('Não foi possível carregar as suas reservas.')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -121,6 +159,15 @@ function Transactions() {
         onConfirm={handleReject}
         onClose={() => setRejectTarget(null)}
       />
+      {ratingTarget && (
+        <RatingModal
+          productId={ratingTarget.product_id}
+          sellerId={ratingTarget.seller_id}
+          productName={ratingTarget.product_name}
+          sellerName={ratingTarget.seller_name}
+          onClose={() => setRatingTarget(null)}
+        />
+      )}
 
       <div className="flex-1 min-w-0 flex flex-col">
 
@@ -209,6 +256,7 @@ function Transactions() {
                         onRejectRequest={setRejectTarget}
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
                         onShareWhatsapp={handleShareWhatsapp}
+                        onRateRequest={setRatingTarget}
                       />
                     )
                   })}
@@ -237,6 +285,7 @@ function Transactions() {
                         onRejectRequest={setRejectTarget}
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
                         onShareWhatsapp={handleShareWhatsapp}
+                        onRateRequest={setRatingTarget}
                       />
                     )
                   })}

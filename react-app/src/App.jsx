@@ -27,6 +27,7 @@ const Profile = lazy(() => import('./pages/Profile'))
 const Notifications = lazy(() => import('./pages/Notifications'))
 const AdminPanel = lazy(() => import('./pages/admin/AdminPanel'))
 const Transactions = lazy(() => import('./pages/Transactions'))
+const Messages = lazy(() => import('./pages/Messages'))
 const TransactionDetail = lazy(() => import('./pages/TransactionDetail'))
 const ProductUnits = lazy(() => import('./pages/ProductUnits'))
 const SellerDashboardLayout = lazy(() => import('./pages/SellerDashboardLayout'))
@@ -155,6 +156,7 @@ function App() {
           <Route path="/transactions" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'seller', 'producer', 'admin']}><Navigate replace to="/minhas-reservas" /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/minhas-reservas/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'seller', 'producer', 'admin']}><Transactions /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/minhas-reservas" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'seller', 'producer', 'admin']}><RouteErrorBoundaryWithNav><Transactions /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/mensagens" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'seller', 'producer', 'admin']}><Messages /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/transactions/:id/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'seller', 'producer', 'admin']}><RouteErrorBoundaryWithNav><TransactionDetail /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/transactions/:id" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'seller', 'producer', 'admin']}><RouteErrorBoundaryWithNav><TransactionDetail /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/product/:productId/units" element={<AdminRouteBlocker><ProtectedRoute><ProductUnits /></ProtectedRoute></AdminRouteBlocker>} />

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import api from '../services/api'
-import { normNegotiationMessage, extractApiErrorMessage } from '../utils/normalizers'
+import { normNegotiationMessage, normTx, extractApiErrorMessage } from '../utils/normalizers'
 import Avatar from './Avatar'
 
 const POLL_MS = 15000
@@ -20,7 +20,10 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
   const [error, setError] = useState('')
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  const [reservation, setReservation] = useState<any>(null)
+  const [concluding, setConcluding] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const userId = localStorage.getItem('userId')
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -36,12 +39,40 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
     }
   }
 
+  const loadReservation = async () => {
+    try {
+      const data = await api.getChatReservations(chatId)
+      const list = Array.isArray(data) ? data : (data.results || [])
+      setReservation(list.length ? normTx(list[0]) : null)
+    } catch (err) {
+      setReservation(null)
+    }
+  }
+
   useEffect(() => {
     load()
+    loadReservation()
     const interval = setInterval(() => load(true), POLL_MS)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId])
+
+  const isSeller = !!reservation && !!userId && String(reservation.seller_id) === String(userId)
+  const canConclude = isSeller && reservation && !['COMPLETED', 'CANCELLED'].includes(reservation.status)
+
+  const handleConclude = async () => {
+    if (!reservation || concluding) return
+    setConcluding(true)
+    setError('')
+    try {
+      await api.concludeTransaction(reservation.id)
+      setReservation((prev: any) => prev ? { ...prev, status: 'COMPLETED' } : prev)
+    } catch (err) {
+      setError(extractApiErrorMessage(err, 'Não foi possível concluir a reserva.'))
+    } finally {
+      setConcluding(false)
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
@@ -73,10 +104,22 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
           </button>
         )}
         <Avatar name={title} size="sm" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-gray-900 truncate">{title}</p>
           {subtitle && <p className="text-xs text-gray-400 truncate">{subtitle}</p>}
         </div>
+        {reservation?.status === 'COMPLETED' ? (
+          <span className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+            <i className="bi bi-check-circle-fill text-gray-400"></i> Concluída
+          </span>
+        ) : canConclude && (
+          <button onClick={handleConclude} disabled={concluding}
+            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-green-600 text-white hover:bg-green-700 disabled:opacity-60">
+            {concluding
+              ? <><i className="bi bi-arrow-repeat animate-spin"></i> A concluir...</>
+              : <><i className="bi bi-check-lg"></i> Marcar como concluído</>}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 soil-texture">

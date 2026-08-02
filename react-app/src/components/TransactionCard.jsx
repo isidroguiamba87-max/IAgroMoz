@@ -1,5 +1,34 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { normalizePhoneForWhatsapp, extractApiErrorMessage } from '../utils/normalizers'
+
+// Menu "..." por reserva — hoje só "Cancelar reserva", pronto para ganhar
+// mais acções (ex: editar quantidade) sem mudar de estrutura outra vez.
+function ReservationMenu({ onCancel, disabled }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button onClick={() => setOpen(o => !o)} disabled={disabled}
+        className="w-10 h-10 flex items-center justify-center rounded-xl border-2 border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+        title="Opções da reserva">
+        <i className="bi bi-three-dots-vertical"></i>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-11 bg-white rounded-xl shadow-xl border border-gray-100 z-30 min-w-[170px] py-1">
+          <button onClick={() => { setOpen(false); onCancel() }}
+            className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+            <i className="bi bi-x-circle"></i> Cancelar reserva
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // TransactionCard — perspetiva diferente para comprador e vendedor
 // Fluxo completo simplificado:
@@ -47,6 +76,7 @@ function TransactionCard({
   onRejectRequest,
   onViewDetails,
   onShareWhatsapp,
+  onRateRequest,
 }) {
   const tx     = transaction
   const status = STATUS_CONFIG[tx.status] || { label: tx.status, color: 'bg-gray-100 text-gray-600', icon: 'bi-question', dot: 'bg-gray-400' }
@@ -232,13 +262,7 @@ function TransactionCard({
               <div className="flex-1 py-2.5 rounded-xl bg-amber-50 text-amber-700 text-sm font-semibold flex items-center justify-center gap-1.5">
                 <i className="bi bi-hourglass-split animate-pulse"></i> Aguarda confirmação
               </div>
-              <button
-                onClick={() => onCancelRequest(tx)}
-                disabled={isLoading}
-                className="py-2.5 px-3 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-50 font-bold text-sm flex items-center justify-center gap-1 disabled:opacity-50 transition-colors"
-                title="Cancelar reserva">
-                <i className="bi bi-x-lg"></i>
-              </button>
+              <ReservationMenu onCancel={() => onCancelRequest(tx)} disabled={isLoading} />
             </>
           )}
 
@@ -251,9 +275,17 @@ function TransactionCard({
 
           {/* COMPLETED — comprador pode avaliar */}
           {isBuyer && tx.status === 'COMPLETED' && (
-            <div className="flex-1 py-2.5 rounded-xl bg-gray-50 text-gray-500 text-sm font-semibold flex items-center justify-center gap-1.5">
-              <i className="bi bi-patch-check-fill text-emerald-500"></i> Entrega concluída
-            </div>
+            <>
+              <div className="flex-1 py-2.5 rounded-xl bg-gray-50 text-gray-500 text-sm font-semibold flex items-center justify-center gap-1.5">
+                <i className="bi bi-patch-check-fill text-emerald-500"></i> Entrega concluída
+              </div>
+              {onRateRequest && (
+                <button onClick={() => onRateRequest(tx)}
+                  className="flex-1 py-2.5 rounded-xl bg-yellow-50 hover:bg-yellow-100 text-yellow-800 text-sm font-semibold flex items-center justify-center gap-1.5">
+                  <i className="bi bi-star-fill"></i> Avaliar
+                </button>
+              )}
+            </>
           )}
 
           {/* COMPLETED — vendedor */}

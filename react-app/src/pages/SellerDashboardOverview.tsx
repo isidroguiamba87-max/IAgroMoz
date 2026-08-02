@@ -69,9 +69,13 @@ function SellerDashboardOverview() {
 
   const loadMyProducts = async () => {
     try {
-      const list = await api.getProducts({ seller: userId })
+      // GET /marketplace/products/?seller= não é um filtro suportado pela API —
+      // devolvia a lista geral paginada (20 produtos de todos os vendedores) e o
+      // produto do utilizador podia simplesmente não estar nessa primeira página.
+      // /feed/posts/my-products/ devolve mesmo só os produtos do utilizador autenticado.
+      const list = await api.getMyLinkableProducts()
       const items = Array.isArray(list) ? list : list.results || []
-      setMyProducts(items.filter(p => String(p.seller_id || p.seller?.id || p.user_id) === String(userId)))
+      setMyProducts(items)
     } catch (_) {
       // painel continua útil sem a grelha de produtos
     }

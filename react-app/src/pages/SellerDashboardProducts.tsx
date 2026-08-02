@@ -14,7 +14,6 @@ function SellerDashboardProducts() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const userId = localStorage.getItem('userId')
 
   useEffect(() => {
     loadProducts()
@@ -24,9 +23,13 @@ function SellerDashboardProducts() {
     setLoading(true)
     setError('')
     try {
-      const data = await api.getProducts({ seller: userId })
+      // GET /marketplace/products/?seller= não é um filtro suportado pela API —
+      // devolvia a lista geral paginada (20 produtos de todos os vendedores) e o
+      // produto do utilizador podia simplesmente não estar nessa primeira página.
+      // /feed/posts/my-products/ devolve mesmo só os produtos do utilizador autenticado.
+      const data = await api.getMyLinkableProducts()
       const list = Array.isArray(data) ? data : data.results || []
-      setProducts(list.filter(item => String(item.seller_id || item.seller?.id || item.user_id) === String(userId)))
+      setProducts(list)
     } catch (err) {
       setError('Não foi possível carregar os produtos.')
     } finally {

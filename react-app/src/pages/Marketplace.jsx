@@ -618,6 +618,12 @@ function Marketplace() {
                   </button>
                 )}
                 {token && !isProducer && (
+                  <button onClick={() => navigate('/mensagens')}
+                    className="w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 shadow-sm flex-shrink-0">
+                    <i className="bi bi-chat-dots-fill text-lg"></i>
+                  </button>
+                )}
+                {token && !isProducer && (
                   <button onClick={handlePublishClick} disabled={checkingStatus}
                     className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center text-white shadow-lg flex-shrink-0">
                     <i className="bi bi-plus-lg font-bold"></i>
@@ -647,6 +653,13 @@ function Marketplace() {
                         {reservationCount > 9 ? '9+' : reservationCount}
                       </span>
                     )}
+                  </button>
+                )}
+                {token && !isProducer && (
+                  <button onClick={() => navigate('/mensagens')}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors">
+                    <i className="bi bi-chat-dots-fill text-base"></i>
+                    <span>Mensagens</span>
                   </button>
                 )}
                 {token && !isProducer && (
