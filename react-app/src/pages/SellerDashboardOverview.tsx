@@ -248,7 +248,7 @@ function SellerDashboardOverview() {
                   </div>
                 </button>
               ))}
-              <button onClick={() => navigate('/create-product')}
+              <button onClick={() => navigate(getDashboardPath('/anunciar'))}
                 className="rounded-2xl border-2 border-dashed border-gray-200 hover:border-green-400 hover:bg-green-50 transition-colors flex flex-col items-center justify-center gap-1 min-h-[7.5rem] text-gray-400 hover:text-green-600">
                 <i className="bi bi-plus-circle text-xl"></i>
                 <span className="text-xs font-semibold">Adicionar</span>

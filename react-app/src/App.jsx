@@ -35,6 +35,7 @@ const SellerDashboardSales = lazy(() => import('./pages/SellerDashboardSales'))
 const SellerDashboardPurchases = lazy(() => import('./pages/SellerDashboardPurchases'))
 const SellerDashboardNotifications = lazy(() => import('./pages/SellerDashboardNotifications'))
 const SellerDashboardProfile = lazy(() => import('./pages/SellerDashboardProfile'))
+const SellerDashboardMessages = lazy(() => import('./pages/SellerDashboardMessages'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -160,6 +161,8 @@ function App() {
             <Route path="pedidos" element={<SellerDashboardSales />} />
             <Route path="produtos" element={<SellerDashboardProducts />} />
             <Route path="anuncios" element={<SellerDashboardProducts />} />
+            <Route path="anunciar" element={<CreateProduct embedded />} />
+            <Route path="mensagens" element={<SellerDashboardMessages />} />
             <Route path="notificacoes" element={<SellerDashboardNotifications />} />
             <Route path="perfil" element={<SellerDashboardProfile />} />
           </Route>
@@ -168,6 +171,8 @@ function App() {
             <Route path="pedidos" element={<SellerDashboardSales />} />
             <Route path="produtos" element={<SellerDashboardProducts />} />
             <Route path="anuncios" element={<SellerDashboardProducts />} />
+            <Route path="anunciar" element={<CreateProduct embedded />} />
+            <Route path="mensagens" element={<SellerDashboardMessages />} />
             <Route path="notificacoes" element={<SellerDashboardNotifications />} />
             <Route path="perfil" element={<SellerDashboardProfile />} />
           </Route>

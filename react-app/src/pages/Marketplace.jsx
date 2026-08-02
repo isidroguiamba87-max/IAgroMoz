@@ -7,6 +7,7 @@ import LazyImage from "../components/LazyImage"
 import api from "../services/api"
 import { API_BASE } from "../config/api"
 import { normProduct as norm, extractApiErrorMessage } from "../utils/normalizers"
+import { getDashboardPath } from "../utils/dashboardPaths"
 
 // ─── Categorias e subcategorias conforme GET /api/enums/ ─────────────────────
 const CATEGORIES = [
@@ -317,6 +318,8 @@ function Marketplace() {
   const userId = localStorage.getItem("userId")
   const userRole = localStorage.getItem("userRole")
   const isAdmin = userRole === "admin"
+  // Produtor já tem "Meus Anúncios" e "Pedidos" dentro do painel — evita duplicar aqui.
+  const isProducer = userRole === "producer"
   const hasMounted = useRef(false)
 
   useEffect(() => {
@@ -516,7 +519,7 @@ function Marketplace() {
                 <p className="text-xs text-gray-500">Compre e venda produtos agrícolas.</p>
               </div>
               <div className="flex items-center gap-2">
-                {token && (
+                {token && !isProducer && (
                   <button onClick={() => navigate('/minhas-reservas')}
                     className="relative w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 shadow-sm flex-shrink-0">
                     <i className="bi bi-cart3 text-lg"></i>
@@ -527,10 +530,16 @@ function Marketplace() {
                     )}
                   </button>
                 )}
-                {token && (
+                {token && !isProducer && (
                   <button onClick={handlePublishClick} disabled={checkingStatus}
                     className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center text-white shadow-lg flex-shrink-0">
                     <i className="bi bi-plus-lg font-bold"></i>
+                  </button>
+                )}
+                {token && isProducer && (
+                  <button onClick={() => navigate(getDashboardPath('/mensagens'))}
+                    className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center text-white shadow-lg flex-shrink-0">
+                    <i className="bi bi-chat-dots-fill"></i>
                   </button>
                 )}
               </div>
@@ -541,7 +550,7 @@ function Marketplace() {
                 <p className="text-sm text-gray-500">Encontre os melhores produtos agrícolas.</p>
               </div>
               <div className="flex items-center gap-3">
-                {token && (
+                {token && !isProducer && (
                   <button onClick={() => navigate('/minhas-reservas')}
                     className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors">
                     <i className="bi bi-cart3 text-base"></i>
@@ -553,10 +562,16 @@ function Marketplace() {
                     )}
                   </button>
                 )}
-                {token && (
+                {token && !isProducer && (
                   <button onClick={handlePublishClick} disabled={checkingStatus}
                     className="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 disabled:opacity-70">
                     {checkingStatus ? <><i className="bi bi-arrow-repeat"></i> A verificar...</> : <><i className="bi bi-plus-lg"></i> Anunciar</>}
+                  </button>
+                )}
+                {token && isProducer && (
+                  <button onClick={() => navigate(getDashboardPath('/mensagens'))}
+                    className="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2">
+                    <i className="bi bi-chat-dots-fill"></i> Mensagens
                   </button>
                 )}
               </div>
@@ -631,7 +646,7 @@ function Marketplace() {
                 <div className="text-center py-16">
                   <i className="bi bi-box-seam text-5xl text-gray-200"></i>
                   <p className="text-gray-500 mt-3 font-semibold">Nenhum produto encontrado</p>
-                  {token && <button onClick={handlePublishClick} className="mt-4 btn-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold">Anunciar produto</button>}
+                  {token && !isProducer && <button onClick={handlePublishClick} className="mt-4 btn-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold">Anunciar produto</button>}
                 </div>
               ) : (
                 <section>
@@ -643,7 +658,7 @@ function Marketplace() {
               )}
 
               {/* Card Venda mais rápido — mobile */}
-              {token && (
+              {token && !isProducer && (
                 <div className="mt-6 rounded-2xl p-4 lg:hidden" style={{ background: "#f0f7f0" }}>
                   <p className="font-black text-green-800 text-base mb-1">Venda mais rápido!</p>
                   <p className="text-green-700 text-xs mb-3 leading-relaxed">

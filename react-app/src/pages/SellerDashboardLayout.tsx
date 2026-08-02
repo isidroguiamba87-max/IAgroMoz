@@ -23,6 +23,7 @@ function SellerDashboardLayout() {
     { label: 'Pedidos', path: `${dashboardBase}/pedidos`, icon: 'bi-receipt' },
     { label: 'Meus Produtos', path: `${dashboardBase}/produtos`, icon: 'bi-box-seam' },
     { label: 'Meus Anúncios', path: `${dashboardBase}/anuncios`, icon: 'bi-megaphone' },
+    { label: 'Mensagens', path: `${dashboardBase}/mensagens`, icon: 'bi-chat-dots' },
     { label: 'Notificações', path: `${dashboardBase}/notificacoes`, icon: 'bi-bell' },
     { label: 'Meu Perfil', path: `${dashboardBase}/perfil`, icon: 'bi-person-circle' },
   ]
@@ -204,7 +205,7 @@ function SellerDashboardLayout() {
 
         <div className="mt-6 pt-5 border-t border-gray-100">
           <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-3">Acesso rápido</p>
-          <button onClick={() => window.location.assign('/create-product')}
+          <button onClick={() => navigate(`${dashboardBase}/anunciar`)}
             className="w-full rounded-3xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 transition mb-3">
             Publicar Novo Produto
           </button>
@@ -286,7 +287,7 @@ function SellerDashboardLayout() {
               </nav>
 
               <div className="mt-6 pt-4 border-t border-gray-100">
-                <button onClick={() => { setMobileMenuOpen(false); navigate('/create-product') }}
+                <button onClick={() => { setMobileMenuOpen(false); navigate(`${dashboardBase}/anunciar`) }}
                   className="w-full rounded-3xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 transition mb-3">
                   Publicar Novo Produto
                 </button>

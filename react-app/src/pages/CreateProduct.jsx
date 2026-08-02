@@ -5,6 +5,7 @@ import DesktopSidebar from "../components/DesktopSidebar"
 import MobileNav from "../components/MobileNav"
 import { API_BASE } from "../config/api"
 import { getUserCache } from "../utils/userCache"
+import { getDashboardPath } from "../utils/dashboardPaths"
 
 const DEFAULT_CATEGORIES = [
   { value: "AGRICULTURE", label: "Agricultura", icon: "bi-flower1",
@@ -41,31 +42,34 @@ const BASE_UNITS = [
   { value: "LITER", label: "Litro",       icon: "bi-droplet" },
 ]
 
-function CreateProduct() {
+// embedded=true: usado dentro do Painel (SellerDashboardLayout) — sem sidebar/header
+// próprios, e ao terminar volta para "Meus Anúncios" em vez de sair para o Mercado.
+function CreateProduct({ embedded = false }) {
   const navigate = useNavigate()
   const userRole = localStorage.getItem("userRole") || "user"
+  const exitPath = embedded ? getDashboardPath("/anuncios") : "/marketplace"
 
   // Bloqueio: apenas produtores/vendedores podem publicar produtos
   if (userRole === "user") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAF8] px-4">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-            <i className="bi bi-ban text-3xl text-red-600"></i>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
-          <p className="text-gray-600 mb-6">Apenas produtores e vendedores podem publicar no Mercado. Solicite o upgrade para aceder a esta funcionalidade.</p>
-          <div className="flex gap-3">
-            <button onClick={() => navigate('/marketplace')} className="flex-1 py-2 rounded-xl border-2 border-gray-300 font-semibold text-gray-700 hover:bg-gray-50">
-              Voltar
-            </button>
-            <button onClick={() => navigate('/profile')} className="flex-1 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700">
-              Ver Upgrade
-            </button>
-          </div>
+    const restricted = (
+      <div className="text-center max-w-md mx-auto">
+        <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+          <i className="bi bi-ban text-3xl text-red-600"></i>
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
+        <p className="text-gray-600 mb-6">Apenas produtores e vendedores podem publicar no Mercado. Solicite o upgrade para aceder a esta funcionalidade.</p>
+        <div className="flex gap-3">
+          <button onClick={() => navigate(exitPath)} className="flex-1 py-2 rounded-xl border-2 border-gray-300 font-semibold text-gray-700 hover:bg-gray-50">
+            Voltar
+          </button>
+          <button onClick={() => navigate('/profile')} className="flex-1 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700">
+            Ver Upgrade
+          </button>
         </div>
       </div>
     )
+    if (embedded) return <div className="flex items-center justify-center py-16 px-4">{restricted}</div>
+    return <div className="min-h-screen flex items-center justify-center bg-[#F8FAF8] px-4">{restricted}</div>
   }
 
   const [provinces, setProvinces] = useState([])
@@ -218,7 +222,7 @@ function CreateProduct() {
       productData.append("base_unit", form.base_unit)
       const result = await api.createProduct(productData)
       if (result?.id) saveMyProductId(result.id)
-      navigate("/marketplace")
+      navigate(exitPath)
     } catch (err) {
       const msg = err?.data
         ? Object.entries(err.data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" | ")
@@ -227,34 +231,16 @@ function CreateProduct() {
     } finally { setLoading(false) }
   }
 
-  return (
-    <div className="min-h-screen bg-[#F8FAF8] flex pb-20 lg:pb-0">
-      <DesktopSidebar />
+  const formContent = (
+    <>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-start gap-2">
+          <i className="bi bi-exclamation-circle-fill mt-0.5 flex-shrink-0"></i>
+          <span>{error}</span>
+        </div>
+      )}
 
-      <div className="flex-1 min-w-0 flex flex-col">
-        {/* Header */}
-        <header className="bg-white sticky top-0 z-40 border-b border-gray-100">
-          <div className="px-4 py-3 flex items-center gap-3 max-w-2xl mx-auto w-full">
-            <button onClick={() => navigate("/marketplace")}
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">
-              <i className="bi bi-arrow-left text-lg"></i>
-            </button>
-            <div>
-              <h1 className="text-lg font-black text-gray-900">Anunciar Produto</h1>
-              <p className="text-xs text-gray-400">Preencha os detalhes do produto</p>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 px-4 py-5 max-w-2xl mx-auto w-full">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-start gap-2">
-              <i className="bi bi-exclamation-circle-fill mt-0.5 flex-shrink-0"></i>
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5">
 
             {/* ── Foto ── */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
@@ -421,7 +407,7 @@ function CreateProduct() {
 
             {/* ── Botões ── */}
             <div className="flex gap-3 pb-4">
-              <button type="button" onClick={() => navigate("/marketplace")}
+              <button type="button" onClick={() => navigate(exitPath)}
                 className="flex-1 py-3.5 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50">
                 Cancelar
               </button>
@@ -434,6 +420,38 @@ function CreateProduct() {
               </button>
             </div>
           </form>
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div className="max-w-2xl w-full">
+        {formContent}
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F8FAF8] flex pb-20 lg:pb-0">
+      <DesktopSidebar />
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Header */}
+        <header className="bg-white sticky top-0 z-40 border-b border-gray-100">
+          <div className="px-4 py-3 flex items-center gap-3 max-w-2xl mx-auto w-full">
+            <button onClick={() => navigate("/marketplace")}
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">
+              <i className="bi bi-arrow-left text-lg"></i>
+            </button>
+            <div>
+              <h1 className="text-lg font-black text-gray-900">Anunciar Produto</h1>
+              <p className="text-xs text-gray-400">Preencha os detalhes do produto</p>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 px-4 py-5 max-w-2xl mx-auto w-full">
+          {formContent}
         </main>
       </div>
 
