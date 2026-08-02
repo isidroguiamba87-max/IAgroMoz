@@ -219,7 +219,7 @@ function SellerDashboardLayout() {
       </aside>
 
       <div className="flex-1 min-w-0">
-        <header className="bg-white border-b border-gray-100 px-4 py-3 lg:py-4 lg:px-6">
+        <header className="bg-white border-b border-gray-100 px-4 py-3 lg:py-4 lg:px-6 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto">
 
             {/* ── Barra de marca — só mobile: menu + logo à esquerda, avatar à direita ── */}
