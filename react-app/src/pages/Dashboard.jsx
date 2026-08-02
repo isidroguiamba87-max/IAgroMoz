@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import MobileNav from "../components/MobileNav"
 import api from "../services/api"
-import { resolveMediaUrl } from "../utils/normalizers"
+import { resolveProductPhoto } from "../utils/normalizers"
 
 // ─── Sparkline SVG ────────────────────────────────────────────────────────────
 function Sparkline({ data, color = "#16a34a" }) {
@@ -467,8 +467,8 @@ function SellerOverviewPanel({ data, userName, userRole, navigate }) {
               <div key={prod.id || idx} className="flex items-center gap-3">
                 <span className="text-gray-400 font-black text-base w-5 flex-shrink-0">{idx + 1}</span>
                 <div className="w-10 h-10 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                  {prod.photo
-                    ? <img src={resolveMediaUrl(prod.photo)} alt="" className="w-full h-full object-cover" />
+                  {resolveProductPhoto(prod)
+                    ? <img src={resolveProductPhoto(prod)} alt="" className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center">
                         <i className="bi bi-box-seam text-gray-300"></i>
                       </div>
@@ -952,7 +952,7 @@ function ProductsPanel() {
         <Table loading={loading} empty="Nenhum produto encontrado."
           cols={[
             { key: "id", label: "ID" },
-            { key: "photo", label: "Foto", render: r => r.photo ? <img src={resolveMediaUrl(r.photo)} alt="" className="w-10 h-10 object-cover rounded-lg" /> : <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center"><i className="bi bi-image text-gray-300"></i></div> },
+            { key: "photo", label: "Foto", render: r => resolveProductPhoto(r) ? <img src={resolveProductPhoto(r)} alt="" className="w-10 h-10 object-cover rounded-lg" /> : <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center"><i className="bi bi-image text-gray-300"></i></div> },
             { key: "name", label: "Nome" },
             { key: "price", label: "Preço", render: r => `${r.price} MT` },
             { key: "category", label: "Categoria" },

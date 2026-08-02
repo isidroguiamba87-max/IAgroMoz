@@ -4,7 +4,7 @@ import api from '../services/api'
 import Avatar from '../components/Avatar'
 import { useSellerProfile } from '../context/SellerProfileContext'
 import { getDashboardPath } from '../utils/dashboardPaths'
-import { resolveMediaUrl } from '../utils/normalizers'
+import { resolveMediaUrl, resolveProductPhoto } from '../utils/normalizers'
 
 // ─── Estado da transação → pill colorida (mesmo vocabulário do TransactionCard) ──
 const STATUS_STYLE = {
@@ -245,8 +245,8 @@ function SellerDashboardOverview() {
                 <button key={p.id} onClick={() => navigate(`/product/${p.id}`)}
                   className="text-left rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                   <div className="h-24 bg-gray-100 flex items-center justify-center">
-                    {(p.photo || p.foto) ? (
-                      <img src={resolveMediaUrl(p.photo || p.foto)} alt={p.name || p.nome} className="w-full h-full object-cover" />
+                    {resolveProductPhoto(p) ? (
+                      <img src={resolveProductPhoto(p)} alt={p.name || p.nome} className="w-full h-full object-cover" />
                     ) : (
                       <i className="bi bi-box-seam text-2xl text-gray-300"></i>
                     )}

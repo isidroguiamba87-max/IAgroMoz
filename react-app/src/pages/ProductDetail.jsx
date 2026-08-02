@@ -8,7 +8,7 @@ import MobileNav from '../components/MobileNav'
 import api from '../services/api'
 
 import { API_BASE } from '../config/api'
-import { resolveMediaUrl } from '../utils/normalizers'
+import { resolveMediaUrl, resolveProductPhoto } from '../utils/normalizers'
 
 function ProductDetail() {
   const { id } = useParams()
@@ -392,7 +392,7 @@ function ProductDetail() {
 
   const productName = product.name || product.nome || 'Produto'
   const sellerId = getSellerId(product)
-  const coverImageUrl = resolveMediaUrl(product.photo || product.image || product.foto)
+  const coverImageUrl = resolveProductPhoto(product) || resolveMediaUrl(product.image)
   const galleryImageUrls = Array.isArray(product.photos)
     ? product.photos.map(p => resolveMediaUrl(p.image || p.photo || p.url || p.file)).filter(Boolean)
     : []

@@ -41,7 +41,7 @@ export function normProduct(p) {
     name:          p.name || p.nome || '',
     description:   p.description || p.descricao || '',
     price:         p.price || p.preco || '0',
-    photo:         resolveMediaUrl(p.photo || p.foto),
+    photo:         resolveProductPhoto(p),
     photos:        Array.isArray(p.photos) ? p.photos : [],
     category:      p.category || p.categoria || '',
     subcategory:   p.subcategory || '',
@@ -164,6 +164,21 @@ export function resolveMediaUrl(path) {
   const clean = path.replace(/^\/+/, '')
   const withMediaPrefix = clean.startsWith('media/') ? clean : `media/${clean}`
   return `${API_MEDIA}/${withMediaPrefix}`
+}
+
+// Alguns produtos não têm o campo de capa ("photo") preenchido — mas têm fotos
+// na galeria (photos[], vindas de add_photo/). Usa a primeira dessas como
+// substituta em vez de mostrar "sem imagem" quando há claramente uma foto.
+export function resolveProductPhoto(p) {
+  if (!p) return null
+  const cover = resolveMediaUrl(p.photo || p.foto)
+  if (cover) return cover
+  const gallery = Array.isArray(p.photos) ? p.photos : []
+  for (const item of gallery) {
+    const url = resolveMediaUrl(typeof item === 'string' ? item : (item?.image || item?.photo || item?.url || item?.file))
+    if (url) return url
+  }
+  return null
 }
 
 // ─── Telefone → WhatsApp URL ──────────────────────────────────────────────────

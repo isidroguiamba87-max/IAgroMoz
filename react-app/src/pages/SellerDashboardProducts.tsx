@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import { resolveMediaUrl } from '../utils/normalizers'
+import { resolveProductPhoto } from '../utils/normalizers'
 
 function SellerDashboardProducts() {
   const navigate = useNavigate()
@@ -58,8 +58,8 @@ function SellerDashboardProducts() {
             <div key={product.id} className="group overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md">
               <button type="button" onClick={() => navigate(`/product/${product.id}`)} className="w-full text-left">
                 <div className="h-44 bg-gray-100">
-                  {product.photo || product.foto ? (
-                    <img src={resolveMediaUrl(product.photo || product.foto)} alt={product.name || product.nome} className="h-44 w-full object-cover" />
+                  {resolveProductPhoto(product) ? (
+                    <img src={resolveProductPhoto(product)} alt={product.name || product.nome} className="h-44 w-full object-cover" />
                   ) : (
                     <div className="flex h-44 items-center justify-center text-3xl text-green-300">
                       <i className="bi bi-box-seam"></i>

@@ -244,8 +244,15 @@ function CreateProduct({ embedded = false }) {
       productData.append("base_unit", form.base_unit)
       const result = await api.createProduct(productData)
       if (result?.id) saveMyProductId(result.id)
-      if (result?.id && form.photos.length > 1) {
-        await Promise.allSettled(form.photos.slice(1).map(file => api.addProductPhoto(result.id, file)))
+      if (result?.id) {
+        // Alguns produtos ficavam sem foto de capa mesmo enviando "photo" na
+        // criação — reenvia a capa pela galeria (add_photo, já confirmado a
+        // funcionar) sempre que a resposta da criação não trouxer a foto de volta.
+        const needsCoverBackfill = !result.photo && !result.foto
+        const toUpload = needsCoverBackfill ? form.photos : form.photos.slice(1)
+        if (toUpload.length) {
+          await Promise.allSettled(toUpload.map(file => api.addProductPhoto(result.id, file)))
+        }
       }
       navigate(exitPath)
     } catch (err) {

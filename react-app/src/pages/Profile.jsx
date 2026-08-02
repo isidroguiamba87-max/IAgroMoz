@@ -11,7 +11,7 @@ import { useTheme } from '../context/ThemeContext'
 import { FieldInput, FieldSelect } from './RegisterBase'
 import { getConnections, addConnection, removeConnection, isConnected } from '../components/FeedRightPanel'
 import { getUserCache, genderLabel, roleLabel, setUserCache } from '../utils/userCache'
-import { resolveMediaUrl } from '../utils/normalizers'
+import { resolveMediaUrl, resolveProductPhoto } from '../utils/normalizers'
 
 // Comprime imagem no cliente antes do upload para evitar 413
 function compressImage(file, maxWidth = 1024, quality = 0.82) {
@@ -299,7 +299,7 @@ function Profile() {
     id:        p.id,
     nome:      p.name  || p.nome  || '',
     preco:     p.price || p.preco || '0',
-    foto:      resolveMediaUrl(p.photo || p.foto),
+    foto:      resolveProductPhoto(p),
     seller_id: p.seller?.id ?? p.seller_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id ?? null,
     vendedor:  p.seller
       ? `${p.seller.first_name || ''} ${p.seller.last_name || ''}`.trim()
