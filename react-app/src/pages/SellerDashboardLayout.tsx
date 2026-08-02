@@ -298,20 +298,18 @@ function SellerDashboardLayout() {
                   <i className="bi bi-x-lg text-xl"></i>
                 </button>
               </div>
-              {isProducerDashboard && (
-                <div className="flex items-center gap-2 mb-4">
-                  <button onClick={() => { setMobileMenuOpen(false); navigate(dashboardBase) }}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl border border-gray-200 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
-                    <i className="bi bi-grid-3x3-gap"></i>
-                    Visão Geral
-                  </button>
-                  <button onClick={() => { setMobileMenuOpen(false); navigate('/feed') }}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl border border-gray-200 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
-                    <i className="bi bi-arrow-left-short"></i>
-                    Voltar ao Feed
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => { setMobileMenuOpen(false); navigate(dashboardBase) }}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl border border-gray-200 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
+                  <i className="bi bi-grid-3x3-gap"></i>
+                  Visão Geral
+                </button>
+                <button onClick={() => { setMobileMenuOpen(false); navigate('/feed') }}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl border border-gray-200 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition">
+                  <i className="bi bi-arrow-left-short"></i>
+                  Voltar ao Feed
+                </button>
+              </div>
               <nav className="space-y-2">
                 {SECTIONS.map(section => (
                   <NavLink key={section.path} to={section.path} onClick={() => setMobileMenuOpen(false)}
