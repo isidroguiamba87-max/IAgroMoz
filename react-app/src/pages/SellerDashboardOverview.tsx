@@ -4,13 +4,14 @@ import api from '../services/api'
 import Avatar from '../components/Avatar'
 import { useSellerProfile } from '../context/SellerProfileContext'
 import { getDashboardPath } from '../utils/dashboardPaths'
-import { resolveMediaUrl, resolveProductPhoto } from '../utils/normalizers'
+import { resolveMediaUrl, resolveProductPhoto, normNegotiationChat } from '../utils/normalizers'
 
 // ─── Estado da transação → pill colorida (mesmo vocabulário do TransactionCard) ──
 const STATUS_STYLE = {
   RESERVED:              { label: 'Reservado',            color: 'bg-amber-100 text-amber-800' },
   AWAITING_CONFIRMATION: { label: 'A confirmar',           color: 'bg-blue-100 text-blue-800' },
   AWAITING_PAYMENT:      { label: 'A confirmar',           color: 'bg-blue-100 text-blue-800' },
+  PAID:                  { label: 'Pago',                  color: 'bg-emerald-100 text-emerald-800' },
   PROCESSING:            { label: 'Em processamento',      color: 'bg-cyan-100 text-cyan-800' },
   IN_TRANSIT:            { label: 'A caminho',             color: 'bg-purple-100 text-purple-800' },
   COMPLETED:             { label: 'Concluído',             color: 'bg-gray-100 text-gray-600' },
@@ -47,17 +48,30 @@ function SellerDashboardOverview() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [myProducts, setMyProducts] = useState([])
+  const [chats, setChats] = useState<any[]>([])
+  const [showRevenue, setShowRevenue] = useState(true)
   const userId = localStorage.getItem('userId')
 
   useEffect(() => {
     loadDashboard()
     loadMyProducts()
+    loadChats()
     // Actualiza sozinho — uma venda pode ser concluída a partir do chat de
     // negociação ou de "Minhas Reservas", páginas fora deste painel, por isso
     // os valores (receita, pedidos) precisam de se refrescar sem F5 manual.
-    const interval = setInterval(() => { loadDashboard(true); loadMyProducts() }, 20000)
+    const interval = setInterval(() => { loadDashboard(true); loadMyProducts(); loadChats() }, 20000)
     return () => clearInterval(interval)
   }, [])
+
+  const loadChats = async () => {
+    try {
+      const data = await api.getNegotiationChats()
+      const list = Array.isArray(data) ? data : (data.results || [])
+      setChats(list.map(normNegotiationChat))
+    } catch (_) {
+      // painel continua útil sem a lista de mensagens
+    }
+  }
 
   const loadDashboard = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -151,8 +165,106 @@ function SellerDashboardOverview() {
         </div>
       </div>
 
-      {/* ── Estatísticas ── */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* ── Mobile: layout compacto em cartões (sem tabela, cabe no ecrã) ── */}
+      <div className="lg:hidden space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-3xl bg-green-700 text-white p-4">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[10px] uppercase tracking-wide opacity-80">Receita total</p>
+              <button onClick={() => setShowRevenue(v => !v)} className="text-white/70 hover:text-white flex-shrink-0">
+                <i className={`bi ${showRevenue ? 'bi-eye' : 'bi-eye-slash'} text-sm`}></i>
+              </button>
+            </div>
+            <p className="text-lg font-black truncate">{showRevenue ? `${formatMoney(payments.total_received)} MZN` : '••••••'}</p>
+            <button onClick={() => navigate(getDashboardPath('/pedidos'))} className="text-xs font-semibold opacity-90 mt-1">Ver pedidos →</button>
+          </div>
+          <button onClick={() => navigate(getDashboardPath('/pedidos'))}
+            className="text-left rounded-3xl bg-amber-50 border border-amber-100 p-4">
+            <p className="text-[10px] uppercase tracking-wide text-amber-700 mb-1">Pedidos pendentes</p>
+            <p className="text-lg font-black text-amber-900">{pendingCount}</p>
+            <p className="text-xs text-amber-700 font-semibold mt-1">Ver pedidos →</p>
+          </button>
+        </div>
+
+        <button onClick={() => navigate(getDashboardPath('/anunciar'))}
+          className="w-full rounded-3xl bg-green-600 text-white p-4 flex items-center justify-center gap-2.5 shadow-sm hover:bg-green-700 transition">
+          <i className="bi bi-plus-circle-fill text-xl flex-shrink-0"></i>
+          <div className="text-left">
+            <p className="text-sm font-bold leading-tight">Adicionar produto</p>
+            <p className="text-xs font-normal opacity-90 leading-tight">Publique e venda mais rápido</p>
+          </div>
+        </button>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-gray-900">Pedidos recentes</h3>
+            <button onClick={() => navigate(getDashboardPath('/pedidos'))} className="text-xs text-green-600 font-semibold">Ver todos</button>
+          </div>
+          {transactions.recent?.length > 0 ? (
+            <>
+              <div>
+                {transactions.recent.slice(0, 4).map((tx: any) => (
+                  <button key={tx.id} onClick={() => navigate(`/transactions/${tx.id}`)}
+                    className="w-full flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 text-left">
+                    <div className="w-11 h-11 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                      {(tx.product_image || tx.imagem || tx.image) ? (
+                        <img src={resolveMediaUrl(tx.product_image || tx.imagem || tx.image)} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <i className="bi bi-box-seam text-gray-300"></i>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{tx.product_name}</p>
+                      <p className="text-xs text-gray-400 truncate">{tx.buyer_name}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-bold text-green-700 whitespace-nowrap">{Number(tx.amount || 0).toFixed(2)} MZN</p>
+                      <StatusPill status={tx.status} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => navigate(getDashboardPath('/pedidos'))}
+                className="w-full mt-3 py-2.5 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+                Ver todos pedidos
+              </button>
+            </>
+          ) : (
+            <p className="text-sm text-gray-400">Nenhum pedido recente encontrado.</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-gray-900">Mensagens</h3>
+            <button onClick={() => navigate(getDashboardPath('/mensagens'))} className="text-xs text-green-600 font-semibold">Ver todas</button>
+          </div>
+          {chats.length > 0 ? (
+            <div>
+              {chats.slice(0, 3).map(c => (
+                <button key={c.id} onClick={() => navigate(getDashboardPath('/mensagens'))}
+                  className="w-full flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 text-left">
+                  <Avatar name={c.otherName} foto={c.otherPhoto} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{c.otherName}</p>
+                    <p className="text-xs text-gray-400 truncate">{c.lastMessage || (c.productName ? `Sobre: ${c.productName}` : 'Sem mensagens')}</p>
+                  </div>
+                  {c.unreadCount > 0 && (
+                    <span className="w-5 h-5 rounded-full bg-green-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                      {c.unreadCount > 9 ? '9+' : c.unreadCount}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">Sem mensagens por enquanto.</p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Desktop: estatísticas + tabela ── */}
+      <div className="hidden lg:grid gap-4 xl:grid-cols-4">
         <div className="rounded-3xl bg-green-700 text-white p-5 shadow-sm">
           <p className="text-xs uppercase tracking-[0.2em] opacity-80 mb-2">Receita total</p>
           <p className="text-2xl font-black">{formatMoney(payments.total_received)} MZN</p>
@@ -179,8 +291,8 @@ function SellerDashboardOverview() {
 
       <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
         <div className="space-y-4">
-          {/* ── Pedidos recentes ── */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          {/* ── Pedidos recentes (tabela) — só desktop; no mobile já há a versão em cartões acima ── */}
+          <div className="hidden lg:block bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-base font-bold text-gray-900">Pedidos recentes</h3>
