@@ -570,7 +570,12 @@ function Profile() {
               ) : (
                 <div className="space-y-3">
                   {posts.map(post => {
-                    const img = resolveMediaUrl(post.imagem || post.image)
+                    // A API devolve as fotos do post no array `photos` (até 5) —
+                    // post.imagem/post.image sozinhos nunca existem nesse formato.
+                    const photosRaw = post.photos || post.images || post.imagens || post.fotos
+                    const img = Array.isArray(photosRaw) && photosRaw.length > 0
+                      ? resolveMediaUrl(typeof photosRaw[0] === 'string' ? photosRaw[0] : (photosRaw[0]?.image || photosRaw[0]?.imagem || photosRaw[0]?.url || photosRaw[0]?.foto))
+                      : resolveMediaUrl(post.imagem || post.image)
                     return (
                       <div key={post.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                         {/* Header */}
@@ -587,7 +592,7 @@ function Profile() {
                         {/* Conteúdo */}
                         <div className="px-4 pb-3">
                           {(post.titulo || post.title) && <p className="font-bold text-gray-900 text-sm mb-1">{post.titulo || post.title}</p>}
-                          <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">{post.conteudo || post.body}</p>
+                          <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">{post.content || post.conteudo || post.body}</p>
                         </div>
 
                         {/* Imagem */}
