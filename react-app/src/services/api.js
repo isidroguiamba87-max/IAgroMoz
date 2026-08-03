@@ -616,6 +616,22 @@ class APIService {
     return this.post(`/techniques/${techniqueId}/vote/`, { vote });
   }
 
+  // ─── Techniques — Comentários ─────────────────────────────────────────────────
+
+  getTechniqueComments(techniqueId) {
+    return this.get(`/techniques/${techniqueId}/comments/`);
+  }
+
+  createTechniqueComment(techniqueId, message, parentId = null) {
+    const data = { message };
+    if (parentId !== null && parentId !== undefined) data.parent = parentId;
+    return this.post(`/techniques/${techniqueId}/comments/`, data);
+  }
+
+  deleteTechniqueComment(id) {
+    return this.delete(`/techniques/comments/${id}/`);
+  }
+
   // ─── Marketplace — Produtos ──────────────────────────────────────────────────
 
   getMyProducts() {
