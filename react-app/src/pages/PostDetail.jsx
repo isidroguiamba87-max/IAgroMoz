@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
@@ -8,6 +8,29 @@ import PhotoGallery from '../components/PhotoGallery'
 import Avatar from '../components/Avatar'
 import api from '../services/api'
 import { resolveMediaUrl, normalizeUserDisplayName } from '../utils/normalizers'
+
+// Repetida por baixo de cada foto quando o post tem mais que uma — mesmo
+// padrão do Facebook (a pessoa faz scroll pelas fotos e pode reagir a
+// qualquer momento) — mas a ação é sempre sobre o post, não por foto.
+function PostActionRow({ liked, likesCount, onLike, onComment, onShare }) {
+  return (
+    <div className="flex items-center border-t border-gray-100">
+      <button onClick={onLike}
+        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold transition-colors ${liked ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-gray-500 hover:bg-gray-50'}`}>
+        <i className={`bi ${liked ? 'bi-hand-thumbs-up-fill' : 'bi-hand-thumbs-up'} text-lg`}></i>
+        {likesCount > 0 ? likesCount : 'Gostar'}
+      </button>
+      <button onClick={onComment}
+        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors">
+        <i className="bi bi-chat text-lg"></i> Comentar
+      </button>
+      <button onClick={onShare}
+        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors">
+        <i className="bi bi-share text-lg"></i> Partilhar
+      </button>
+    </div>
+  )
+}
 
 // GET /feed/posts/{id}/ devolve o autor aninhado em .autor/.author (por vezes
 // dentro de .user/.profile) — ao contrário do Feed.jsx, que já faz este
@@ -41,6 +64,10 @@ function PostDetail() {
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [authorLookup, setAuthorLookup] = useState(null)
+  const [liked, setLiked] = useState(false)
+  const [likesCount, setLikesCount] = useState(0)
+  const commentSectionRef = useRef(null)
+  const commentInputRef = useRef(null)
   const userId = localStorage.getItem('userId')
 
   // Sellers não podem aceder aos posts independentes do Feed
@@ -74,6 +101,8 @@ function PostDetail() {
       const data = await api.getFeedPost(id)
       setPost(data)
       setAuthorLookup(null)
+      setLiked(!!(data.liked || data.gostou))
+      setLikesCount(data.total_likes ?? data.likes_count ?? 0)
       // Em alguns posts o autor vem só como ID (sem nome/foto embutidos) —
       // mesmo caso que o Feed.jsx já resolve com um pedido extra a /users/{id}/.
       const { name: quickName, id: authorId } = resolvePostAuthor(data)
@@ -91,6 +120,33 @@ function PostDetail() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleLike = async () => {
+    if (!localStorage.getItem('access_token')) { navigate('/login'); return }
+    const wasLiked = liked
+    setLiked(!wasLiked)
+    setLikesCount(c => wasLiked ? Math.max(0, c - 1) : c + 1)
+    try {
+      await api.likeFeedPost(id)
+    } catch (err) {
+      setLiked(wasLiked)
+      setLikesCount(c => wasLiked ? c + 1 : Math.max(0, c - 1))
+    }
+  }
+
+  const scrollToComments = () => {
+    commentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    commentInputRef.current?.focus()
+  }
+
+  const handleShare = async () => {
+    const url = window.location.origin + '/post/' + id
+    if (navigator.share) {
+      try { await navigator.share({ title: postTitle, url }); return } catch (_) { /* utilizador cancelou */ }
+    }
+    navigator.clipboard.writeText(url)
+    alert('Link copiado!')
   }
 
   const handleSubmitComment = async (e) => {
@@ -213,11 +269,23 @@ function PostDetail() {
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="agro-card p-6 mb-6">
-          {postImages.length > 0 && (
+          {postImages.length > 1 ? (
+            // Várias fotos — mostra todas em coluna (scroll), como no Facebook,
+            // cada uma seguida das mesmas ações (gostar/comentar/partilhar são
+            // sempre sobre o post, repetidas para ficarem à mão ao ir descendo).
+            <div className="rounded-xl overflow-hidden mb-6 border border-gray-100">
+              {postImages.map((src, i) => (
+                <div key={i} className={i > 0 ? 'border-t border-gray-100' : ''}>
+                  <img src={src} alt={`${postTitle} (${i + 1})`} className="w-full object-cover" loading="lazy" decoding="async" />
+                  <PostActionRow liked={liked} likesCount={likesCount} onLike={handleLike} onComment={scrollToComments} onShare={handleShare} />
+                </div>
+              ))}
+            </div>
+          ) : postImages.length === 1 ? (
             <div className="rounded-xl overflow-hidden mb-6">
               <PhotoGallery images={postImages} alt={postTitle} />
             </div>
-          )}
+          ) : null}
 
           <div className="flex items-center gap-3 mb-4">
             <Avatar name={postAuthor} foto={postAuthorFoto} size="lg" />
@@ -257,23 +325,25 @@ function PostDetail() {
             </div>
           )}
 
-          <div className="flex items-center gap-6 pt-4 border-t border-gray-200 text-sm text-gray-600">
+          {postImages.length <= 1 && (
+            <PostActionRow liked={liked} likesCount={likesCount} onLike={handleLike} onComment={scrollToComments} onShare={handleShare} />
+          )}
+          <div className="flex items-center gap-6 pt-2 text-sm text-gray-600">
             <span>{mainComments.length} {mainComments.length === 1 ? 'comentário' : 'comentários'}</span>
           </div>
         </div>
 
-        <div className="agro-card p-6">
+        <div className="agro-card p-6" ref={commentSectionRef}>
           <h2 className="text-lg font-bold text-gray-800 mb-4">
             Comentários ({mainComments.length})
           </h2>
 
           <form onSubmit={handleSubmitComment} className="mb-6">
             <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center text-white font-bold flex-shrink-0">
-                U
-              </div>
+              <Avatar name={localStorage.getItem('userName')} size="md" />
               <div className="flex-1">
                 <input
+                  ref={commentInputRef}
                   type="text"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}

@@ -5,6 +5,7 @@ import DesktopSidebar from '../components/DesktopSidebar'
 import FeedRightPanel, { getPendingRequestsForMe } from '../components/FeedRightPanel'
 import Comment from '../components/Comment'
 import Avatar from '../components/Avatar'
+import PhotoGrid from '../components/PhotoGrid'
 import api from '../services/api'
 import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
 import { normalizeUserDisplayName, normalizeComment, resolveMediaUrl } from '../utils/normalizers'
@@ -27,48 +28,6 @@ const REACTIONS = [
 ]
 
 // normalizeUserDisplayName, normalizeComment, resolveMediaUrl importadas de utils/normalizers
-
-// ─── Preview organizado de fotos no card do feed ───────────────────────────────
-// Até 5 fotos por post, mas não expõe todas ao mesmo tempo — mostra no máximo 3
-// organizadas; para ver todas (com scroll horizontal) a pessoa abre a publicação.
-function FeedPhotoPreview({ images, alt, onOpen }) {
-  if (!images || images.length === 0) return null
-
-  if (images.length === 1) {
-    return (
-      <div className="cursor-pointer" onClick={onOpen}>
-        <img src={images[0]} alt={alt || 'Imagem do post'} className="w-full object-cover max-h-[500px]" loading="lazy" decoding="async" />
-      </div>
-    )
-  }
-
-  if (images.length === 2) {
-    return (
-      <div className="grid grid-cols-2 gap-0.5 cursor-pointer" onClick={onOpen}>
-        {images.map((src, i) => (
-          <img key={i} src={src} alt={`${alt || 'Imagem do post'} (${i + 1})`} className="w-full h-56 object-cover" loading="lazy" decoding="async" />
-        ))}
-      </div>
-    )
-  }
-
-  const shown = images.slice(0, 3)
-  const extra = images.length - shown.length
-  return (
-    <div className="grid grid-cols-3 gap-0.5 cursor-pointer" onClick={onOpen}>
-      {shown.map((src, i) => (
-        <div key={i} className="relative">
-          <img src={src} alt={`${alt || 'Imagem do post'} (${i + 1})`} className="w-full h-32 object-cover" loading="lazy" decoding="async" />
-          {i === shown.length - 1 && extra > 0 && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">+{extra}</span>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
 
 // ─── Componente principal ──────────────────────────────────────────────────────
 function Feed() {
@@ -639,7 +598,7 @@ function Feed() {
                       </div>
                     </div>
                     {images.length > 0 && (
-                      <FeedPhotoPreview images={images} alt={post.title} onOpen={() => navigate(`/post/${post.id}`)} />
+                      <PhotoGrid images={images} alt={post.title} onOpen={() => navigate(`/post/${post.id}`)} />
                     )}
                     {post.body && (
                       <div className="px-4 pt-3 pb-1">

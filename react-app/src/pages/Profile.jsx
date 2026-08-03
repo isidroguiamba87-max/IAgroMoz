@@ -5,6 +5,7 @@ import DesktopSidebar from '../components/DesktopSidebar'
 import LoadingPlant from '../components/LoadingPlant'
 import Comment from '../components/Comment'
 import Avatar from '../components/Avatar'
+import PhotoGrid from '../components/PhotoGrid'
 import api from '../services/api'
 import { addNotification } from './Notifications'
 import { useTheme } from '../context/ThemeContext'
@@ -573,9 +574,9 @@ function Profile() {
                     // A API devolve as fotos do post no array `photos` (até 5) —
                     // post.imagem/post.image sozinhos nunca existem nesse formato.
                     const photosRaw = post.photos || post.images || post.imagens || post.fotos
-                    const img = Array.isArray(photosRaw) && photosRaw.length > 0
-                      ? resolveMediaUrl(typeof photosRaw[0] === 'string' ? photosRaw[0] : (photosRaw[0]?.image || photosRaw[0]?.imagem || photosRaw[0]?.url || photosRaw[0]?.foto))
-                      : resolveMediaUrl(post.imagem || post.image)
+                    const postImages = Array.isArray(photosRaw) && photosRaw.length > 0
+                      ? photosRaw.map(item => resolveMediaUrl(typeof item === 'string' ? item : (item?.image || item?.imagem || item?.url || item?.foto))).filter(Boolean)
+                      : (resolveMediaUrl(post.imagem || post.image) ? [resolveMediaUrl(post.imagem || post.image)] : [])
                     return (
                       <div key={post.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                         {/* Header */}
@@ -595,8 +596,10 @@ function Profile() {
                           <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">{post.content || post.conteudo || post.body}</p>
                         </div>
 
-                        {/* Imagem */}
-                        {img && <img src={img} alt="" className="w-full aspect-[4/3] object-cover" />}
+                        {/* Imagens */}
+                        {postImages.length > 0 && (
+                          <PhotoGrid images={postImages} alt={post.titulo || post.title} onOpen={() => navigate(`/post/${post.id}`)} />
+                        )}
 
                         {/* Acções */}
                         <div className="border-t border-gray-100 px-2 py-1 flex items-center">
