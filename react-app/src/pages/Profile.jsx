@@ -244,20 +244,26 @@ function Profile() {
         foto_perfil: null,
       }))
       const foto = data.profile_photo || data.foto_perfil
-      if (foto) setEditFotoPreview(foto)
-      // Actualiza cache com dados frescos
-      setUserCache({
-        name:         `${data.first_name || ''} ${data.last_name || ''}`.trim(),
-        email:        data.email    || '',
-        username:     data.username || '',
-        gender:       data.gender   || '',
-        contact:      contactFromApi,
-        districtId:   String(data.district?.id   || ''),
-        districtName: data.district?.name || data.distrito?.nome || '',
-        provinceId:   String(data.district?.province?.id   || ''),
-        provinceName: data.district?.province?.name || data.district?.provincia?.nome || '',
-        foto:         foto || '',
-      })
+      // O cache local (userCache) representa o UTILIZADOR AUTENTICADO — só pode
+      // ser actualizado com os próprios dados. Escrever aqui sem esta condição
+      // sobrepunha o nome/foto/contacto de quem quer que se estivesse a ver
+      // (ex: abrir o perfil da Mércia fazia a app inteira "vestir" a foto e o
+      // nome dela até a página ser recarregada).
+      if (isOwnProfile) {
+        if (foto) setEditFotoPreview(foto)
+        setUserCache({
+          name:         `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+          email:        data.email    || '',
+          username:     data.username || '',
+          gender:       data.gender   || '',
+          contact:      contactFromApi,
+          districtId:   String(data.district?.id   || ''),
+          districtName: data.district?.name || data.distrito?.nome || '',
+          provinceId:   String(data.district?.province?.id   || ''),
+          provinceName: data.district?.province?.name || data.district?.provincia?.nome || '',
+          foto:         foto || '',
+        })
+      }
       return data
     } catch (err) {
       console.error(err)
@@ -507,7 +513,7 @@ function Profile() {
               <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-4">
                 <div className="flex flex-col items-center text-center">
                   {(profile.profile_photo || profile.foto_perfil) ? (
-                    <img src={profile.profile_photo || profile.foto_perfil} alt={initials}
+                    <img src={resolveMediaUrl(profile.profile_photo || profile.foto_perfil)} alt={initials}
                       className="w-24 h-24 rounded-full object-cover shadow-lg mb-3 border-4 border-green-100" />
                   ) : (
                     <div className="w-24 h-24 rounded-full avatar-gradient flex items-center justify-center text-white text-4xl font-bold shadow-lg mb-3">
@@ -554,8 +560,8 @@ function Profile() {
               {/* Mobile: card de perfil compacto */}
               <div className="lg:hidden bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-4">
-                  {profile.foto_perfil ? (
-                    <img src={profile.foto_perfil} alt={initials}
+                  {(profile.profile_photo || profile.foto_perfil) ? (
+                    <img src={resolveMediaUrl(profile.profile_photo || profile.foto_perfil)} alt={initials}
                       className="w-16 h-16 rounded-full object-cover flex-shrink-0 shadow-lg border-2 border-green-100" />
                   ) : (
                     <div className="w-16 h-16 rounded-full avatar-gradient flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 shadow-lg">
@@ -613,7 +619,7 @@ function Profile() {
                       <div key={post.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                         {/* Header */}
                         <div className="flex items-center gap-3 px-4 py-3">
-                          <Avatar name={profile.nome_completo || `${profile.first_name} ${profile.last_name}`.trim()} foto={profile.foto_perfil} size="sm" />
+                          <Avatar name={profile.nome_completo || `${profile.first_name} ${profile.last_name}`.trim()} foto={profile.profile_photo || profile.foto_perfil} size="sm" />
                           <div>
                             <p className="font-bold text-gray-900 text-sm">{profile.nome_completo || `${profile.first_name} ${profile.last_name}`.trim()}</p>
                             <p className="text-xs text-gray-400">
