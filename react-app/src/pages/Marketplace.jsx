@@ -400,6 +400,9 @@ function Marketplace() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [reservationCount, setReservationCount] = useState(0)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   const token = localStorage.getItem("access_token")
   const userId = localStorage.getItem("userId")
@@ -408,12 +411,13 @@ function Marketplace() {
   // Produtor já tem "Meus Anúncios" e "Pedidos" dentro do painel — evita duplicar aqui.
   const isProducer = userRole === "producer"
   const hasMounted = useRef(false)
+  const categoryMounted = useRef(false)
 
   useEffect(() => {
     if (hasMounted.current) return
     hasMounted.current = true
 
-    loadProducts()
+    loadProducts(1)
     if (token) {
       loadMyProfile()
       loadReservationCount()
@@ -434,6 +438,13 @@ function Marketplace() {
     }
   }, [])
 
+  // Categoria filtra no servidor (?category=) — recarrega a partir da página 1
+  // sempre que muda, sem repetir isso no mount (já tratado pelo efeito acima).
+  useEffect(() => {
+    if (!categoryMounted.current) { categoryMounted.current = true; return }
+    loadProducts(1)
+  }, [category])
+
   const loadReservationCount = async () => {
     try {
       const data = await api.getTransactions()
@@ -453,15 +464,20 @@ function Marketplace() {
     } catch (_) {}
   }
 
-  const loadProducts = async () => {
+  const loadProducts = async (targetPage = 1) => {
     try {
-      setLoading(true); setError("")
-      const data = await api.getProducts()
+      if (targetPage === 1) { setLoading(true); setError("") } else { setLoadingMore(true) }
+      const params = { page: targetPage }
+      if (category !== "todos") params.category = category
+      const data = await api.getProducts(params)
       const list = Array.isArray(data) ? data : (data.results || [])
-      setProducts(list.map(norm))
+      const normalized = list.map(norm)
+      setProducts(prev => targetPage === 1 ? normalized : [...prev, ...normalized])
+      setHasMore(!Array.isArray(data) && !!data.next)
+      setPage(targetPage)
     } catch (err) {
-      setError("Erro ao carregar produtos. Verifique a conexão com o servidor.")
-    } finally { setLoading(false) }
+      if (targetPage === 1) setError("Erro ao carregar produtos. Verifique a conexão com o servidor.")
+    } finally { setLoading(false); setLoadingMore(false) }
   }
 
   // Verifica se o utilizador logado é dono do produto
@@ -515,11 +531,9 @@ function Marketplace() {
     { id: "LIVESTOCK",   label: "Pecuária",    icon: "bi-heart-fill" },
   ]
 
-  const filteredProducts = products.filter(p => {
-    const matchCat = category === "todos" || p.category === category
-    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
-    return matchCat && matchSearch
-  })
+  // Categoria já vem filtrada do servidor (?category=); aqui só falta a busca por nome,
+  // que a API não documenta como filtro — por isso continua a ser feita no que já carregou.
+  const filteredProducts = products.filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()))
 
   const destaques = [...filteredProducts].filter(p => p.avg_rating > 0).sort((a, b) => b.avg_rating - a.avg_rating).slice(0, 4)
   const novos = [...filteredProducts].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 4)
@@ -717,7 +731,7 @@ function Marketplace() {
           ) : error ? (
             <div className="text-center py-8">
               <p className="text-red-600 mb-3">{error}</p>
-              <button onClick={loadProducts} className="btn-primary text-white px-6 py-2 rounded-xl text-sm">Tentar novamente</button>
+              <button onClick={() => loadProducts(1)} className="btn-primary text-white px-6 py-2 rounded-xl text-sm">Tentar novamente</button>
             </div>
           ) : (
             <>
@@ -754,6 +768,14 @@ function Marketplace() {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {filteredProducts.map(p => <ProductCard key={p.id} product={p} />)}
                   </div>
+                  {hasMore && (
+                    <div className="flex justify-center mt-5">
+                      <button onClick={() => loadProducts(page + 1)} disabled={loadingMore}
+                        className="px-6 py-2.5 rounded-xl border-2 border-green-200 text-green-700 font-semibold text-sm hover:bg-green-50 disabled:opacity-50">
+                        {loadingMore ? 'A carregar...' : 'Carregar mais produtos'}
+                      </button>
+                    </div>
+                  )}
                 </section>
               )}
 
