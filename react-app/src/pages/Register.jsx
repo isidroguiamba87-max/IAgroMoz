@@ -129,7 +129,6 @@ function Register() {
                   onSuccess={handleGoogleSuccess}
                   onError={() => setGoogleError('Não foi possível continuar com Google.')}
                   locale="pt"
-                  width="100%"
                   text="signup_with"
                 />
               </div>

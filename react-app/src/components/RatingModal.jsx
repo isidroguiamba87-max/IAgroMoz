@@ -33,6 +33,9 @@ function RatingModal({ productId, sellerId, productName, sellerName, onClose, on
 
   const handleSubmit = async () => {
     if (userRating === 0) { setError('Selecione uma avaliação de 1 a 5 estrelas'); return }
+    // Nunca disparar o pedido sem um ID válido — evita .../ratings/null/rate_seller/ (500).
+    if (ratingType === 'produto' && !productId) { setError('Não foi possível identificar o produto para avaliar.'); return }
+    if (ratingType === 'vendedor' && !sellerId) { setError('Não foi possível identificar o vendedor para avaliar.'); return }
     const score = parseFloat(userRating)
     setLoading(true)
     setError('')

@@ -208,7 +208,6 @@ function Login() {
                   onSuccess={handleGoogleSuccess}
                   onError={() => setError('Não foi possível entrar com Google.')}
                   locale="pt"
-                  width="100%"
                   text="signin_with"
                 />
               </div>
