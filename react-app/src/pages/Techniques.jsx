@@ -416,8 +416,9 @@ function Techniques() {
     if (!token) { navigate('/login'); return }
     setVotingId(techniqueId)
     try {
-      // POST /techniques/{id}/vote/ espera { vote: "UP" | "DOWN" } — confirmado pela documentação da API.
-      await api.voteTechnique(techniqueId, voto === 'APROVA' ? 'UP' : 'DOWN')
+      // POST /techniques/{id}/vote/ só aceita { vote: "APPROVE" | "REJECT" } —
+      // confirmado pelo erro 400 "Invalid vote. Use 'APPROVE' or 'REJECT'."
+      await api.voteTechnique(techniqueId, voto === 'APROVA' ? 'APPROVE' : 'REJECT')
       loadTechniques()
     } catch (err) {
       // Erros de rede são tratados globalmente pelo NetworkErrorModal
@@ -606,10 +607,10 @@ function Techniques() {
 
                 <div className="flex items-center gap-4 mb-4">
                   <span className="flex items-center gap-1 text-green-600 font-bold text-sm">
-                    <i className="bi bi-hand-thumbs-up"></i> {t.votes_up ?? t.votes_approve ?? t.votos_aprovacao ?? 0}
+                    <i className="bi bi-hand-thumbs-up"></i> {t.votes_approve ?? t.votos_aprovacao ?? 0}
                   </span>
                   <span className="flex items-center gap-1 text-red-500 font-bold text-sm">
-                    <i className="bi bi-hand-thumbs-down"></i> {t.votes_down ?? t.votes_reject ?? t.votos_rejeicao ?? 0}
+                    <i className="bi bi-hand-thumbs-down"></i> {t.votes_reject ?? t.votos_rejeicao ?? 0}
                   </span>
                   {(t.total_votes || t.total_votos) > 0 && (
                     <span className="text-xs text-gray-400 ml-auto">{t.total_votes || t.total_votos} votos</span>
@@ -620,36 +621,34 @@ function Techniques() {
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mb-4 overflow-hidden">
                     <div
                       className="bg-green-500 h-full transition-all duration-500"
-                      style={{ width: `${Math.round(((t.votes_up ?? t.votes_approve ?? t.votos_aprovacao ?? 0) / (t.total_votes || t.total_votos)) * 100)}%` }}
+                      style={{ width: `${Math.round(((t.votes_approve ?? t.votos_aprovacao ?? 0) / (t.total_votes || t.total_votos)) * 100)}%` }}
                     />
                   </div>
                 )}
 
                 {(() => {
-                  // Normaliza para UP/DOWN — a API documenta esses valores, mas
-                  // aceita-se também o histórico APPROVE/REJECT em registos antigos.
-                  const rawVote = (t.user_vote || t.meu_voto || '').toString().toUpperCase()
-                  const itemVote = (rawVote === 'UP' || rawVote === 'APPROVE') ? 'UP'
-                    : (rawVote === 'DOWN' || rawVote === 'REJECT') ? 'DOWN' : null
+                  // A API só aceita/devolve APPROVE ou REJECT (confirmado pelo erro 400
+                  // "Invalid vote. Use 'APPROVE' or 'REJECT'." — não usa UP/DOWN).
+                  const itemVote = (t.user_vote || t.meu_voto || '').toString().toUpperCase()
                   return (
                     <div className="flex gap-2 mb-3">
                       <button
                         onClick={() => handleVote(t.id, 'APROVA')}
                         disabled={votingId === t.id}
                         className={`flex-1 py-2 rounded-xl font-semibold text-sm flex items-center justify-center gap-1 disabled:opacity-50 transition-colors ${
-                          itemVote === 'UP' ? 'bg-green-600 text-white' : 'bg-green-100 hover:bg-green-200 text-green-700'
+                          itemVote === 'APPROVE' ? 'bg-green-600 text-white' : 'bg-green-100 hover:bg-green-200 text-green-700'
                         }`}
                       >
-                        <i className="bi bi-hand-thumbs-up"></i> {itemVote === 'UP' ? 'Aprovado' : 'Aprovar'}
+                        <i className="bi bi-hand-thumbs-up"></i> {itemVote === 'APPROVE' ? 'Aprovado' : 'Aprovar'}
                       </button>
                       <button
                         onClick={() => handleVote(t.id, 'REPROVA')}
                         disabled={votingId === t.id}
                         className={`flex-1 py-2 rounded-xl font-semibold text-sm flex items-center justify-center gap-1 disabled:opacity-50 transition-colors ${
-                          itemVote === 'DOWN' ? 'bg-red-600 text-white' : 'bg-red-100 hover:bg-red-200 text-red-700'
+                          itemVote === 'REJECT' ? 'bg-red-600 text-white' : 'bg-red-100 hover:bg-red-200 text-red-700'
                         }`}
                       >
-                        <i className="bi bi-hand-thumbs-down"></i> {itemVote === 'DOWN' ? 'Reprovado' : 'Reprovar'}
+                        <i className="bi bi-hand-thumbs-down"></i> {itemVote === 'REJECT' ? 'Reprovado' : 'Reprovar'}
                       </button>
                     </div>
                   )

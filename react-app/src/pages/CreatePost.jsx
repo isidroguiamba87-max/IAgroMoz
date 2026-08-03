@@ -179,11 +179,22 @@ function CreatePost() {
         const created = await api.createFeedPost(postData)
         postId = created?.id
       }
+      let photoUploadFailed = false
       if (postId && extraPhotos.length > 0) {
-        await Promise.allSettled(extraPhotos.map(file => api.addPostPhoto(postId, file)))
+        const results = await Promise.allSettled(extraPhotos.map(file => api.addPostPhoto(postId, file)))
+        const failed = results.filter(r => r.status === 'rejected')
+        if (failed.length) {
+          photoUploadFailed = true
+          console.error('Falha ao enviar fotos extra do post:', failed.map(f => f.reason))
+          setError(`Publicação criada, mas ${failed.length} de ${extraPhotos.length} foto(s) extra não foram enviadas. Pode adicioná-las depois a editar o post.`)
+        }
       }
       if (postId && linkedProductId) {
         await api.linkProductToPost(postId, linkedProductId, 'Ver produto no marketplace').catch(() => {})
+      }
+      if (photoUploadFailed) {
+        setLoading(false)
+        return
       }
       navigate('/feed')
     } catch (err) {
