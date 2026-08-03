@@ -273,12 +273,20 @@ function Profile() {
 
   const normalizeText = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
 
-  // GET /feed/posts/?author= não é um filtro documentado pela API — percorre as
-  // páginas da lista geral e filtra pelo autor no cliente (mesmo padrão de loadProducts).
   const loadPosts = async () => {
     setLoadingPosts(true); setPostsError('')
     const MAX_PAGES = 15
     try {
+      // Para perfis alheios, tentar extrair posts embutidos no public-profile
+      if (!isOwnProfile && profileId) {
+        const pubProfile = await api.getUserPublicProfile(profileId).catch(() => null)
+        const embedded = pubProfile?.posts || pubProfile?.feed_posts || pubProfile?.publicacoes || []
+        if (Array.isArray(embedded) && embedded.length > 0) {
+          setPosts(embedded)
+          return
+        }
+      }
+      // Fallback: paginar o feed global e filtrar pelo autor no cliente
       const matches = []
       let page = 1
       let firstPageFailed = false
@@ -323,16 +331,32 @@ function Profile() {
     return sellerObj?.id ?? producerObj?.id ?? p.seller_id ?? p.producer_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id ?? null
   }
 
-  // GET /marketplace/products/?seller= não é um filtro suportado pela API —
-  // percorre as páginas da lista geral e filtra pelo vendedor/produtor no
-  // cliente (a "banca" do vendedor no perfil dele). Limitado a MAX_PAGES para
-  // não ficar a percorrer o catálogo inteiro indefinidamente.
   const loadProducts = async () => {
     setLoadingProducts(true); setProductsError('')
     const MAX_PAGES = 15
     try {
       const targetId = profileId || localStorage.getItem('userId')
       if (!targetId) { setProducts([]); return }
+
+      // Próprio perfil: endpoint dedicado GET /feed/posts/my-products/
+      if (isOwnProfile) {
+        const data = await api.getMyLinkableProducts().catch(() => null)
+        const list = data ? (Array.isArray(data) ? data : (data.results || [])) : []
+        if (list.length > 0) {
+          setProducts(list.map(normalizeProduct))
+          return
+        }
+      } else {
+        // Perfil alheio: tentar extrair produtos embutidos no public-profile
+        const pubProfile = await api.getUserPublicProfile(targetId).catch(() => null)
+        const embedded = pubProfile?.products || pubProfile?.marketplace_products || pubProfile?.banca || []
+        if (Array.isArray(embedded) && embedded.length > 0) {
+          setProducts(embedded.map(normalizeProduct))
+          return
+        }
+      }
+
+      // Fallback: paginar o marketplace e filtrar pelo dono no cliente
       const matches = []
       let page = 1
       let firstPageFailed = false
@@ -495,14 +519,7 @@ function Profile() {
       <DesktopSidebar />
       <div className="flex-1 min-w-0">
         <header className="glass-effect sticky top-0 z-40 border-b border-gray-100 lg:hidden">
-          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-end">
-            {isOwnProfile && (
-              <button onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors">
-                <i className="bi bi-box-arrow-right"></i> Sair
-              </button>
-            )}
-          </div>
+          <div className="max-w-2xl mx-auto px-4 py-3" />
         </header>
 
         <main className="max-w-4xl mx-auto px-4 py-6 pb-24 lg:pb-6">
