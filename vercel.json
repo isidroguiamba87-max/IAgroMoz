@@ -2,7 +2,8 @@
   "buildCommand": "cd react-app && npm install && npm run build",
   "outputDirectory": "react-app/dist",
   "env": {
-    "VITE_API_BASE_URL": "https://api.iagromoz.com/api/"
+    "VITE_API_BASE_URL": "https://api.iagromoz.com/api/",
+    "VITE_GOOGLE_CLIENT_ID": "1036905880686-r50qkep4e1d8ts9g9tar0f5a8fgmkb34.apps.googleusercontent.com"
   },
   "redirects": [
     {
