@@ -5,6 +5,7 @@ import LoadingPlant from '../components/LoadingPlant'
 import ImageViewer from '../components/ImageViewer'
 import api from '../services/api'
 import { API_MEDIA } from '../config/api'
+import { extractApiErrorMessage } from '../utils/normalizers'
 
 function TechniqueDetail() {
   const { id } = useParams()
@@ -64,7 +65,7 @@ function TechniqueDetail() {
       await api.voteTechnique(id, voto === 'APROVA' ? 'APPROVE' : 'REJECT')
       loadTechnique()
     } catch (err) {
-      alert(err?.message || 'Erro ao votar.')
+      alert(extractApiErrorMessage(err, 'Erro ao votar.'))
     } finally {
       setVoting(false)
     }
@@ -275,18 +276,18 @@ function TechniqueDetail() {
           {/* Estatísticas */}
           <div className="bg-gray-50 rounded-2xl p-6 mb-6">
             <h3 className="text-lg font-bold text-gray-800 mb-4">Votação da Comunidade</h3>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-green-600">{aprovacao}</p>
-                <p className="text-sm text-gray-600">Aprovações</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
+              <div className="text-center min-w-0">
+                <p className="text-2xl sm:text-3xl font-bold text-green-600">{aprovacao}</p>
+                <p className="text-xs sm:text-sm text-gray-600 break-words">Aprovações</p>
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-red-600">{rejeicao}</p>
-                <p className="text-sm text-gray-600">Reprovações</p>
+              <div className="text-center min-w-0">
+                <p className="text-2xl sm:text-3xl font-bold text-red-600">{rejeicao}</p>
+                <p className="text-xs sm:text-sm text-gray-600 break-words">Reprovações</p>
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-blue-600">{approvalRate}%</p>
-                <p className="text-sm text-gray-600">Aprovação</p>
+              <div className="text-center min-w-0">
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600">{approvalRate}%</p>
+                <p className="text-xs sm:text-sm text-gray-600 break-words">Aprovação</p>
               </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
