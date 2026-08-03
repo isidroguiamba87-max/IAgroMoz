@@ -202,21 +202,21 @@ function TechniqueDetail() {
   }
 
   const total = technique.total_votes || technique.total_votos || 0
-  const aprovacao = technique.votes_approve ?? technique.votos_aprovacao ?? 0
-  const rejeicao = technique.votes_reject ?? technique.votos_rejeicao ?? 0
+  const aprovacao = technique.approval_votes ?? technique.votes_approve ?? technique.votos_aprovacao ?? 0
+  const rejeicao = technique.rejection_votes ?? technique.votes_reject ?? technique.votos_rejeicao ?? 0
   const approvalRate = total > 0 ? Math.round((aprovacao / total) * 100) : 0
 
   const statusColor = () => {
     const s = (technique.status || '').toUpperCase()
-    if (s === 'APROVADA') return 'bg-green-100 text-green-700'
-    if (s === 'REPROVADA') return 'bg-red-100 text-red-700'
+    if (s === 'APPROVED' || s === 'APROVADA') return 'bg-green-100 text-green-700'
+    if (s === 'REJECTED' || s === 'REPROVADA') return 'bg-red-100 text-red-700'
     return 'bg-yellow-100 text-yellow-700'
   }
 
   const statusLabel = () => {
     const s = (technique.status || '').toUpperCase()
-    if (s === 'APROVADA') return '✓ Técnica Aprovada pela Comunidade'
-    if (s === 'REPROVADA') return '✗ Técnica Reprovada'
+    if (s === 'APPROVED' || s === 'APROVADA') return '✓ Técnica Aprovada pela Comunidade'
+    if (s === 'REJECTED' || s === 'REPROVADA') return '✗ Técnica Reprovada'
     return '⏳ Em votação'
   }
 

@@ -5,6 +5,7 @@ import DesktopSidebar from '../components/DesktopSidebar'
 import LoadingPlant from '../components/LoadingPlant'
 import api from '../services/api'
 import { API_MEDIA } from '../config/api'
+import { extractApiErrorMessage } from '../utils/normalizers'
 
 // Formulário de pedido de autorização (igual ao do Marketplace)
 function SellerRequestForm({ onClose, existingRequest }) {
@@ -359,6 +360,11 @@ function Techniques() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [votingId, setVotingId] = useState(null)
+  const [voteToast, setVoteToast] = useState('')
+  // A API não devolve o voto do próprio utilizador (nem no GET da técnica, nem
+  // na resposta do POST /vote/), por isso guardamos localmente assim que o
+  // voto é aceite para o botão acender de imediato.
+  const [votedMap, setVotedMap] = useState({})
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showSellerRequestModal, setShowSellerRequestModal] = useState(false)
@@ -412,18 +418,30 @@ function Techniques() {
     }
   }
 
+  const showVoteToast = (msg) => {
+    setVoteToast(msg)
+    setTimeout(() => setVoteToast(''), 3500)
+  }
+
   const handleVote = async (techniqueId, voto) => {
     if (!token) { navigate('/login'); return }
     setVotingId(techniqueId)
     try {
       // POST /techniques/{id}/vote/ só aceita { vote: "APPROVE" | "REJECT" } —
       // confirmado pelo erro 400 "Invalid vote. Use 'APPROVE' or 'REJECT'."
-      await api.voteTechnique(techniqueId, voto === 'APROVA' ? 'APPROVE' : 'REJECT')
+      const vote = voto === 'APROVA' ? 'APPROVE' : 'REJECT'
+      await api.voteTechnique(techniqueId, vote)
+      setVotedMap(prev => ({ ...prev, [techniqueId]: vote }))
+      showVoteToast(voto === 'APROVA' ? 'Voto de aprovação registado!' : 'Voto de reprovação registado!')
       loadTechniques()
     } catch (err) {
+      const msg = extractApiErrorMessage(err, '')
       // Erros de rede são tratados globalmente pelo NetworkErrorModal
-      if (!err?.message?.includes('fetch') && !err?.message?.includes('rede')) {
-        alert(err?.message || 'Erro ao votar.')
+      if (err?.message?.includes('fetch') || err?.message?.includes('rede')) return
+      if (msg.toLowerCase().includes('já votou') || msg.toLowerCase().includes('already voted') || err?.status === 400) {
+        showVoteToast('Já votaste nesta recomendação.')
+      } else {
+        showVoteToast(msg || 'Erro ao votar.')
       }
     } finally {
       setVotingId(null)
@@ -461,16 +479,16 @@ function Techniques() {
   const statusColor = (status) => {
     if (!status) return 'bg-gray-100 text-gray-600'
     const s = status.toUpperCase()
-    if (s === 'APROVADA') return 'bg-green-100 text-green-700'
-    if (s === 'REPROVADA') return 'bg-red-100 text-red-700'
+    if (s === 'APPROVED' || s === 'APROVADA') return 'bg-green-100 text-green-700'
+    if (s === 'REJECTED' || s === 'REPROVADA') return 'bg-red-100 text-red-700'
     return 'bg-yellow-100 text-yellow-700'
   }
 
   const statusLabel = (status) => {
     if (!status) return 'Pendente'
     const s = status.toUpperCase()
-    if (s === 'APROVADA') return '✓ Aprovada'
-    if (s === 'REPROVADA') return '✗ Reprovada'
+    if (s === 'APPROVED' || s === 'APROVADA') return '✓ Aprovada'
+    if (s === 'REJECTED' || s === 'REPROVADA') return '✗ Reprovada'
     return '⏳ Em votação'
   }
 
@@ -478,6 +496,11 @@ function Techniques() {
     <div className="min-h-screen pb-20 soil-texture flex lg:pb-0">
       <DesktopSidebar />
       <div className="flex-1 min-w-0">
+      {voteToast && (
+        <div className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
+          <i className="bi bi-info-circle-fill text-green-400"></i> {voteToast}
+        </div>
+      )}
       {showSellerRequestModal && (
         <SellerRequestForm
           onClose={() => setShowSellerRequestModal(false)}
@@ -607,10 +630,10 @@ function Techniques() {
 
                 <div className="flex items-center gap-4 mb-4">
                   <span className="flex items-center gap-1 text-green-600 font-bold text-sm">
-                    <i className="bi bi-hand-thumbs-up"></i> {t.votes_approve ?? t.votos_aprovacao ?? 0}
+                    <i className="bi bi-hand-thumbs-up"></i> {t.approval_votes ?? t.votes_approve ?? t.votos_aprovacao ?? 0}
                   </span>
                   <span className="flex items-center gap-1 text-red-500 font-bold text-sm">
-                    <i className="bi bi-hand-thumbs-down"></i> {t.votes_reject ?? t.votos_rejeicao ?? 0}
+                    <i className="bi bi-hand-thumbs-down"></i> {t.rejection_votes ?? t.votes_reject ?? t.votos_rejeicao ?? 0}
                   </span>
                   {(t.total_votes || t.total_votos) > 0 && (
                     <span className="text-xs text-gray-400 ml-auto">{t.total_votes || t.total_votos} votos</span>
@@ -621,15 +644,15 @@ function Techniques() {
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mb-4 overflow-hidden">
                     <div
                       className="bg-green-500 h-full transition-all duration-500"
-                      style={{ width: `${Math.round(((t.votes_approve ?? t.votos_aprovacao ?? 0) / (t.total_votes || t.total_votos)) * 100)}%` }}
+                      style={{ width: `${Math.round(((t.approval_votes ?? t.votes_approve ?? t.votos_aprovacao ?? 0) / (t.total_votes || t.total_votos)) * 100)}%` }}
                     />
                   </div>
                 )}
 
                 {(() => {
-                  // A API só aceita/devolve APPROVE ou REJECT (confirmado pelo erro 400
-                  // "Invalid vote. Use 'APPROVE' or 'REJECT'." — não usa UP/DOWN).
-                  const itemVote = (t.user_vote || t.meu_voto || '').toString().toUpperCase()
+                  // A API não devolve o voto do próprio utilizador — usa-se o que
+                  // foi guardado localmente assim que o voto foi aceite nesta sessão.
+                  const itemVote = votedMap[t.id] || (t.user_vote || t.meu_voto || '').toString().toUpperCase()
                   return (
                     <div className="flex gap-2 mb-3">
                       <button
