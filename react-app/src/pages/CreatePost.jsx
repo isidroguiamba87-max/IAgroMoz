@@ -52,6 +52,7 @@ function CreatePost() {
   const [extraPreviews, setExtraPreviews] = useState([])
   const [linkableProducts, setLinkableProducts] = useState([])
   const [linkedProductId, setLinkedProductId] = useState('')
+  const [districts, setDistricts] = useState([])
 
   useEffect(() => {
     if (userRole !== 'producer') return
@@ -61,14 +62,21 @@ function CreatePost() {
     }).catch(() => {})
   }, [])
 
+  useEffect(() => {
+    api.getDistricts().then(setDistricts).catch(() => {})
+  }, [])
+
   const [formData, setFormData] = useState({
     title:        editPost?.title       || editPost?.titulo       || '',
     content:      editPost?.body        || editPost?.conteudo     || '',
     image:        null,
     category:     editPost?.category    || '',
-    // Localização vem pré-preenchida com a que o utilizador indicou no registo;
-    // fica editável para o caso de o post ser sobre outro local.
-    distrito:     editPost?.distrito    || localStorage.getItem('userDistrictName') || '',
+    // district é o ID do distrito (não o nome). Ao editar, a API pode devolver
+    // district como objeto aninhado {id, name} em vez do ID simples enviado na
+    // criação — daí o district?.id primeiro. Pré-preenchido com o que o
+    // utilizador indicou no registo; fica editável para o caso de o post ser
+    // sobre outro local.
+    district:     editPost?.district?.id ?? editPost?.district_id ?? (typeof editPost?.district === 'number' ? editPost.district : null) ?? localStorage.getItem('userDistrictId') ?? '',
     tipo_cultura: editPost?.tipo_cultura || '',
   })
 
@@ -162,13 +170,13 @@ function CreatePost() {
     setLoading(true)
     try {
       // POST /api/feed/posts/  — multipart/form-data
-      // Campos: title (obrigatório), content, image, category, distrito, tipo_cultura
+      // Campos: title (obrigatório), content, category, district (ID numérico do distrito, não o nome)
       const postData = new FormData()
       postData.append('title', formData.title.trim())
       postData.append('content', formData.content.trim())
       if (formData.image) postData.append('image', formData.image)
       if (formData.category) postData.append('category', formData.category)
-      if (formData.distrito.trim()) postData.append('distrito', formData.distrito.trim())
+      if (formData.district) postData.append('district', formData.district)
       if (formData.tipo_cultura.trim()) postData.append('tipo_cultura', formData.tipo_cultura.trim())
 
       let postId = editPost?.id
@@ -353,14 +361,17 @@ function CreatePost() {
                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                   <i className="bi bi-geo-alt text-red-500"></i> Localização
                 </label>
-                <input
-                  type="text"
-                  name="distrito"
-                  value={formData.distrito}
+                <select
+                  name="district"
+                  value={formData.district}
                   onChange={handleChange}
-                  className="form-input w-full px-4 py-3 rounded-xl text-sm"
-                  placeholder="Ex: Manica"
-                />
+                  className="form-input w-full px-4 py-3 rounded-xl text-sm bg-white"
+                >
+                  <option value="">Nenhuma</option>
+                  {districts.map(d => (
+                    <option key={d.id} value={d.id}>{d.name || d.nome}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">

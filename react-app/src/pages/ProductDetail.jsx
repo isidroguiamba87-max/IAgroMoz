@@ -657,11 +657,6 @@ function ProductDetail() {
                     <i className="bi bi-cart3"></i> Entrar para reservar
                   </button>
                 )}
-                <a href={`https://wa.me/?text=${encodeURIComponent(`Olá! Tenho interesse no produto: ${product.name || product.nome}`)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="block w-full bg-[#25D366] hover:bg-[#1ebe5d] text-white py-3 rounded-xl font-semibold text-base text-center">
-                  <i className="bi bi-whatsapp mr-1"></i> Contatar Vendedor
-                </a>
                 <button onClick={() => { setRatingType('produto'); setShowRatingModal(true) }}
                   className="w-full bg-yellow-50 hover:bg-yellow-100 text-yellow-800 py-3 rounded-xl font-semibold flex items-center justify-center gap-2">
                   <i className="bi bi-star"></i> Avaliar Produto
@@ -815,8 +810,10 @@ function ProductDetail() {
               </button>
             </div>
 
-            {/* Tabs produto/vendedor */}
-            {(product.vendedor || product.seller) && token && (
+            {/* Tabs produto/vendedor — só mostra se houver um ID de vendedor
+                resolvível (a API às vezes só devolve o nome, sem id, e nesse
+                caso não há forma de chamar rate_seller/). */}
+            {getSellerId(product) && token && (
               <div className="flex gap-2 mb-4 bg-gray-100 rounded-xl p-1">
                 <button onClick={() => { setRatingType('produto'); setRatingError(''); setRatingSuccess('') }}
                   className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${ratingType === 'produto' ? 'bg-white shadow text-yellow-700' : 'text-gray-500'}`}>
