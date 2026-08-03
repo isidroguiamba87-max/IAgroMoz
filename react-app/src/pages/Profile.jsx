@@ -320,60 +320,97 @@ function Profile() {
       : (p.vendedor || ''),
   })
 
-  // p.seller/p.producer vêm como o perfil de vendedor/produtor (id = ID do
-  // perfil, não do utilizador) — o Django User real está aninhado em
-  // .user (mesmo padrão de resolveSeller/getSellerId em ProductDetail.jsx).
-  // Sem isto, comparar p.seller.id diretamente com o userId da rota nunca
-  // batia certo e a banca do vendedor aparecia sempre vazia.
-  const resolveProductOwnerUserId = (p) => {
-    const sellerObj = (p.seller && typeof p.seller === 'object') ? (p.seller.user || p.seller.profile || p.seller) : null
-    const producerObj = (p.producer && typeof p.producer === 'object') ? (p.producer.user || p.producer.profile || p.producer) : null
-    return sellerObj?.id ?? producerObj?.id ?? p.seller_id ?? p.producer_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id ?? null
+  // Retorna true se um produto pertence a um determinado perfil.
+  // Compara o seller/producer PROFILE ID (p.seller.id / p.producer.id) contra
+  // um profileId de vendedor/produtor — NÃO o user ID da rota.
+  // Também tenta p.seller.user quando vem como objecto aninhado {id: ...}
+  // ou como número (user ID directo), cobrindo as duas formas que o DRF pode usar.
+  const productBelongsTo = (p, sellerProfId, producerProfId) => {
+    const selId   = p.seller?.id   ?? p.seller_id   ?? null
+    const prodId  = p.producer?.id ?? p.producer_id ?? null
+    // user aninhado — pode ser número ou objecto
+    const selUserId = typeof p.seller?.user === 'number'
+      ? p.seller.user
+      : (p.seller?.user?.id ?? null)
+    const prodUserId = typeof p.producer?.user === 'number'
+      ? p.producer.user
+      : (p.producer?.user?.id ?? null)
+    if (sellerProfId) {
+      if (selId   && String(selId)     === String(sellerProfId)) return true
+      if (selUserId && String(selUserId) === String(sellerProfId)) return true
+    }
+    if (producerProfId) {
+      if (prodId   && String(prodId)    === String(producerProfId)) return true
+      if (prodUserId && String(prodUserId) === String(producerProfId)) return true
+    }
+    return false
+  }
+
+  const paginateProducts = async (sellerProfId, producerProfId) => {
+    const MAX_PAGES = 15
+    const matches = []
+    let page = 1
+    let firstFailed = false
+    while (page <= MAX_PAGES) {
+      const data = await api.getProducts({ page }).catch(() => null)
+      if (!data) { firstFailed = page === 1; break }
+      const list = Array.isArray(data) ? data : (data.results || [])
+      for (const p of list) {
+        if (productBelongsTo(p, sellerProfId, producerProfId)) matches.push(p)
+      }
+      if (!Array.isArray(data) && !data.next) break
+      page++
+    }
+    return { matches, firstFailed }
   }
 
   const loadProducts = async () => {
     setLoadingProducts(true); setProductsError('')
-    const MAX_PAGES = 15
     try {
       const targetId = profileId || localStorage.getItem('userId')
       if (!targetId) { setProducts([]); return }
 
-      // Próprio perfil: endpoint dedicado GET /feed/posts/my-products/
       if (isOwnProfile) {
+        // 1.ª opção: endpoint dedicado GET /feed/posts/my-products/
         const data = await api.getMyLinkableProducts().catch(() => null)
         const list = data ? (Array.isArray(data) ? data : (data.results || [])) : []
-        if (list.length > 0) {
-          setProducts(list.map(normalizeProduct))
-          return
+        if (list.length > 0) { setProducts(list.map(normalizeProduct)); return }
+
+        // Fallback: paginar filtrando pelo seller/producer profile ID do estado
+        const spId = sellerProfile?.id ?? null
+        const ppId = producerProfile?.id ?? null
+        if (spId || ppId) {
+          const { matches, firstFailed } = await paginateProducts(spId, ppId)
+          if (firstFailed) { setProductsError('Erro ao carregar produtos. Tente novamente.'); setProducts([]); return }
+          setProducts(matches.map(normalizeProduct)); return
         }
       } else {
-        // Perfil alheio: tentar extrair produtos embutidos no public-profile
+        // Perfil alheio: obter public-profile para extrair produtos ou IDs de perfil
         const pubProfile = await api.getUserPublicProfile(targetId).catch(() => null)
+
+        // Tentar produtos embutidos directamente na resposta
         const embedded = pubProfile?.products || pubProfile?.marketplace_products || pubProfile?.banca || []
         if (Array.isArray(embedded) && embedded.length > 0) {
-          setProducts(embedded.map(normalizeProduct))
-          return
+          setProducts(embedded.map(normalizeProduct)); return
+        }
+
+        // Extrair seller/producer profile IDs e filtrar por eles
+        const spId =
+          pubProfile?.seller_profile?.id ?? pubProfile?.seller?.id ??
+          pubProfile?.vendedor?.id ?? null
+        const ppId =
+          pubProfile?.producer_profile?.id ?? pubProfile?.producer?.id ??
+          pubProfile?.produtor?.id ?? null
+
+        if (spId || ppId) {
+          const { matches, firstFailed } = await paginateProducts(spId, ppId)
+          if (firstFailed) { setProductsError('Erro ao carregar produtos. Tente novamente.'); setProducts([]); return }
+          setProducts(matches.map(normalizeProduct)); return
         }
       }
 
-      // Fallback: paginar o marketplace e filtrar pelo dono no cliente
-      const matches = []
-      let page = 1
-      let firstPageFailed = false
-      while (page <= MAX_PAGES) {
-        const data = await api.getProducts({ page }).catch(() => null)
-        if (!data) { firstPageFailed = page === 1; break }
-        const pageList = Array.isArray(data) ? data : (data.results || [])
-        for (const p of pageList) {
-          const sid = resolveProductOwnerUserId(p)
-          if (sid && String(sid) === String(targetId)) matches.push(p)
-        }
-        const hasNext = !Array.isArray(data) && !!data.next
-        if (!hasNext) break
-        page += 1
-      }
-      if (firstPageFailed) { setProductsError('Erro ao carregar produtos. Tente novamente.'); setProducts([]); return }
-      setProducts(matches.map(normalizeProduct))
+      // Fallback final sem IDs de perfil: sem resultados
+      setProducts([])
     } catch (err) { setProductsError('Erro ao carregar produtos. Tente novamente.'); setProducts([]) }
     finally { setLoadingProducts(false) }
   }
