@@ -306,6 +306,17 @@ function Profile() {
       : (p.vendedor || ''),
   })
 
+  // p.seller/p.producer vêm como o perfil de vendedor/produtor (id = ID do
+  // perfil, não do utilizador) — o Django User real está aninhado em
+  // .user (mesmo padrão de resolveSeller/getSellerId em ProductDetail.jsx).
+  // Sem isto, comparar p.seller.id diretamente com o userId da rota nunca
+  // batia certo e a banca do vendedor aparecia sempre vazia.
+  const resolveProductOwnerUserId = (p) => {
+    const sellerObj = (p.seller && typeof p.seller === 'object') ? (p.seller.user || p.seller.profile || p.seller) : null
+    const producerObj = (p.producer && typeof p.producer === 'object') ? (p.producer.user || p.producer.profile || p.producer) : null
+    return sellerObj?.id ?? producerObj?.id ?? p.seller_id ?? p.producer_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id ?? null
+  }
+
   // GET /marketplace/products/?seller= não é um filtro suportado pela API —
   // percorre as páginas da lista geral e filtra pelo vendedor/produtor no
   // cliente (a "banca" do vendedor no perfil dele). Limitado a MAX_PAGES para
@@ -324,7 +335,7 @@ function Profile() {
         if (!data) { firstPageFailed = page === 1; break }
         const pageList = Array.isArray(data) ? data : (data.results || [])
         for (const p of pageList) {
-          const sid = p.seller?.id ?? p.seller_id ?? p.vendedor_id ?? p.user_id ?? p.owner_id
+          const sid = resolveProductOwnerUserId(p)
           if (sid && String(sid) === String(targetId)) matches.push(p)
         }
         const hasNext = !Array.isArray(data) && !!data.next
@@ -738,7 +749,7 @@ function Profile() {
                 { label: 'Nome', value: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Utilizador' },
                 ...(isOwnProfile ? [{ label: 'Email', value: profile.email }] : []),
                 { label: 'Tipo', value: getRoleLabel(profile), badge: getRoleColor(profile) },
-                { label: 'Pode vender', value: profile.pode_vender ? 'Sim' : 'Não' },
+                { label: 'Pode vender', value: (profile.can_sell || getRoleLabel(profile) === 'Produtor') ? 'Sim' : 'Não' },
               ].map(({ label, value, badge }) => (
                 <div key={label} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
                   <span className="text-gray-500 text-sm">{label}</span>
