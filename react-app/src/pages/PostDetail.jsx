@@ -7,7 +7,7 @@ import Comment from '../components/Comment'
 import PhotoGallery from '../components/PhotoGallery'
 import Avatar from '../components/Avatar'
 import api from '../services/api'
-import { resolveMediaUrl } from '../utils/normalizers'
+import { resolveMediaUrl, normalizeUserDisplayName } from '../utils/normalizers'
 
 // GET /feed/posts/{id}/ devolve o autor aninhado em .autor/.author (por vezes
 // dentro de .user/.profile) — ao contrário do Feed.jsx, que já faz este
@@ -40,6 +40,7 @@ function PostDetail() {
   const [loading, setLoading] = useState(true)
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [authorLookup, setAuthorLookup] = useState(null)
   const userId = localStorage.getItem('userId')
 
   // Sellers não podem aceder aos posts independentes do Feed
@@ -72,6 +73,17 @@ function PostDetail() {
       setLoading(true)
       const data = await api.getFeedPost(id)
       setPost(data)
+      setAuthorLookup(null)
+      // Em alguns posts o autor vem só como ID (sem nome/foto embutidos) —
+      // mesmo caso que o Feed.jsx já resolve com um pedido extra a /users/{id}/.
+      const { name: quickName, id: authorId } = resolvePostAuthor(data)
+      if (authorId && quickName === 'Utilizador' && localStorage.getItem('access_token')) {
+        api.getUser(authorId).then(u => {
+          const name = normalizeUserDisplayName(u)
+          const foto = u?.profile_photo || u?.foto_perfil || u?.photo
+          if (name || foto) setAuthorLookup({ name, foto: resolveMediaUrl(foto) })
+        }).catch(() => {})
+      }
       const answers = await api.getFeedComments(id)
       setComments(Array.isArray(answers) ? answers : (answers?.results || []))
     } catch (err) {
@@ -155,7 +167,9 @@ function PostDetail() {
 
   const postTitle = post.titulo || post.title || ''
   const postBody = post.content || post.primeira_mensagem || post.conteudo || post.body || ''
-  const { name: postAuthor, foto: postAuthorFoto } = resolvePostAuthor(post)
+  const quickAuthor = resolvePostAuthor(post)
+  const postAuthor = authorLookup?.name || quickAuthor.name
+  const postAuthorFoto = authorLookup?.foto || quickAuthor.foto
   const postDate = post.criado_em || post.created_at
   const postImages = (() => {
     const raw = post.imagens || post.images || post.fotos || post.photos
