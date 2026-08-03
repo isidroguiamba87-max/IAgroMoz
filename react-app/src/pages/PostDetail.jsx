@@ -5,8 +5,29 @@ import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
 import LoadingPlant from '../components/LoadingPlant'
 import Comment from '../components/Comment'
 import PhotoGallery from '../components/PhotoGallery'
+import Avatar from '../components/Avatar'
 import api from '../services/api'
 import { resolveMediaUrl } from '../utils/normalizers'
+
+// GET /feed/posts/{id}/ devolve o autor aninhado em .autor/.author (por vezes
+// dentro de .user/.profile) — ao contrário do Feed.jsx, que já faz este
+// desembrulho, este ecrã só olhava para post.nome_completo/post.author_name
+// no nível de topo, por isso caía sempre em "Utilizador".
+function resolvePostAuthor(post) {
+  const raw = post?.autor || post?.author || {}
+  const author = (typeof raw === 'object') ? (raw.user || raw.profile || raw) : {}
+  const candidates = [
+    post?.nome_completo, post?.autor_nome, post?.author_name,
+    author?.first_name && author?.last_name ? `${author.first_name} ${author.last_name}`.trim() : null,
+    author?.first_name, author?.last_name, author?.username, author?.name,
+    author?.email?.split('@')[0],
+  ]
+  const name = candidates.map(c => (c || '').toString().trim()).find(Boolean)
+  const foto = author?.profile_photo || author?.foto_perfil || author?.photo || author?.imagem
+    || post?.autor_foto || post?.author_foto
+  const id = author?.id ?? post?.autor_id ?? post?.author_id ?? (typeof raw === 'object' ? raw.id : raw) ?? null
+  return { name: name || 'Utilizador', foto: resolveMediaUrl(foto), id }
+}
 
 function PostDetail() {
   const { id } = useParams()
@@ -134,7 +155,7 @@ function PostDetail() {
 
   const postTitle = post.titulo || post.title || ''
   const postBody = post.content || post.primeira_mensagem || post.conteudo || post.body || ''
-  const postAuthor = post.nome_completo || post.author_name || 'Utilizador'
+  const { name: postAuthor, foto: postAuthorFoto } = resolvePostAuthor(post)
   const postDate = post.criado_em || post.created_at
   const postImages = (() => {
     const raw = post.imagens || post.images || post.fotos || post.photos
@@ -185,9 +206,7 @@ function PostDetail() {
           )}
 
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center text-white font-bold text-lg">
-              {postAuthor.charAt(0).toUpperCase()}
-            </div>
+            <Avatar name={postAuthor} foto={postAuthorFoto} size="lg" />
             <div>
               <p className="font-semibold text-gray-800">{postAuthor}</p>
               <p className="text-xs text-gray-500">

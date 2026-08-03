@@ -700,8 +700,8 @@ function Feed() {
                         <div className="px-4 py-3">
                           <form onSubmit={(e) => handleSubmitComment(post.id, e)} className="flex items-center gap-2">
                             <Avatar name={localStorage.getItem('userName')} size="sm" />
-                            <input type="text" value={commentTexts[post.id] || ''} onChange={(e) => setCommentTexts(prev => ({ ...prev, [post.id]: e.target.value }))} placeholder="Escreva um comentário..." className="flex-1 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-                            <button type="submit" className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white"><i className="bi bi-send-fill text-xs"></i></button>
+                            <input type="text" value={commentTexts[post.id] || ''} onChange={(e) => setCommentTexts(prev => ({ ...prev, [post.id]: e.target.value }))} placeholder="Escreva um comentário..." className="flex-1 min-w-0 bg-white border border-gray-200 rounded-full px-3 sm:px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                            <button type="submit" className="w-8 h-8 flex-shrink-0 rounded-full bg-green-600 flex items-center justify-center text-white"><i className="bi bi-send-fill text-xs"></i></button>
                           </form>
                         </div>
                         <div className="px-4 pb-4 max-h-72 overflow-y-auto">

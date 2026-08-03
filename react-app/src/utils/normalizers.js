@@ -58,20 +58,30 @@ export function normProduct(p) {
 
 // ─── Chat de Negociação (marketplace/chats) ────────────────────────────────────
 
+// c.seller/c.buyer podem vir como o perfil de vendedor/produtor (nome e foto
+// aninhados em .user), não como o utilizador achatado — sem desembrulhar,
+// o nome caía sempre nos fallbacks genéricos "Vendedor"/"Comprador".
+function resolveChatParty(raw) {
+  if (!raw || typeof raw !== 'object') return {}
+  return raw.user || raw.profile || raw
+}
+
 export function normNegotiationChat(c) {
   const myId = String(localStorage.getItem('userId') || '')
   const buyerId = String(c.buyer_id ?? c.buyer?.id ?? c.buyer ?? '')
   const isBuyer = !!myId && buyerId === myId
   const lastMessage = c.last_message
+  const sellerParty = resolveChatParty(c.seller)
+  const buyerParty = resolveChatParty(c.buyer)
   return {
     id: c.id,
     status: c.status || 'ACTIVE',
     productId: c.product_id ?? c.product?.id ?? c.reservation?.product_id ?? null,
     productName: c.product_name || c.product?.name || c.reservation?.product_name || '',
     otherName: isBuyer
-      ? (c.seller_name || c.seller?.store_name || `${c.seller?.first_name || ''} ${c.seller?.last_name || ''}`.trim() || c.seller?.username || 'Vendedor')
-      : (c.buyer_name || `${c.buyer?.first_name || ''} ${c.buyer?.last_name || ''}`.trim() || c.buyer?.username || 'Comprador'),
-    otherPhoto: isBuyer ? (c.seller?.profile_photo || null) : (c.buyer?.profile_photo || null),
+      ? (c.seller_name || c.seller?.store_name || `${sellerParty.first_name || ''} ${sellerParty.last_name || ''}`.trim() || sellerParty.username || 'Vendedor')
+      : (c.buyer_name || `${buyerParty.first_name || ''} ${buyerParty.last_name || ''}`.trim() || buyerParty.username || 'Comprador'),
+    otherPhoto: resolveMediaUrl(isBuyer ? (sellerParty.profile_photo || sellerParty.foto_perfil) : (buyerParty.profile_photo || buyerParty.foto_perfil)),
     lastMessage: typeof lastMessage === 'string' ? lastMessage : (lastMessage?.content || ''),
     lastMessageAt: (typeof lastMessage === 'object' && lastMessage?.created_at) || c.updated_at || c.created_at || null,
     unreadCount: c.unread_count ?? 0,
@@ -80,12 +90,16 @@ export function normNegotiationChat(c) {
 
 export function normNegotiationMessage(m) {
   const myId = String(localStorage.getItem('userId') || '')
-  const senderId = String(m.sender_id ?? m.sender?.id ?? m.sender ?? m.user_id ?? '')
+  const senderObj = (m.sender && typeof m.sender === 'object') ? (m.sender.user || m.sender.profile || m.sender) : null
+  const senderId = String(senderObj?.id ?? m.sender_id ?? (typeof m.sender !== 'object' ? m.sender : '') ?? m.user_id ?? '')
+  const senderName = m.sender_name
+    || (senderObj ? `${senderObj.first_name || ''} ${senderObj.last_name || ''}`.trim() : '')
+    || senderObj?.username || ''
   return {
     id: m.id,
     content: m.content || m.message || '',
     fromMe: !!myId && senderId === myId,
-    senderName: m.sender_name || m.sender?.username || '',
+    senderName,
     createdAt: m.created_at || m.timestamp || null,
   }
 }

@@ -138,7 +138,10 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
           <p className="text-center text-sm text-gray-400 mt-6">Ainda não há mensagens. Diga olá!</p>
         ) : (
           messages.map(m => (
-            <div key={m.id} className={`flex ${m.fromMe ? 'justify-end' : 'justify-start'}`}>
+            <div key={m.id} className={`flex flex-col ${m.fromMe ? 'items-end' : 'items-start'}`}>
+              {!m.fromMe && (
+                <span className="text-[11px] font-semibold text-gray-400 px-1 mb-0.5">{m.senderName || title}</span>
+              )}
               <div className={`max-w-[75%] text-sm flex items-end gap-1.5 ${m.fromMe ? 'chat-user-message' : 'chat-ai-message'} ${m.pending ? 'opacity-60' : ''}`}>
                 <span>{m.content}</span>
                 {m.pending && <i className="bi bi-clock text-[10px] flex-shrink-0"></i>}
