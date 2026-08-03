@@ -14,7 +14,7 @@ function TechniqueDetail() {
   const [technique, setTechnique] = useState(null)
   const [loading, setLoading] = useState(true)
   const [voting, setVoting] = useState(false)
-  const [userVote, setUserVote] = useState(null) // 'APPROVE' | 'REJECT' | null
+  const [userVote, setUserVote] = useState(null) // 'UP' | 'DOWN' | null
   const [voteError, setVoteError] = useState('')
 
   // Editar
@@ -55,9 +55,13 @@ function TechniqueDetail() {
       const data = await api.getTechnique(id)
       setTechnique(data)
       setEditForm({ titulo: data.title || data.titulo || '', descricao: data.description || data.descricao || '' })
-      // Recuperar o voto do utilizador actual se a API o devolve
-      const uv = data.user_vote || data.meu_voto || null
-      if (uv) setUserVote(uv.toUpperCase())
+      // Recuperar o voto do utilizador actual se a API o devolve.
+      // Normaliza para UP/DOWN (valores documentados) mesmo que o backend
+      // ainda devolva os nomes antigos APPROVE/REJECT nalgum registo.
+      const rawVote = (data.user_vote || data.meu_voto || '').toString().toUpperCase()
+      const uv = (rawVote === 'UP' || rawVote === 'APPROVE') ? 'UP'
+        : (rawVote === 'DOWN' || rawVote === 'REJECT') ? 'DOWN' : null
+      setUserVote(uv)
     } catch (err) {
       console.error('Erro ao carregar técnica:', err)
     } finally {
@@ -199,8 +203,8 @@ function TechniqueDetail() {
   }
 
   const total = technique.total_votes || technique.total_votos || 0
-  const aprovacao = technique.votes_approve || technique.votos_aprovacao || 0
-  const rejeicao = technique.votes_reject || technique.votos_rejeicao || 0
+  const aprovacao = technique.votes_up ?? technique.votes_approve ?? technique.votos_aprovacao ?? 0
+  const rejeicao = technique.votes_down ?? technique.votes_reject ?? technique.votos_rejeicao ?? 0
   const approvalRate = total > 0 ? Math.round((aprovacao / total) * 100) : 0
 
   const statusColor = () => {
@@ -388,26 +392,26 @@ function TechniqueDetail() {
           )}
           <div className="flex gap-3">
             <button
-              onClick={() => handleVote('APPROVE')}
+              onClick={() => handleVote('UP')}
               disabled={voting}
               className={`flex-1 py-3.5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
-                userVote === 'APPROVE'
+                userVote === 'UP'
                   ? 'bg-green-600 text-white shadow-lg scale-[1.02]'
                   : 'bg-green-50 border-2 border-green-200 text-green-700 hover:bg-green-100'
               }`}>
               <span className="text-xl">👍</span>
-              {userVote === 'APPROVE' ? 'Aprovado' : 'Aprovar'}
+              {userVote === 'UP' ? 'Aprovado' : 'Aprovar'}
             </button>
             <button
-              onClick={() => handleVote('REJECT')}
+              onClick={() => handleVote('DOWN')}
               disabled={voting}
               className={`flex-1 py-3.5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
-                userVote === 'REJECT'
+                userVote === 'DOWN'
                   ? 'bg-red-600 text-white shadow-lg scale-[1.02]'
                   : 'bg-red-50 border-2 border-red-200 text-red-700 hover:bg-red-100'
               }`}>
               <span className="text-xl">👎</span>
-              {userVote === 'REJECT' ? 'Reprovado' : 'Reprovar'}
+              {userVote === 'DOWN' ? 'Reprovado' : 'Reprovar'}
             </button>
           </div>
           {!token && (

@@ -516,6 +516,14 @@ function Profile() {
             <div className="flex-1 min-w-0 space-y-4">
               {/* Mobile: card de perfil compacto */}
               <div className="lg:hidden bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                {isOwnProfile && (
+                  <div className="flex justify-end mb-2">
+                    <button onClick={handleLogout}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors">
+                      <i className="bi bi-box-arrow-right"></i> Sair
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center gap-4">
                   {(profile.profile_photo || profile.foto_perfil) ? (
                     <img src={resolveMediaUrl(profile.profile_photo || profile.foto_perfil)} alt={initials}

@@ -13,9 +13,9 @@ export function normTx(tx) {
     unit_name:              tx.unit_name || tx.unit || 'un',
     amount:                 tx.amount || tx.total_price || tx.price || '0',
     created_at:             tx.created_at || tx.criado_em || '',
-    buyer_id:               tx.buyer?.id ?? tx.buyer_id ?? (Number.isFinite(tx.buyer) ? tx.buyer : null),
+    buyer_id:               tx.buyer?.id ?? tx.buyer_id ?? (typeof tx.buyer === 'object' ? null : tx.buyer ?? null),
     buyer_name:             tx.buyer_name || (tx.buyer?.first_name ? `${tx.buyer.first_name} ${tx.buyer.last_name || ''}`.trim() : null) || 'Comprador',
-    seller_id:              tx.seller?.id ?? tx.seller_id ?? tx.product?.seller?.id ?? tx.product?.seller_id ?? (Number.isFinite(tx.seller) ? tx.seller : null),
+    seller_id:              tx.seller?.id ?? tx.seller_id ?? tx.product?.seller?.id ?? tx.product?.seller_id ?? (typeof tx.seller === 'object' ? null : tx.seller ?? null),
     seller_name:            tx.seller_name || (tx.seller?.first_name ? `${tx.seller.first_name} ${tx.seller.last_name || ''}`.trim() : null) || 'Vendedor',
     // ID do PERFIL de vendedor/produtor (não o user.id) — é o que a API espera em
     // POST /marketplace/ratings/{seller_id}/rate_seller/. Distinto de seller_id acima,
