@@ -539,9 +539,9 @@ function ProductDetail() {
               <div className="flex items-center gap-3 mb-4">
                 <StarRating rating={parseFloat(product.media_avaliacao || product.average_rating || 0)} readonly size="md" />
                 <span className="text-sm text-gray-500">
-                  {parseFloat(product.media_avaliacao || product.average_rating || 0).toFixed(1)} · ({product.total_avaliacoes || product.ratings_count || 0} avaliações)
+                  {parseFloat(product.media_avaliacao || product.average_rating || 0).toFixed(1)} · ({product.total_ratings ?? product.total_avaliacoes ?? product.ratings_count ?? 0} avaliações)
                 </span>
-                {product.user_avaliou && (
+                {(product.user_avaliou || product.user_rated) && (
                   <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✓ Avaliado</span>
                 )}
               </div>

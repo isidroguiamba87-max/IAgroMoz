@@ -357,10 +357,11 @@ function Feed() {
     try { await api.deleteCommunitySession(postId); setPosts(prev => prev.filter(p => p.id !== postId)); setConfirmDelete(null); setShowPostMenu(null) }
     catch (err) { alert('Não foi possível apagar o post.') }
   }
-  const shareToWhatsApp = (post) => { window.open('https://wa.me/?text=' + encodeURIComponent(post.title + '\n\n' + post.body + '\n\nVia IAgroMOZ'), '_blank'); setShowShareModal(null) }
-  const shareToFacebook = () => { window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href), '_blank'); setShowShareModal(null) }
-  const shareToTwitter = (post) => { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(post.title + ' - Via IAgroMOZ'), '_blank'); setShowShareModal(null) }
-  const copyLink = (postId) => { navigator.clipboard.writeText(window.location.origin + '/post/' + postId); alert('Link copiado!'); setShowShareModal(null) }
+  const postUrl = (postId) => window.location.origin + '/post/' + postId
+  const shareToWhatsApp = (post) => { window.open('https://wa.me/?text=' + encodeURIComponent(post.title + '\n\n' + post.body + '\n\n' + postUrl(post.id)), '_blank'); setShowShareModal(null) }
+  const shareToFacebook = (postId) => { window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(postUrl(postId)), '_blank'); setShowShareModal(null) }
+  const shareToTwitter = (post) => { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(post.title + ' - Via IAgroMOZ') + '&url=' + encodeURIComponent(postUrl(post.id)), '_blank'); setShowShareModal(null) }
+  const copyLink = (postId) => { navigator.clipboard.writeText(postUrl(postId)); alert('Link copiado!'); setShowShareModal(null) }
 
   // ─ Filtro por localização — botão + menu suspenso de províncias ─
   const LocationFilter = ({ compact = false }) => (
@@ -691,7 +692,7 @@ function Feed() {
               <div className="grid grid-cols-4 gap-4 mb-6">
                 {[
                   { label: 'WhatsApp', icon: 'bi-whatsapp', color: 'bg-green-500', action: () => shareToWhatsApp(posts.find(p => p.id === showShareModal)) },
-                  { label: 'Facebook', icon: 'bi-facebook', color: 'bg-blue-600', action: shareToFacebook },
+                  { label: 'Facebook', icon: 'bi-facebook', color: 'bg-blue-600', action: () => shareToFacebook(showShareModal) },
                   { label: 'Twitter', icon: 'bi-twitter-x', color: 'bg-gray-900', action: () => shareToTwitter(posts.find(p => p.id === showShareModal)) },
                   { label: 'Copiar', icon: 'bi-link-45deg', color: 'bg-gray-500', action: () => copyLink(showShareModal) },
                 ].map(({ label, icon, color, action }) => (
