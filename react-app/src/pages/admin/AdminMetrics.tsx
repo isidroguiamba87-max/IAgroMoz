@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../services/api'
 import { SectionHeader, Sparkline, StatCard } from './AdminComponents'
+import LoadingPlant from '../../components/LoadingPlant'
 
 function AdminMetrics() {
   const [metrics, setMetrics] = useState(null)
@@ -54,7 +55,7 @@ function AdminMetrics() {
       {error && <div className="rounded-3xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {loading ? (
-        <div className="flex justify-center py-24"><div className="w-10 h-10 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div></div>
+        <div className="flex justify-center py-24"><LoadingPlant /></div>
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="grid grid-cols-1 gap-4">

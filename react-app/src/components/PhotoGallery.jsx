@@ -59,7 +59,7 @@ function PhotoGallery({ images, alt }) {
       setDownloaded(true)
       setTimeout(() => setDownloaded(false), 2000)
     } catch {
-      window.open(src, '_blank')
+      window.open(src, '_blank', 'noopener,noreferrer')
     }
   }
 

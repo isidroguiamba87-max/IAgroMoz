@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import MobileNav from '../components/MobileNav'
 import DesktopSidebar from '../components/DesktopSidebar'
 import FeedRightPanel, { getPendingRequestsForMe } from '../components/FeedRightPanel'
@@ -7,9 +8,9 @@ import Comment from '../components/Comment'
 import Avatar from '../components/Avatar'
 import PhotoGrid from '../components/PhotoGrid'
 import api from '../services/api'
-import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
 import { normalizeUserDisplayName, normalizeComment, resolveMediaUrl } from '../utils/normalizers'
 import { createKeyedThrottle } from '../utils/debounce'
+import { useAuth } from '../context/AuthContext'
 
 import { API_BASE } from '../config/api'
 
@@ -32,16 +33,9 @@ const REACTIONS = [
 // ─── Componente principal ──────────────────────────────────────────────────────
 function Feed() {
   const navigate = useNavigate()
-  const userRole = localStorage.getItem('userRole') || 'user'
-  const dashboardPath = getDashboardPath('', userRole)
-  const dashboardLabel = getDashboardLabel(userRole)
-  
-  // Sellers não acessam o Feed normal, devem ir diretamente ao painel.
-  // Produtores usam o Feed como início (o Painel fica acessível à parte, ver MobileNav/DesktopSidebar).
-  if (userRole === 'seller') {
-    return <Navigate replace to={dashboardPath} />
-  }
-  
+  const location = useLocation()
+
+  const { requireAuth } = useAuth()
   const pressTimer = useRef(null)
   const likeThrottle = useRef(createKeyedThrottle())
   const userName = localStorage.getItem('userName')
@@ -115,11 +109,6 @@ function Feed() {
     const timer = setTimeout(() => { document.addEventListener('mousedown', close) }, 0)
     return () => { clearTimeout(timer); document.removeEventListener('mousedown', close) }
   }, [showPostMenu, showReactionPanel, showLocationMenu])
-
-  const requireAuth = () => {
-    if (!localStorage.getItem('access_token')) { navigate('/register'); return false }
-    return true
-  }
 
   const resolveAuthor = (p) => {
     if (!p) return {}
@@ -220,10 +209,30 @@ function Feed() {
     setUserNames({ ..._userNameCache })
   }
 
+  // Resolve o distrito de um post — a API tanto pode devolver um objecto
+  // aninhado {id, name} como só o ID numérico do distrito (FK crua). Quando é
+  // só o ID, mostrar o número directamente estava a enganar (ex: "1" em vez
+  // de "Morrumbene"), daí a necessidade do mapa id→nome carregado à parte.
+  const resolveDistrictName = (raw, distMap) => {
+    if (!raw) return null
+    if (typeof raw === 'object') return raw.name || raw.nome || null
+    // ID numérico cru (número ou string só de dígitos) — traduz via mapa;
+    // qualquer outra string já é o nome do distrito, usa-a directamente.
+    if (typeof raw === 'number' || /^\d+$/.test(String(raw).trim())) return distMap[String(raw)] || null
+    return String(raw)
+  }
+
   const loadPosts = async () => {
     try {
       setLoading(true)
-      const data = await api.getCommunitySessions()
+      const [data, districtsList] = await Promise.all([
+        api.getCommunitySessions(),
+        api.getDistricts().catch(() => [])
+      ])
+      const distMap = {}
+      ;(Array.isArray(districtsList) ? districtsList : (districtsList?.results || [])).forEach(d => {
+        distMap[String(d.id)] = d.name || d.nome
+      })
       const rawPosts = Array.isArray(data) ? data : (data?.results || [])
       const normalized = rawPosts.map(p => {
         const author = resolveAuthor(p)
@@ -237,7 +246,7 @@ function Feed() {
           author_id: author?.id || p.autor?.id || p.autor || p.author?.id || p.author || p.autor_id || p.author_id || null,
           author_foto: resolveMediaUrl(author?.foto_perfil || author?.profile_photo || author?.photo || author?.imagem || p.autor_foto || p.author_foto),
           created_at: p.criado_em || p.created_at,
-          distrito: p.distrito || p.district || p.author?.district?.name || null,
+          distrito: resolveDistrictName(p.distrito, distMap) || resolveDistrictName(p.district, distMap) || resolveDistrictName(p.author?.district, distMap) || null,
           tipo_cultura: p.tipo_cultura || p.crop_type || p.categoria_label || null,
           in_market: Boolean(p.produto || p.product || p.produto_id || p.product_id || p.marketplace_product_id || p.em_mercado || p.is_market),
           linked_products: Array.isArray(p.linked_products) ? p.linked_products : [],
@@ -290,10 +299,10 @@ function Feed() {
     } finally { setLoadingComments(prev => ({ ...prev, [postId]: false })) }
   }
 
-  const handleCreatePost = useCallback(() => { if (!requireAuth()) return; navigate('/create-post') }, [navigate])
+  const handleCreatePost = useCallback(() => { if (!requireAuth(handleCreatePost)) return; navigate('/create-post') }, [navigate, requireAuth])
 
   const handleLike = useCallback(async (postId) => {
-    if (!requireAuth()) return
+    if (!requireAuth(() => handleLike(postId))) return
     await likeThrottle.current(postId, async () => {
       // Optimistic update — inverte imediatamente na UI
       setPosts(prev => prev.map(p => {
@@ -313,19 +322,19 @@ function Feed() {
         }))
       }
     })
-  }, [])
+  }, [requireAuth])
 
   const handleReaction = useCallback(async (postId, key) => {
-    if (!requireAuth()) return
+    if (!requireAuth(() => handleReaction(postId, key))) return
     setPostReactions(prev => { const n = { ...prev }; n[postId] === key ? delete n[postId] : (n[postId] = key); return n })
     setShowReactionPanel(null)
     // Também enviar like à API para persistir
     try { await api.likeFeedPost(postId) } catch (err) { console.warn('Erro ao registar reação:', err) }
-  }, [])
-  const handlePressStart = useCallback((postId) => { pressTimer.current = setTimeout(() => { if (!requireAuth()) return; setShowReactionPanel(postId) }, 600) }, [])
+  }, [requireAuth])
+  const handlePressStart = useCallback((postId) => { pressTimer.current = setTimeout(() => { if (!requireAuth(() => setShowReactionPanel(postId))) return; setShowReactionPanel(postId) }, 600) }, [requireAuth])
   const handlePressEnd = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } }
   const toggleComments = async (postId) => {
-    if (!requireAuth()) return
+    if (!requireAuth(() => toggleComments(postId))) return
     if (expandedComments[postId]) { setExpandedComments(prev => ({ ...prev, [postId]: false })); return }
     setExpandedComments(prev => ({ ...prev, [postId]: true }))
     setCommentErrors(prev => ({ ...prev, [postId]: null }))
@@ -333,7 +342,7 @@ function Feed() {
   }
   const handleSubmitComment = async (postId, e) => {
     e?.preventDefault()
-    if (!requireAuth()) return
+    if (!requireAuth(() => handleSubmitComment(postId))) return
     const text = commentTexts[postId]
     if (!text?.trim()) return
     try {
@@ -344,12 +353,12 @@ function Feed() {
     } catch (err) { setCommentErrors(prev => ({ ...prev, [postId]: 'Não foi possível enviar o comentário.' })) }
   }
   const handleReply = async (postId, parentId, replyText) => {
-    if (!requireAuth()) return
+    if (!requireAuth(() => handleReply(postId, parentId, replyText))) return
     try { await api.sendCommunityMessage(postId, replyText, parentId); await loadComments(postId) }
     catch (err) { setCommentErrors(prev => ({ ...prev, [postId]: 'Não foi possível enviar a resposta.' })) }
   }
   const handleShare = (postId) => {
-    if (!requireAuth()) return
+    if (!requireAuth(() => handleShare(postId))) return
     setShowShareModal(postId)
     setPostShares(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }))
   }
@@ -358,9 +367,9 @@ function Feed() {
     catch (err) { alert('Não foi possível apagar o post.') }
   }
   const postUrl = (postId) => window.location.origin + '/post/' + postId
-  const shareToWhatsApp = (post) => { window.open('https://wa.me/?text=' + encodeURIComponent(post.title + '\n\n' + post.body + '\n\n' + postUrl(post.id)), '_blank'); setShowShareModal(null) }
-  const shareToFacebook = (postId) => { window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(postUrl(postId)), '_blank'); setShowShareModal(null) }
-  const shareToTwitter = (post) => { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(post.title + ' - Via IAgroMOZ') + '&url=' + encodeURIComponent(postUrl(post.id)), '_blank'); setShowShareModal(null) }
+  const shareToWhatsApp = (post) => { window.open('https://wa.me/?text=' + encodeURIComponent(post.title + '\n\n' + post.body + '\n\n' + postUrl(post.id)), '_blank', 'noopener,noreferrer'); setShowShareModal(null) }
+  const shareToFacebook = (postId) => { window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(postUrl(postId)), '_blank', 'noopener,noreferrer'); setShowShareModal(null) }
+  const shareToTwitter = (post) => { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(post.title + ' - Via IAgroMOZ') + '&url=' + encodeURIComponent(postUrl(post.id)), '_blank', 'noopener,noreferrer'); setShowShareModal(null) }
   const copyLink = (postId) => { navigator.clipboard.writeText(postUrl(postId)); alert('Link copiado!'); setShowShareModal(null) }
 
   // ─ Filtro por localização — botão + menu suspenso de províncias ─
@@ -392,6 +401,15 @@ function Feed() {
 
   return (
     <div className="min-h-screen bg-[#F8FAF8] flex">
+      <Helmet>
+        <title>IAgroMOZ — Comunidade Agrícola de Moçambique</title>
+        <meta name="description" content="Feed da comunidade agrícola de Moçambique. Partilha experiências, descobre técnicas e conecta-te com agricultores de todo o país." />
+        <link rel="canonical" href={`https://www.iagromoz.com${location.pathname === '/' ? '/' : '/feed'}`} />
+        <meta property="og:title" content="IAgroMOZ — Comunidade Agrícola de Moçambique" />
+        <meta property="og:description" content="Feed da comunidade agrícola de Moçambique. Partilha experiências, descobre técnicas e conecta-te com agricultores de todo o país." />
+        <meta property="og:url" content={`https://www.iagromoz.com${location.pathname === '/' ? '/' : '/feed'}`} />
+        <meta property="og:type" content="website" />
+      </Helmet>
       {/* ── Sidebar desktop ── */}
       <DesktopSidebar />
 
@@ -400,7 +418,7 @@ function Feed() {
         <header className="glass-effect sticky top-0 z-40 lg:hidden">
           <div className="px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="" className="w-7 h-7 object-contain" />
+              <img src="/logo.png" alt="" className="w-10 h-10 object-contain flex-shrink-0" />
               <span className="text-lg font-black text-gradient">IAgroMOZ</span>
             </div>
             <div className="flex items-center gap-2">
@@ -447,9 +465,9 @@ function Feed() {
             {!isLoggedIn && (
               <div className="mx-4 mt-4 rounded-3xl overflow-hidden shadow-lg">
                 <div className="relative h-32" style={{ background: 'linear-gradient(135deg, #003D20, #006D3F, #00C853)' }}>
-                  <img src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=70" alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+                  <img src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=70" alt="Agricultores de Moçambique" className="absolute inset-0 w-full h-full object-cover opacity-20" />
                   <div className="relative z-10 p-5 h-full flex flex-col justify-between">
-                    <p className="text-white font-black text-base leading-tight">Bem-vindo à comunidade agrícola de Moçambique 🌿</p>
+                    <h1 className="text-white font-black text-base leading-tight">Bem-vindo à comunidade agrícola de Moçambique 🌿</h1>
                     <div className="flex gap-2">
                       <button onClick={() => navigate('/register')} className="bg-white text-green-800 px-4 py-1.5 rounded-full text-sm font-bold shadow">Criar conta</button>
                       <button onClick={() => navigate('/login')} className="border-2 border-white text-white px-4 py-1.5 rounded-full text-sm font-semibold">Entrar</button>

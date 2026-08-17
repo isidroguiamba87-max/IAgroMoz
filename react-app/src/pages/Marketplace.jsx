@@ -8,6 +8,7 @@ import api from "../services/api"
 import { API_BASE } from "../config/api"
 import { normProduct as norm, extractApiErrorMessage, resolveMediaUrl } from "../utils/normalizers"
 import { getDashboardPath } from "../utils/dashboardPaths"
+import { useAuth } from "../context/AuthContext"
 
 // ─── Categorias e subcategorias conforme GET /api/enums/ ─────────────────────
 const CATEGORIES = [
@@ -388,6 +389,7 @@ function ProductMenu({ product, onEdit, onDelete }) {
 // ─── Marketplace principal ────────────────────────────────────────────────────
 function Marketplace() {
   const navigate = useNavigate()
+  const { requireAuth } = useAuth()
   const [category, setCategory] = useState("todos")
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -494,7 +496,7 @@ function Marketplace() {
   }
 
   const handlePublishClick = async () => {
-    if (!token) { navigate("/login"); return }
+    if (!requireAuth(handlePublishClick)) return
     setCheckingStatus(true)
     try {
       const { allowed } = await api.checkPublishPermission()

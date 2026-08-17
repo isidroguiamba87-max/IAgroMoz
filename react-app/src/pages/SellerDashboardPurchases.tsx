@@ -10,25 +10,17 @@ function SellerDashboardPurchases() {
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const userId = localStorage.getItem('userId')
 
   useEffect(() => {
     const load = async () => {
       setLoading(true)
       setError('')
       try {
-        const [txData, pyData] = await Promise.all([api.getTransactions(), api.getPayments().catch(() => [])])
+        const [txData, pyData] = await Promise.all([api.getTransactions({ role: 'buyer' }), api.getPayments().catch(() => [])])
         const list = Array.isArray(txData) ? txData : txData.results || []
         const pyList = Array.isArray(pyData) ? pyData : pyData.results || []
         const normalized = list.map(normTx)
-        // Compras: utilizador é comprador e não é simultaneamente o vendedor
-        const purchases = normalized.filter(tx => {
-          const isBuyer = tx.buyer_id != null
-            ? String(tx.buyer_id) === String(userId)
-            : String(tx.seller_id) !== String(userId)
-          return isBuyer && String(tx.seller_id) !== String(userId)
-        })
-        setTransactions(purchases)
+        setTransactions(normalized)
         setPayments(pyList)
       } catch (err) {
         setError('Não foi possível carregar as compras.')
@@ -37,7 +29,7 @@ function SellerDashboardPurchases() {
       }
     }
     load()
-  }, [userId])
+  }, [])
 
   const getPayment = (tx) => payments.find(p => String(p.transaction || p.transaction_id) === String(tx.id))
 

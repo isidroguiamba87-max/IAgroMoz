@@ -181,6 +181,13 @@ body {
 }
 .loading-plant { animation: grow-plant 1.5s ease-in-out infinite; }
 
+/* ── Bottom sheet menu ────────────────────────────── */
+@keyframes slide-up {
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.22s ease-out; }
+
 /* ── Typing dots ──────────────────────────────────── */
 @keyframes typing-dots {
   0%, 20% { opacity: 0.3; }

@@ -52,6 +52,7 @@ function CreatePost() {
   const [extraPreviews, setExtraPreviews] = useState([])
   const [linkableProducts, setLinkableProducts] = useState([])
   const [linkedProductId, setLinkedProductId] = useState('')
+  const [provinces, setProvinces] = useState([])
   const [districts, setDistricts] = useState([])
 
   useEffect(() => {
@@ -63,7 +64,7 @@ function CreatePost() {
   }, [])
 
   useEffect(() => {
-    api.getDistricts().then(setDistricts).catch(() => {})
+    api.getProvinces().then(setProvinces).catch(() => {})
   }, [])
 
   const [formData, setFormData] = useState({
@@ -71,18 +72,33 @@ function CreatePost() {
     content:      editPost?.body        || editPost?.conteudo     || '',
     image:        null,
     category:     editPost?.category    || '',
+    province:     editPost?.district?.province?.id ?? editPost?.district?.province_id ?? localStorage.getItem('userProvinceId') ?? '',
     // district é o ID do distrito (não o nome). Ao editar, a API pode devolver
     // district como objeto aninhado {id, name} em vez do ID simples enviado na
     // criação — daí o district?.id primeiro. Pré-preenchido com o que o
     // utilizador indicou no registo; fica editável para o caso de o post ser
     // sobre outro local.
     district:     editPost?.district?.id ?? editPost?.district_id ?? (typeof editPost?.district === 'number' ? editPost.district : null) ?? localStorage.getItem('userDistrictId') ?? '',
-    tipo_cultura: editPost?.tipo_cultura || '',
   })
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(p => ({ ...p, [name]: value }))
+  }
+
+  // Distrito depende da província escolhida — carrega a lista certa sempre
+  // que a província muda (incluindo o valor pré-preenchido no arranque).
+  useEffect(() => {
+    if (formData.province) {
+      api.getDistricts(formData.province).then(setDistricts).catch(() => {})
+    } else {
+      setDistricts([])
+    }
+  }, [formData.province])
+
+  const handleProvinceChange = (e) => {
+    const province = e.target.value
+    setFormData(p => ({ ...p, province, district: '' }))
   }
 
   // Aceita seleção múltipla logo na primeira foto: a 1ª vai para a capa (com
@@ -177,7 +193,6 @@ function CreatePost() {
       if (formData.image) postData.append('image', formData.image)
       if (formData.category) postData.append('category', formData.category)
       if (formData.district) postData.append('district', formData.district)
-      if (formData.tipo_cultura.trim()) postData.append('tipo_cultura', formData.tipo_cultura.trim())
 
       let postId = editPost?.id
       if (isEditing) {
@@ -354,37 +369,41 @@ function CreatePost() {
             )}
           </div>
 
-          {/* ── Localização e Cultura ── */}
+          {/* ── Localização ── */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <i className="bi bi-geo-alt text-red-500"></i> Localização
+                  <i className="bi bi-geo-alt text-red-500"></i> Província
                 </label>
                 <select
-                  name="district"
-                  value={formData.district}
-                  onChange={handleChange}
+                  name="province"
+                  value={formData.province}
+                  onChange={handleProvinceChange}
                   className="form-input w-full px-4 py-3 rounded-xl text-sm bg-white"
                 >
                   <option value="">Nenhuma</option>
-                  {districts.map(d => (
-                    <option key={d.id} value={d.id}>{d.name || d.nome}</option>
+                  {provinces.map(p => (
+                    <option key={p.id} value={p.id}>{p.name || p.nome}</option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <i className="bi bi-flower1 text-amber-600"></i> Cultura
+                  <i className="bi bi-geo-alt-fill text-red-500"></i> Distrito
                 </label>
-                <input
-                  type="text"
-                  name="tipo_cultura"
-                  value={formData.tipo_cultura}
+                <select
+                  name="district"
+                  value={formData.district}
                   onChange={handleChange}
-                  className="form-input w-full px-4 py-3 rounded-xl text-sm"
-                  placeholder="Ex: Milho"
-                />
+                  disabled={!formData.province}
+                  className="form-input w-full px-4 py-3 rounded-xl text-sm bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  <option value="">{formData.province ? 'Nenhum' : 'Selecione a província'}</option>
+                  {districts.map(d => (
+                    <option key={d.id} value={d.id}>{d.name || d.nome}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">

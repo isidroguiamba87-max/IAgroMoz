@@ -34,47 +34,30 @@ function PhotoGrid({ images, alt, onOpen, maxHeight = 420 }) {
     )
   }
 
-  if (n === 3) {
-    return (
-      <div className="grid grid-cols-2 grid-rows-2 gap-0.5" style={{ height: maxHeight * 0.8 }}>
-        <Tile src={images[0]} alt={alt} i={0} onOpen={open} className="row-span-2" />
-        <Tile src={images[1]} alt={alt} i={1} onOpen={open} />
-        <Tile src={images[2]} alt={alt} i={2} onOpen={open} />
-      </div>
-    )
-  }
-
-  if (n === 4) {
-    return (
-      <div className="grid grid-cols-2 grid-rows-2 gap-0.5" style={{ height: maxHeight * 0.8 }}>
-        {images.map((src, i) => <Tile key={i} src={src} alt={alt} i={i} onOpen={open} />)}
-      </div>
-    )
-  }
-
-  // 5 fotos (máximo por post) — 1 grande à esquerda + grelha 2x2 à direita,
-  // igual ao padrão clássico do Facebook.
-  const extra = n - 5
+  // 3 ou mais fotos — nunca mostra tudo de uma vez no cartão do feed: no
+  // máximo 3 miniaturas (1 grande + 2 empilhadas), com "+N" sobre a última
+  // quando há mais fotos por ver. Clicar em qualquer miniatura abre a
+  // publicação completa, onde todas as fotos aparecem em coluna.
+  const shown = images.slice(0, 3)
+  const extra = n - shown.length
   return (
-    <div className="grid grid-cols-2 gap-0.5" style={{ height: maxHeight }}>
-      <Tile src={images[0]} alt={alt} i={0} onOpen={open} />
-      <div className="grid grid-cols-2 grid-rows-2 gap-0.5">
-        {images.slice(1, 5).map((src, i) => {
-          const idx = i + 1
-          const isLast = idx === 4
-          return (
-            <div key={idx} className="relative" onClick={() => open(idx)}>
-              <img src={src} alt={`${alt || 'Imagem'} ${idx + 1}`} loading="lazy" decoding="async"
-                className="w-full h-full object-cover cursor-pointer" />
-              {isLast && extra > 0 && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
-                  <span className="text-white font-bold text-lg">+{extra}</span>
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+    <div className="grid grid-cols-2 grid-rows-2 gap-0.5" style={{ height: maxHeight * 0.8 }}>
+      <Tile src={shown[0]} alt={alt} i={0} onOpen={open} className="row-span-2" />
+      {shown.slice(1).map((src, i) => {
+        const idx = i + 1
+        const isLast = idx === shown.length - 1
+        return (
+          <div key={idx} className="relative overflow-hidden" onClick={() => open(idx)}>
+            <img src={src} alt={`${alt || 'Imagem'} ${idx + 1}`} loading="lazy" decoding="async"
+              className="w-full h-full object-cover cursor-pointer" />
+            {isLast && extra > 0 && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                <span className="text-white font-bold text-lg">+{extra}</span>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -97,6 +97,10 @@ class APIService {
         if (!renewed) {
           // Aguarda 1s antes de mostrar erro — dá tempo ao Render de processar
           await new Promise(r => setTimeout(r, 1000));
+          // Só avisa em ações reais (POST/PUT/PATCH/DELETE) — um 401 num GET
+          // de visualização (ex: visitante a ver Técnicas) já é tratado em
+          // silêncio por cada página, não deve acender o popup sozinho.
+          if (isMutation) window.dispatchEvent(new CustomEvent('auth-required', { detail: { message: 'A tua sessão expirou. Entra novamente para continuar.' } }));
           throw { status: 401, message: 'Sessão expirada. Faça login novamente.', data: null };
         }
 
@@ -105,6 +109,7 @@ class APIService {
         if (retry.status === 401) {
           this._clearAuth();
           await new Promise(r => setTimeout(r, 1000));
+          if (isMutation) window.dispatchEvent(new CustomEvent('auth-required', { detail: { message: 'A tua sessão expirou. Entra novamente para continuar.' } }));
           throw { status: 401, message: 'Sessão expirada. Faça login novamente.', data: null };
         }
         return this._handleResponse(retry);
@@ -211,6 +216,7 @@ class APIService {
     localStorage.removeItem('userRole');
     localStorage.removeItem('userId');
     localStorage.removeItem('userName');
+    window.dispatchEvent(new CustomEvent('auth-changed'));
   }
 
   // ─── HTTP helpers ────────────────────────────────────────────────────────────
@@ -244,6 +250,7 @@ class APIService {
       await this.getUserProfile();
       await this._cacheRoleProfile();
     } catch (e) { console.warn('Profile cache após login falhou:', e) }
+    window.dispatchEvent(new CustomEvent('auth-changed'));
     return data;
   }
 
@@ -257,6 +264,7 @@ class APIService {
       await this.getUserProfile();
       await this._cacheRoleProfile();
     } catch (e) { console.warn('Profile cache após login Google falhou:', e) }
+    window.dispatchEvent(new CustomEvent('auth-changed'));
     return data;
   }
 
@@ -308,6 +316,7 @@ class APIService {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('userRole');
+      window.dispatchEvent(new CustomEvent('auth-changed'));
     }
   }
 
@@ -790,8 +799,11 @@ class APIService {
 
   // ─── Marketplace — Transações ────────────────────────────────────────────────
 
-  getTransactions() {
-    return this.get('/marketplace/transactions/');
+  // params: { role: 'seller' | 'buyer' } — 'seller' = pedidos recebidos (produtos
+  // dele), 'buyer' = compras que ele fez a outros. Sem role, devolve ambos
+  // misturados (comportamento antigo, usado só onde isso já é o desejado).
+  getTransactions(params = {}) {
+    return this.get('/marketplace/transactions/', params);
   }
 
   getTransaction(id) {
@@ -896,6 +908,14 @@ class APIService {
       }
       throw err
     }
+  }
+
+  // POST /users/upgrade-role/  — muda o papel do próprio utilizador NORMAL,
+  // sem aprovação de admin (diferente do fluxo antigo de pedido/estado acima).
+  // Produtor:  { role: 'PRODUCER', contact, farm_address }
+  // Vendedor:  { role: 'SELLER', seller_type, store_name, contact, store_address, nuit }
+  upgradeRole(payload) {
+    return this.post('/users/upgrade-role/', payload)
   }
 
   // Compatibilidade — getMySellerRequest

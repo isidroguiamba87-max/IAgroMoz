@@ -1,7 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Avatar from './Avatar'
+import api from '../services/api'
 import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
+
+const NOTIF_POLL_MS = 30000
 
 function DesktopSidebar() {
   const location = useLocation()
@@ -18,13 +21,6 @@ function DesktopSidebar() {
       setUserRole(localStorage.getItem('userRole') || 'user')
       setIsLoggedIn(!!localStorage.getItem('access_token'))
       setUserName(localStorage.getItem('userName') || '')
-      const myId = localStorage.getItem('userId')
-      try {
-        const notifs = JSON.parse(localStorage.getItem(`app_notifications_${myId}`) || '[]')
-        setUnreadNotif(notifs.filter(n => !n.read).length)
-      } catch (_) {
-        setUnreadNotif(0)
-      }
     }
 
     refreshState()
@@ -32,14 +28,35 @@ function DesktopSidebar() {
     return () => window.removeEventListener('app-notifications-updated', refreshState)
   }, [])
 
+  // Contagem de não lidas vem do backend (GET /notifications/), não só do que
+  // o próprio browser gerou localmente — só assim chegam notificações de
+  // outras pessoas (ex: alguém reservou um produto teu).
   useEffect(() => {
     if (!localStorage.getItem('access_token')) return
-    import('../services/api').then(({ default: api }) => {
-      api.getTransactions().then(data => {
-        const list = Array.isArray(data) ? data : (data.results || [])
-        setActiveReservations(list.filter(tx => !['COMPLETED', 'CANCELLED'].includes(tx.status)).length)
+    let cancelled = false
+    const loadUnread = () => {
+      api.getNotifications().then(data => {
+        if (cancelled) return
+        const list = Array.isArray(data) ? data : (data?.results || [])
+        setUnreadNotif(list.filter(n => n.is_read === false || n.read === false).length)
       }).catch(() => {})
-    })
+    }
+    loadUnread()
+    window.addEventListener('app-notifications-updated', loadUnread)
+    const interval = setInterval(loadUnread, NOTIF_POLL_MS)
+    return () => {
+      cancelled = true
+      window.removeEventListener('app-notifications-updated', loadUnread)
+      clearInterval(interval)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!localStorage.getItem('access_token')) return
+    api.getTransactions().then(data => {
+      const list = Array.isArray(data) ? data : (data.results || [])
+      setActiveReservations(list.filter(tx => !['COMPLETED', 'CANCELLED'].includes(tx.status)).length)
+    }).catch(() => {})
   }, [])
 
   const dashboardPath = getDashboardPath('', userRole)
@@ -47,8 +64,8 @@ function DesktopSidebar() {
 
   // Grupo 1 — navegação principal
   const mainItems = [
-    { path: '/feed',        icon: 'bi-house-fill',     label: 'Feed',            roles: ['user', 'producer', 'admin', 'guest'] },
-    { path: '/chat',        icon: 'bi-robot',          label: 'IA – Assistente', roles: ['user', 'seller', 'producer', 'admin'] },
+    { path: '/feed',        icon: 'bi-house-fill',     label: 'Início',          roles: ['user', 'seller', 'producer', 'admin', 'guest'] },
+    { path: '/chat',        icon: 'bi-robot',          label: 'IA – Assistente', roles: ['user', 'producer', 'admin'] },
     { path: '/techniques',  icon: 'bi-geo-alt-fill',   label: 'Recomendações',   roles: ['user', 'producer', 'admin'] },
     { path: '/marketplace', icon: 'bi-cart3',          label: 'Mercado',         roles: ['user', 'seller', 'producer', 'admin'] },
   ]
@@ -85,8 +102,8 @@ function DesktopSidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-64 xl:w-72 h-screen sticky top-0 border-r border-gray-100 bg-white px-4 py-6 flex-shrink-0">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-3 mb-6">
-        <img src="/logo.png" alt="IAgroMOZ" className="w-8 h-8 object-contain" />
+      <div className="flex items-center gap-2.5 px-3 mb-6">
+        <img src="/logo.png" alt="IAgroMOZ" className="w-12 h-12 object-contain flex-shrink-0" />
         <span className="text-xl font-black text-gradient">IAgroMOZ</span>
         {isLoggedIn && (
           <Link to="/profile" className="ml-auto flex-shrink-0" title={userName || 'Perfil'}>

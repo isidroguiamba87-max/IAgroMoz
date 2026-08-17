@@ -27,8 +27,14 @@ function Login() {
   const [secondsLeft, setSecondsLeft] = useState(0)
   const intervalRef = useRef(null)
 
-  // Destino após login — usa ?next= ou /feed por defeito
-  const nextPath = new URLSearchParams(location.search).get('next') || '/feed'
+  // Destino após login — usa ?next= ou /feed por defeito.
+  // Só aceita caminhos internos (começam por "/" mas não "//" nem contêm "://"),
+  // para não abrir a porta a redireccionamento aberto (?next=//site-malicioso.com)
+  // logo a seguir ao login, quando a confiança do utilizador está mais alta.
+  const rawNext = new URLSearchParams(location.search).get('next')
+  const nextPath = (rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.includes('://'))
+    ? rawNext
+    : '/feed'
   const registerSuccess = location.state?.registerSuccess
 
   useEffect(() => {
@@ -120,9 +126,7 @@ function Login() {
 
       {/* Logo + tagline */}
       <div className="relative z-10 text-center">
-        <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center mx-auto mb-3 shadow-2xl overflow-hidden">
-          <img src="/logo.png" alt="IAgroMOZ" className="w-20 h-20 object-contain" />
-        </div>
+        <img src="/logo.png" alt="IAgroMOZ" className="w-36 h-36 object-contain mx-auto mb-3 drop-shadow-2xl" />
         <h1 className="text-4xl font-black text-white tracking-tight mb-1">IAgroMOZ</h1>
         <p className="text-white/80 text-base font-medium">Agricultura Inteligente para Moçambique</p>
       </div>

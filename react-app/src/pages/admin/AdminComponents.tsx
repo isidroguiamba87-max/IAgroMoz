@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import LoadingPlant from '../../components/LoadingPlant'
 
 export function Sparkline({ data, color = '#16a34a' }) {
   if (!data || data.length < 2) return null
@@ -77,7 +78,7 @@ export function Table({ cols, rows, loading, empty = 'Sem dados.' }) {
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <div className="w-10 h-10 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+        <LoadingPlant />
       </div>
     )
   }

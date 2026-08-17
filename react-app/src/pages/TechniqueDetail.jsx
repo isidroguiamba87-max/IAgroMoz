@@ -7,10 +7,31 @@ import Comment from '../components/Comment'
 import api from '../services/api'
 import { API_MEDIA } from '../config/api'
 import { extractApiErrorMessage } from '../utils/normalizers'
+import { useAuth } from '../context/AuthContext'
 
 function TechniqueDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { requireAuth } = useAuth()
+
+  // Vendedor não tem acesso a Técnicas — só Início/Mercado/Reserva/Perfil/Notificações.
+  if ((localStorage.getItem('userRole') || 'user') === 'seller') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAF8] px-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <i className="bi bi-ban text-3xl text-red-600"></i>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
+          <p className="text-gray-600 mb-6">As Técnicas não estão disponíveis para contas de Vendedor.</p>
+          <button onClick={() => navigate('/marketplace')} className="btn-primary text-white px-6 py-2 rounded-xl font-semibold">
+            Ir ao Mercado
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const [technique, setTechnique] = useState(null)
   const [loading, setLoading] = useState(true)
   const [voting, setVoting] = useState(false)
@@ -62,7 +83,9 @@ function TechniqueDetail() {
       const uv = (rawVote === 'APPROVE' || rawVote === 'REJECT') ? rawVote : null
       setUserVote(uv)
     } catch (err) {
-      console.error('Erro ao carregar técnica:', err)
+      // 401 pode acontecer a um visitante sem sessão — sem erro assustador na
+      // consola, a página já mostra "Técnica não encontrada" com técnica=null.
+      if (err?.status !== 401) console.error('Erro ao carregar técnica:', err)
     } finally {
       setLoading(false)
     }
@@ -96,7 +119,7 @@ function TechniqueDetail() {
   }
 
   const handleVote = async (vote) => {
-    if (!token) { navigate('/login'); return }
+    if (!requireAuth(() => handleVote(vote), 'Entra na tua conta para votar nesta técnica.')) return
     setVoting(true)
     setVoteError('')
     try {
@@ -151,7 +174,7 @@ function TechniqueDetail() {
   }
 
   const handleSubmitComment = async () => {
-    if (!token) { navigate('/login'); return }
+    if (!requireAuth(handleSubmitComment, 'Entra na tua conta para comentar.')) return
     const text = commentText.trim()
     if (!text) return
     setSubmittingComment(true)
@@ -168,7 +191,7 @@ function TechniqueDetail() {
   }
 
   const handleReplyComment = async (parentId, text) => {
-    if (!token) { navigate('/login'); return }
+    if (!requireAuth(() => handleReplyComment(parentId, text), 'Entra na tua conta para responder.')) return
     try {
       await api.createTechniqueComment(id, text, parentId)
       loadComments()
@@ -415,7 +438,7 @@ function TechniqueDetail() {
           </div>
           {!token && (
             <p className="text-center text-xs text-gray-400 mt-2">
-              <button onClick={() => navigate('/login')} className="underline text-green-600">Inicia sessão</button> para votar
+              <button onClick={() => requireAuth(null, 'Entra na tua conta para votar nesta técnica.')} className="underline text-green-600">Inicia sessão</button> para votar
             </p>
           )}
         </div>
@@ -463,7 +486,7 @@ function TechniqueDetail() {
             ) : (
               <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-5 text-center">
                 <p className="text-gray-500 text-sm">
-                  <button onClick={() => navigate('/login')} className="font-semibold text-green-600 underline">Inicia sessão</button> para comentar
+                  <button onClick={() => requireAuth(null, 'Entra na tua conta para comentar.')} className="font-semibold text-green-600 underline">Inicia sessão</button> para comentar
                 </p>
               </div>
             )}

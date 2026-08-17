@@ -252,28 +252,20 @@ function SellerDashboardLayout() {
                   </div>
                 )}
               </div>
-              {/* No topo da Visão Geral (desktop), estes botões ficam na mesma linha da saudação (ver SellerDashboardOverview) */}
-              {!(isProducerDashboard && isOverviewIndex) && (
+              {/* No topo da Visão Geral (desktop), estes botões ficam na mesma linha da saudação (ver SellerDashboardOverview).
+                  Produtor e vendedor têm ambos acesso ao Feed, por isso o botão é comum aos dois papéis. */}
+              {!isOverviewIndex && (
                 <div className="hidden lg:flex items-center gap-3">
-                  {isProducerDashboard ? (
-                    <>
-                      <button onClick={() => navigate(dashboardBase)}
-                        className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                        <i className="bi bi-grid-3x3-gap text-lg"></i>
-                        Visão Geral
-                      </button>
-                      <button onClick={() => navigate('/feed')}
-                        className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                        <i className="bi bi-arrow-left-short text-lg"></i>
-                        Voltar ao Feed
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="rounded-full bg-green-50 px-3 py-2 font-semibold text-green-700">{formatRole(profile.role)}</span>
-                      <span className="text-gray-400">{profile.email}</span>
-                    </>
-                  )}
+                  <button onClick={() => navigate(dashboardBase)}
+                    className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <i className="bi bi-grid-3x3-gap text-lg"></i>
+                    Visão Geral
+                  </button>
+                  <button onClick={() => navigate('/feed')}
+                    className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
+                    <i className="bi bi-arrow-left-short text-lg"></i>
+                    Ir ao Feed
+                  </button>
                 </div>
               )}
             </div>

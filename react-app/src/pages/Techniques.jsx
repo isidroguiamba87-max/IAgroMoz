@@ -6,6 +6,7 @@ import LoadingPlant from '../components/LoadingPlant'
 import api from '../services/api'
 import { API_MEDIA } from '../config/api'
 import { extractApiErrorMessage } from '../utils/normalizers'
+import { useAuth } from '../context/AuthContext'
 
 // Formulário de pedido de autorização (igual ao do Marketplace)
 function SellerRequestForm({ onClose, existingRequest }) {
@@ -356,6 +357,26 @@ function DeleteTechniqueModal({ technique, onConfirm, onCancel, loading }) {
 
 function Techniques() {
   const navigate = useNavigate()
+  const { requireAuth } = useAuth()
+
+  // Vendedor não tem acesso a Técnicas — só Início/Mercado/Reserva/Perfil/Notificações.
+  if ((localStorage.getItem('userRole') || 'user') === 'seller') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAF8] px-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <i className="bi bi-ban text-3xl text-red-600"></i>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
+          <p className="text-gray-600 mb-6">As Técnicas não estão disponíveis para contas de Vendedor.</p>
+          <button onClick={() => navigate('/marketplace')} className="btn-primary text-white px-6 py-2 rounded-xl font-semibold">
+            Ir ao Mercado
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const [techniques, setTechniques] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -424,7 +445,7 @@ function Techniques() {
   }
 
   const handleVote = async (techniqueId, voto) => {
-    if (!token) { navigate('/login'); return }
+    if (!requireAuth(() => handleVote(techniqueId, voto), 'Entra na tua conta para votar nesta técnica.')) return
     setVotingId(techniqueId)
     try {
       // POST /techniques/{id}/vote/ só aceita { vote: "APPROVE" | "REJECT" } —
@@ -449,7 +470,7 @@ function Techniques() {
   }
 
   const handlePublishClick = async () => {
-    if (!token) { navigate('/login'); return }
+    if (!requireAuth(handlePublishClick)) return
     // Apenas produtor e admin podem publicar técnicas
     if (userRole !== 'producer' && userRole !== 'admin' && userRole !== 'seller') {
       setShowSellerRequestModal(true)
@@ -582,7 +603,7 @@ function Techniques() {
               </button>
             ) : (
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => requireAuth(null, 'Entra na tua conta para publicar ou votar em técnicas.')}
                 className="btn-primary text-white px-6 py-3 rounded-xl font-semibold mx-auto"
               >
                 Fazer login

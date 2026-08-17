@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { API_BASE } from '../config/api'
+import LoadingPlant from './LoadingPlant'
 
 // Rotas permitidas para papel seller e producer
 const SELLER_ALLOWED_ROUTES = [
@@ -97,7 +98,7 @@ function ProtectedRoute({ children, adminOnly = false, allowedRoles = null }) {
   if (authState === 'checking') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+        <LoadingPlant />
       </div>
     )
   }

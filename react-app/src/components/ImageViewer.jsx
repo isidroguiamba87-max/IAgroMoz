@@ -36,7 +36,7 @@ function ImageViewer({ src, alt = 'Imagem', className = '', imgClassName = '' })
       setTimeout(() => setDownloaded(false), 2000)
     } catch {
       // Fallback — abrir em nova aba
-      window.open(src, '_blank')
+      window.open(src, '_blank', 'noopener,noreferrer')
     }
   }
 

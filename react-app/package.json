@@ -13,10 +13,13 @@
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
     "bootstrap-icons": "^1.11.3",
+    "gsap": "^3.12.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-helmet-async": "^3.0.0",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^6.20.0"
+    "react-router-dom": "^6.20.0",
+    "three": "^0.160.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useParams, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import { getDashboardPath, getDashboardLabel } from '../utils/dashboardPaths'
@@ -8,6 +9,7 @@ import PhotoGallery from '../components/PhotoGallery'
 import Avatar from '../components/Avatar'
 import api from '../services/api'
 import { resolveMediaUrl, normalizeUserDisplayName } from '../utils/normalizers'
+import { useAuth } from '../context/AuthContext'
 
 // Repetida por baixo de cada foto quando o post tem mais que uma — mesmo
 // padrão do Facebook (a pessoa faz scroll pelas fotos e pode reagir a
@@ -55,6 +57,7 @@ function resolvePostAuthor(post) {
 function PostDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { requireAuth } = useAuth()
   const userRole = localStorage.getItem('userRole') || 'user'
   const dashboardPath = getDashboardPath('', userRole)
   const dashboardLabel = getDashboardLabel(userRole)
@@ -123,7 +126,7 @@ function PostDetail() {
   }
 
   const handleLike = async () => {
-    if (!localStorage.getItem('access_token')) { navigate('/login'); return }
+    if (!requireAuth(handleLike, 'Entra na tua conta para gostar desta publicação.')) return
     const wasLiked = liked
     setLiked(!wasLiked)
     setLikesCount(c => wasLiked ? Math.max(0, c - 1) : c + 1)
@@ -152,6 +155,7 @@ function PostDetail() {
   const handleSubmitComment = async (e) => {
     e.preventDefault()
     if (!commentText.trim()) return
+    if (!requireAuth(() => handleSubmitComment(e), 'Entra na tua conta para comentar.')) return
 
     try {
       setSubmitting(true)
@@ -160,19 +164,20 @@ function PostDetail() {
       loadPost()
     } catch (err) {
       console.error('Erro ao enviar comentário:', err)
-      alert('Erro ao enviar comentário. Faça login primeiro.')
+      alert('Erro ao enviar comentário.')
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleReply = async (parentId, replyText) => {
+    if (!requireAuth(() => handleReply(parentId, replyText), 'Entra na tua conta para responder.')) return
     try {
       await api.createFeedComment(id, replyText, parentId)
       loadPost()
     } catch (err) {
       console.error('Erro ao enviar resposta:', err)
-      alert('Erro ao enviar resposta. Faça login primeiro.')
+      alert('Erro ao enviar resposta.')
     }
   }
 
@@ -250,8 +255,30 @@ function PostDetail() {
     }
   }
 
+  const postCanonical = `https://www.iagromoz.com/post/${id}`
+  const metaTitle = postTitle ? `${postTitle} | IAgroMOZ` : 'IAgroMOZ — Comunidade Agrícola de Moçambique'
+  const metaDescription = postBody
+    ? postBody.slice(0, 155).replace(/\s+/g, ' ').trim() + (postBody.length > 155 ? '…' : '')
+    : 'Publicação da comunidade agrícola IAgroMOZ de Moçambique.'
+  const metaImage = postImages[0] || 'https://www.iagromoz.com/logo.png'
+
   return (
     <div className="min-h-screen soil-texture pb-8">
+      <Helmet>
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDescription} />
+        <link rel="canonical" href={postCanonical} />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:url" content={postCanonical} />
+        <meta property="og:image" content={metaImage} />
+        <meta property="og:site_name" content="IAgroMOZ" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={metaImage} />
+      </Helmet>
       <header className="glass-effect sticky top-0 z-40 border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">

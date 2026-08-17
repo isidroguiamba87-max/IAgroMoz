@@ -1,11 +1,12 @@
 ﻿import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import { RegisterLayout, FieldInput, LocationFields, useLocation_, loginAfterRegister, extractRegisterError } from "./RegisterBase"
 
 import api from "../services/api"
 
 function RegisterNormal() {
   const navigate = useNavigate()
+  const nextPath = new URLSearchParams(useLocation().search).get('next')
   const { provinces, districts, loadingProvinces, loadDistricts } = useLocation_()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -42,7 +43,7 @@ function RegisterNormal() {
       setLoading(false)
       return
     }
-    await loginAfterRegister(form.email, form.password, navigate)
+    await loginAfterRegister(form.email, form.password, navigate, nextPath)
     setLoading(false)
   }
 

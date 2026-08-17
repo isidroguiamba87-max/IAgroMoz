@@ -6,36 +6,46 @@ function MobileNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const [userRole, setUserRole] = useState('user')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     setUserRole(localStorage.getItem('userRole') || 'user')
   }, [])
 
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [location.pathname])
+
   const dashboardBase = getDashboardPath('', userRole)
 
-  // Nav do vendedor/produtor — 5 itens com "+" central
+  // Nav do vendedor — vive do lado do Feed/Mercado como um comprador normal
+  // (o painel de vendas fica só a um toque, no botão "Ir ao Feed"/"Visão
+  // Geral" dentro do próprio painel — ver SellerDashboardLayout). No Mercado
+  // ele só vê e compra; o que reservar cai em "Reserva", tal como um
+  // comprador normal.
   const sellerNavItems = [
-    { path: dashboardBase,       icon: 'bi-house-fill',   label: 'Início' },
-    { path: '/marketplace',      icon: 'bi-box-seam',     label: 'Produtos' },
-    { path: '/create-product',   icon: null,              label: 'Publicar', isPlus: true },
-    { path: '/minhas-reservas',  icon: 'bi-receipt',      label: 'Pedidos' },
-    { path: '/profile',          icon: 'bi-list',         label: 'Menu' },
+    { path: '/feed',             icon: 'bi-house-fill',   label: 'Início' },
+    { path: '/marketplace',      icon: 'bi-shop-window',  label: 'Mercado' },
+    { path: '/minhas-reservas',  icon: 'bi-receipt',      label: 'Reserva' },
+    { path: '/profile',          icon: 'bi-person-fill',  label: 'Perfil' },
+    { path: '/notifications',    icon: 'bi-bell-fill',    label: 'Notificações' },
   ]
 
   // "+" contextual: publica produto se estiver no Mercado, senão publica no Feed
   // (produtor tem acesso às duas coisas, ver handleContextualPlus)
+  // "Menu" abre um menu com Painel/Técnicas/Perfil, em vez de ir direto a um só sítio.
   const producerNavItems = [
-    { path: '/feed',                 icon: 'bi-house-fill',    label: 'Início' },
-    { path: '/marketplace',          icon: 'bi-box-seam',      label: 'Produtos' },
-    { path: '#',                     icon: null,               label: 'Publicar', isPlus: true, isContextual: true },
-    { path: '/producer/dashboard',   icon: 'bi-speedometer2',  label: 'Painel' },
-    { path: '/profile',              icon: 'bi-list',          label: 'Menu' },
+    { path: '/feed',        icon: 'bi-house-fill', label: 'Início' },
+    { path: '/marketplace', icon: 'bi-box-seam',   label: 'Produtos' },
+    { path: '#',            icon: null,            label: 'Publicar', isPlus: true, isContextual: true },
+    { path: '/chat',        icon: 'bi-robot',       label: 'Chat' },
+    { path: '#',            icon: 'bi-list',        label: 'Menu', isMenu: true },
   ]
 
   // Nav do utilizador normal — 5 itens com "+" central contextual
   // Reservas ficam acessíveis a partir do carrinho no Mercado, não daqui.
   const normalUserNavItems = [
-    { path: '/feed',            icon: 'bi-house-fill',   label: 'Feed',           roles: ['user', 'admin'] },
+    { path: '/feed',            icon: 'bi-house-fill',   label: 'Início',         roles: ['user', 'admin'] },
     { path: '/marketplace',     icon: 'bi-shop-window',  label: 'Mercado',        roles: ['user', 'admin'] },
     { path: '#',                icon: null,              label: 'Publicar', isPlus: true, isContextual: true },
     { path: '/chat',            icon: 'bi-robot',        label: 'Chat',           roles: ['user', 'admin'] },
@@ -43,7 +53,7 @@ function MobileNav() {
   ]
 
   const defaultNavItems = [
-    { path: '/feed',         icon: 'bi-house-fill',     label: 'Feed',          roles: ['user', 'admin', 'guest'] },
+    { path: '/feed',         icon: 'bi-house-fill',     label: 'Início',        roles: ['user', 'admin', 'guest'] },
     { path: '/chat',         icon: 'bi-robot',          label: 'IA',            roles: ['user', 'admin'] },
     { path: '/marketplace',  icon: 'bi-shop-window',    label: 'Mercado',       roles: ['user', 'admin'] },
     { path: '/dashboard',    icon: 'bi-graph-up',       label: 'Admin',         roles: ['admin'] },
@@ -116,6 +126,18 @@ function MobileNav() {
             }
           }
 
+          if (item.isMenu) {
+            return (
+              <button key="menu" onClick={() => setMenuOpen(true)}
+                className="flex-1 flex flex-col items-center gap-0.5 px-1 py-2 relative">
+                <i className={`${item.icon} text-xl ${menuOpen ? 'text-green-700' : 'text-gray-400'}`}></i>
+                <span className={`text-[10px] font-semibold ${menuOpen ? 'text-green-700' : 'text-gray-400'}`}>
+                  {item.label}
+                </span>
+              </button>
+            )
+          }
+
           if (isSellerOrProducer || isNormalUser) {
             return (
               <Link key={item.path + item.label} to={item.path}
@@ -151,6 +173,47 @@ function MobileNav() {
           )
         })}
       </div>
+
+      {isProducer && menuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-end justify-center z-[60]"
+          onClick={() => setMenuOpen(false)}
+        >
+          <div
+            className="bg-white w-full max-w-md rounded-t-3xl pt-2 px-2 pb-6 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1.5 rounded-full bg-gray-200 mx-auto my-2"></div>
+            <button
+              onClick={() => { setMenuOpen(false); navigate(dashboardBase) }}
+              className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl hover:bg-gray-50 text-left"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center">
+                <i className="bi bi-speedometer2 text-green-700 text-lg"></i>
+              </div>
+              <span className="font-semibold text-gray-800">Painel</span>
+            </button>
+            <button
+              onClick={() => { setMenuOpen(false); navigate('/techniques') }}
+              className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl hover:bg-gray-50 text-left"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center">
+                <i className="bi bi-lightbulb text-green-700 text-lg"></i>
+              </div>
+              <span className="font-semibold text-gray-800">Técnicas</span>
+            </button>
+            <button
+              onClick={() => { setMenuOpen(false); navigate('/profile') }}
+              className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl hover:bg-gray-50 text-left"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center">
+                <i className="bi bi-person-circle text-green-700 text-lg"></i>
+              </div>
+              <span className="font-semibold text-gray-800">Meu Perfil</span>
+            </button>
+          </div>
+        </div>
+      )}
     </nav>
   )
 }

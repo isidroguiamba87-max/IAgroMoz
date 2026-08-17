@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import LoadingPlant from './LoadingPlant'
 
 // Evento global para mostrar o modal de erro
 export const showNetworkError = (msg) => {
   window.dispatchEvent(new CustomEvent('network-error', { detail: msg || null }))
 }
 
-// ─── Loading do servidor (logo + pontos) ─────────────────────────────────────
-// Mostra logo pequena + pontos animados imediatamente.
+// ─── Loading do servidor (logo + pontos, igual ao LoadingPlant) ──────────────
 // Após 10 minutos sem resposta, mostra mensagem "servidor a dormir".
 export function ServerLoadingOverlay({ visible }) {
   const [showSleepMsg, setShowSleepMsg] = useState(false)
@@ -27,38 +27,15 @@ export function ServerLoadingOverlay({ visible }) {
 
   return (
     <div className="fixed inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-[9998]">
-      <div className="flex flex-col items-center gap-4">
-        {/* Logo pequena */}
-        <img src="/logo.png" alt="IAgroMOZ" className="w-10 h-10 object-contain opacity-80" />
-        {/* Pontos animados */}
-        <div className="flex items-center gap-1.5">
-          {[0, 1, 2].map(i => (
-            <span
-              key={i}
-              className="w-2 h-2 rounded-full bg-green-500"
-              style={{
-                animation: 'bounce 1.2s infinite',
-                animationDelay: `${i * 0.2}s`,
-              }}
-            />
-          ))}
+      <LoadingPlant />
+      {showSleepMsg && (
+        <div className="-mt-4 max-w-xs text-center px-4">
+          <p className="text-sm font-semibold text-gray-700 mb-1">O servidor está a acordar...</p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            O servidor IAgroMOZ entra em modo de espera após inatividade. Aguarda mais alguns segundos.
+          </p>
         </div>
-        {/* Mensagem de servidor a dormir — só após 10 minutos */}
-        {showSleepMsg && (
-          <div className="mt-2 max-w-xs text-center px-4">
-            <p className="text-sm font-semibold text-gray-700 mb-1">O servidor está a acordar...</p>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              O servidor IAgroMOZ entra em modo de espera após inatividade. Aguarda mais alguns segundos.
-            </p>
-          </div>
-        )}
-      </div>
-      <style>{`
-        @keyframes bounce {
-          0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-          40% { transform: translateY(-8px); opacity: 1; }
-        }
-      `}</style>
+      )}
     </div>
   )
 }

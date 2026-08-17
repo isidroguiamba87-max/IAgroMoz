@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom"
 import MobileNav from "../components/MobileNav"
 import api from "../services/api"
 import { resolveProductPhoto } from "../utils/normalizers"
+import LoadingPlant from "../components/LoadingPlant"
 
 // ─── Sparkline SVG ────────────────────────────────────────────────────────────
 function Sparkline({ data, color = "#16a34a" }) {
@@ -44,7 +45,7 @@ function Badge({ status }) {
 
 // ─── Tabela genérica ──────────────────────────────────────────────────────────
 function Table({ cols, rows, loading, empty = "Sem dados." }) {
-  if (loading) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div></div>
+  if (loading) return <LoadingPlant />
   if (!rows || rows.length === 0) return <div className="text-center py-12 text-gray-400 text-sm">{empty}</div>
   return (
     <div className="overflow-x-auto">
@@ -166,11 +167,7 @@ function SellerOverviewPanel({ data, userName, userRole, navigate }) {
   const [activeTab, setActiveTab] = useState("home") // "home" | "dashboard"
   const userFoto = localStorage.getItem("userFoto")
 
-  if (!data) return (
-    <div className="flex justify-center py-24">
-      <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  )
+  if (!data) return <LoadingPlant />
 
   const p = data.products || {}
   const t = data.transactions || {}
@@ -675,7 +672,7 @@ function AdminSidebar({ active, setActive, userName, navigate }) {
 
 // ─── SECÇÃO: Visão Geral ──────────────────────────────────────────────────────
 function OverviewPanel({ data, metrics }) {
-  if (!data) return <div className="flex justify-center py-24"><div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div></div>
+  if (!data) return <LoadingPlant />
   const u = data.users || {}; const m = data.marketplace || {}; const f = data.feed || {}; const t = data.techniques || {}; const up = data.upgrade_requests || {}; const act = data.activity || {}
   return (
     <div className="space-y-6">
@@ -1184,7 +1181,7 @@ function MetricsPanel() {
         <button onClick={load} className="px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white hover:bg-gray-50"><i className="bi bi-arrow-clockwise"></i></button>
       </div>
       {loading ? (
-        <div className="flex justify-center py-24"><div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div></div>
+        <LoadingPlant />
       ) : !metrics ? (
         <div className="text-center py-12 text-gray-400">Sem dados de métricas.</div>
       ) : (
@@ -1372,9 +1369,7 @@ function Dashboard() {
           {/* Conteúdo */}
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">
             {isOverview && loadingDash ? (
-              <div className="flex items-center justify-center py-24">
-                <div className="w-10 h-10 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-              </div>
+              <LoadingPlant />
             ) : isOverview && errorDash ? (
               <div className="text-center py-24">
                 <p className="text-red-600 mb-4">{errorDash}</p>
@@ -1415,7 +1410,7 @@ function Dashboard() {
         </header>
         <main className="flex-1 overflow-y-auto p-6">
           {isOverview && loadingDash ? (
-            <div className="flex items-center justify-center py-24"><div className="w-10 h-10 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div></div>
+            <LoadingPlant />
           ) : isOverview && errorDash ? (
             <div className="text-center py-24">
               <p className="text-red-600 mb-4">{errorDash}</p>

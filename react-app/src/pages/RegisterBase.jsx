@@ -173,11 +173,17 @@ export function LocationFields({ provinces, districts, loadingProvinces, provinc
 }
 
 // ─── Função de login após registo ─────────────────────────────────────────────
-export async function loginAfterRegister(email, password, navigate) {
+// nextPath (opcional): de onde o visitante veio, via ?next= — só é usado se
+// for um caminho interno seguro (mesma validação do Login.jsx), para não
+// abrir a porta a redireccionamento aberto.
+export async function loginAfterRegister(email, password, navigate, nextPath) {
   try {
     await api.login(email, password)
     const userRole = localStorage.getItem('userRole') || 'user'
-    if (userRole === 'seller') {
+    const safeNext = (nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//') && !nextPath.includes('://')) ? nextPath : null
+    if (safeNext) {
+      navigate(safeNext, { replace: true })
+    } else if (userRole === 'seller') {
       navigate('/seller/dashboard', { replace: true })
     } else {
       navigate('/feed', { replace: true })

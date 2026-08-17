@@ -13,6 +13,7 @@ import { FieldInput, FieldSelect } from './RegisterBase'
 import { getConnections, addConnection, removeConnection, isConnected } from '../components/FeedRightPanel'
 import { getUserCache, genderLabel, roleLabel, setUserCache } from '../utils/userCache'
 import { resolveMediaUrl, resolveProductPhoto } from '../utils/normalizers'
+import { getDashboardPath } from '../utils/dashboardPaths'
 
 // Comprime imagem no cliente antes do upload para evitar 413
 function compressImage(file, maxWidth = 1024, quality = 0.82) {
@@ -43,7 +44,11 @@ function Profile() {
 
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('posts') // posts | produtos | info | edit | password
+  // Ao entrar no próprio perfil, cai primeiro em Definições — não faz sentido
+  // abrir sempre no Feed/Mercado/Recomendações vazios. Ao ver o perfil de
+  // outra pessoa (sem "settings" disponível), o efeito de tabs abaixo já
+  // corrige automaticamente para a primeira tab válida (posts/Feed).
+  const [activeTab, setActiveTab] = useState('settings') // posts | produtos | recomendacoes | settings | info
   const location = useLocation()
 
   // Publicações do feed
@@ -100,10 +105,14 @@ function Profile() {
   const [psLoading, setPsLoading] = useState(false)
   const [psError, setPsError] = useState('')
   const [upgradeReq, setUpgradeReq] = useState(null)
-  const [showUpgradeForm, setShowUpgradeForm] = useState(false)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
   const [upgradeContact, setUpgradeContact] = useState('')
   const [upgradeFarmAddress, setUpgradeFarmAddress] = useState('')
+  // Bloco B — Mudar de perfil (NORMAL -> Produtor/Vendedor)
+  const [upgradeRoleChoice, setUpgradeRoleChoice] = useState(null) // null | 'producer' | 'seller'
+  const [sellerUpgradeForm, setSellerUpgradeForm] = useState({ seller_type: 'INDIVIDUAL', store_name: '', nuit: '', contact: '', store_address: '' })
+  const [sellerUpgradeError, setSellerUpgradeError] = useState('')
+  const [sellerUpgradeLoading, setSellerUpgradeLoading] = useState(false)
 
   // Senha
   const [pwForm, setPwForm] = useState({ old_password: '', new_password: '', confirm: '' })
@@ -133,9 +142,18 @@ function Profile() {
 
   useEffect(() => {
     if (!profile) return
-    const availableTabs = isOwnProfile
-      ? ['posts', 'produtos', 'recomendacoes', 'settings']
-      : ['posts', 'produtos', 'recomendacoes', 'info']
+    const roleUp = (profile.role || localStorage.getItem('userRole') || '').toUpperCase()
+    const normalOwnProfile = isOwnProfile && (roleUp === 'NORMAL' || roleUp === 'USER')
+    // O vendedor só vê aqui a "situação do mercado" (os seus produtos), sem
+    // edição nenhuma — para editar dados/loja, tem de ir ao Painel.
+    const sellerOwnProfile = isOwnProfile && roleUp === 'SELLER'
+    const availableTabs = normalOwnProfile
+      ? ['settings']
+      : sellerOwnProfile
+        ? ['produtos']
+        : isOwnProfile
+          ? ['posts', 'produtos', 'recomendacoes', 'settings']
+          : ['posts', 'produtos', 'recomendacoes', 'info']
     if (!availableTabs.includes(activeTab) && !activeTab.startsWith('settings_')) {
       setActiveTab(availableTabs[0])
     }
@@ -201,18 +219,49 @@ function Profile() {
     } finally { setPsLoading(false) }
   }
 
+  // POST /users/upgrade-role/ — muda logo o papel da conta (sem aprovação de
+  // admin, ao contrário do antigo fluxo de pedido/estado). Ao ter sucesso,
+  // recarrega a app para todos os componentes (menu, sidebar, rotas) lerem o
+  // novo userRole a partir do zero.
   const handleUpgradeSubmit = async (e) => {
-    e.preventDefault(); setUpgradeLoading(true)
+    e.preventDefault(); setUpgradeLoading(true); setPsError('')
     try {
-      await api.requestUpgradeToProducer(upgradeContact, upgradeFarmAddress)
-      const st = await api.getUpgradeStatus()
-      setUpgradeReq(st)
-      setShowUpgradeForm(false)
-      setEditSuccess('Pedido de upgrade submetido. Aguarde aprovação do admin.')
-      addNotification({ type: 'upgrade_request', message: 'Pedido de upgrade submetido com sucesso. Aguarde aprovação do admin.', icon: 'bi-arrow-up-circle' }, true)
+      await api.upgradeRole({ role: 'PRODUCER', contact: upgradeContact.trim(), farm_address: upgradeFarmAddress.trim() })
+      localStorage.setItem('userRole', 'producer')
+      addNotification({ type: 'upgrade_request', message: 'A tua conta passou a Produtor.', icon: 'bi-arrow-up-circle' }, true)
+      window.location.href = '/profile'
     } catch (err) {
-      setPsError(err?.data ? Object.entries(err.data).map(([k,v]) => Array.isArray(v)?v.join(', '):v).join(' | ') : (err?.message || 'Erro ao submeter pedido'))
-    } finally { setUpgradeLoading(false) }
+      setPsError(err?.data ? Object.entries(err.data).map(([k,v]) => Array.isArray(v)?v.join(', '):v).join(' | ') : (err?.message || 'Erro ao mudar de perfil'))
+      setUpgradeLoading(false)
+    }
+  }
+
+  const handleSellerUpgradeSubmit = async (e) => {
+    e.preventDefault()
+    setSellerUpgradeError('')
+    const phone = sellerUpgradeForm.contact.trim().replace(/\s+/g, '')
+    if (!sellerUpgradeForm.store_name.trim()) return setSellerUpgradeError('O nome da loja é obrigatório.')
+    if (!/^\+?\d{8,15}$/.test(phone)) return setSellerUpgradeError('Formato de contacto inválido. Ex: +258841234567')
+    if (!sellerUpgradeForm.store_address.trim()) return setSellerUpgradeError('O endereço da loja é obrigatório.')
+    const nuit = sellerUpgradeForm.nuit.trim()
+    if (nuit && !/^\d{9}$/.test(nuit)) return setSellerUpgradeError('NUIT inválido. Deve conter 9 dígitos numéricos.')
+    setSellerUpgradeLoading(true)
+    try {
+      await api.upgradeRole({
+        role: 'SELLER',
+        seller_type: sellerUpgradeForm.seller_type,
+        store_name: sellerUpgradeForm.store_name.trim(),
+        contact: phone,
+        store_address: sellerUpgradeForm.store_address.trim(),
+        ...(nuit ? { nuit } : {}),
+      })
+      localStorage.setItem('userRole', 'seller')
+      addNotification({ type: 'upgrade_request', message: 'A tua conta passou a Vendedor.', icon: 'bi-arrow-up-circle' }, true)
+      window.location.href = '/profile'
+    } catch (err) {
+      setSellerUpgradeError(err?.data ? Object.entries(err.data).map(([k,v]) => Array.isArray(v)?v.join(', '):v).join(' | ') : (err?.message || 'Erro ao mudar de perfil'))
+      setSellerUpgradeLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -439,20 +488,38 @@ function Profile() {
     </div>
   )
 
-  // Tabs disponíveis — todos os utilizadores têm Feed, Mercado e Recomendações
-  const tabs = isOwnProfile
+  // Tabs disponíveis — Feed, Mercado e Recomendações só fazem sentido para
+  // quem pode publicar nesses sítios (produtor/vendedor). Um utilizador NORMAL
+  // nunca tem posts, produtos ou técnicas próprias, por isso no seu próprio
+  // perfil só vê Definições (onde também está o pedido de upgrade de conta).
+  const profileRoleUpper = (profile.role || localStorage.getItem('userRole') || '').toUpperCase()
+  const isNormalOwnProfile = isOwnProfile && (profileRoleUpper === 'NORMAL' || profileRoleUpper === 'USER')
+  // Vendedor: este ecrã (fora do Painel) é só para ver a situação do mercado —
+  // sem separador de Definições/edição. Para editar dados ou a loja, o
+  // caminho é o Painel (SellerDashboardProfile), não aqui.
+  const isSellerOwnProfile = isOwnProfile && profileRoleUpper === 'SELLER'
+
+  const tabs = isNormalOwnProfile
     ? [
-        { id: 'posts',         label: 'Feed',           icon: 'bi-grid-3x3' },
-        { id: 'produtos',      label: 'Mercado',        icon: 'bi-shop' },
-        { id: 'recomendacoes', label: 'Recomendações',  icon: 'bi-lightbulb' },
         { id: 'settings',      label: 'Definições',     icon: 'bi-gear' },
       ]
-    : [
-        { id: 'posts',         label: 'Feed',           icon: 'bi-grid-3x3' },
-        { id: 'produtos',      label: 'Mercado',        icon: 'bi-shop' },
-        { id: 'recomendacoes', label: 'Recomendações',  icon: 'bi-lightbulb' },
-        { id: 'info',          label: 'Info',           icon: 'bi-person' },
-      ]
+    : isSellerOwnProfile
+      ? [
+          { id: 'produtos',      label: 'Mercado',        icon: 'bi-shop' },
+        ]
+      : isOwnProfile
+        ? [
+            { id: 'posts',         label: 'Feed',           icon: 'bi-grid-3x3' },
+            { id: 'produtos',      label: 'Mercado',        icon: 'bi-shop' },
+            { id: 'recomendacoes', label: 'Recomendações',  icon: 'bi-lightbulb' },
+            { id: 'settings',      label: 'Definições',     icon: 'bi-gear' },
+          ]
+        : [
+            { id: 'posts',         label: 'Feed',           icon: 'bi-grid-3x3' },
+            { id: 'produtos',      label: 'Mercado',        icon: 'bi-shop' },
+            { id: 'recomendacoes', label: 'Recomendações',  icon: 'bi-lightbulb' },
+            { id: 'info',          label: 'Info',           icon: 'bi-person' },
+          ]
 
   return (
     <div className="min-h-screen bg-[#F8FAF8] flex">
@@ -641,6 +708,16 @@ function Profile() {
           {/* Tab: Produtos do Marketplace */}
           {activeTab === 'produtos' && (
             <div>
+              {isSellerOwnProfile && (
+                <div className="bg-blue-50 border border-blue-100 text-blue-700 px-4 py-3 rounded-xl mb-3 text-sm flex items-center gap-3">
+                  <i className="bi bi-info-circle-fill flex-shrink-0"></i>
+                  <span className="flex-1">Aqui só podes ver a situação do teu mercado. Para editar produtos, dados ou a loja, usa o teu Painel.</span>
+                  <button onClick={() => navigate(getDashboardPath('', 'seller'))}
+                    className="flex-shrink-0 whitespace-nowrap font-semibold underline">
+                    Ir ao Painel
+                  </button>
+                </div>
+              )}
               {productsError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-3 text-sm flex items-center gap-2">
                   <i className="bi bi-exclamation-circle-fill flex-shrink-0"></i>
@@ -654,7 +731,7 @@ function Profile() {
                     <i className="bi bi-shop text-3xl text-gray-300"></i>
                   </div>
                   <p className="text-gray-500 text-sm">Nenhum produto publicado</p>
-                  {isOwnProfile && (
+                  {isOwnProfile && !isSellerOwnProfile && (
                     <button onClick={() => navigate('/create-product')} className="mt-3 btn-primary text-white px-5 py-2 rounded-xl text-sm font-semibold">
                       Publicar produto
                     </button>
@@ -893,6 +970,26 @@ function Profile() {
                 </button>
               </div>
 
+              {/* Mudar de perfil — só para quem ainda é utilizador normal;
+                  irreversível, por isso desaparece assim que houver
+                  producerProfile/sellerProfile. */}
+              {!producerProfile && !sellerProfile && (
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+                  <button
+                    onClick={() => setActiveTab('settings_upgrade')}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 rounded-2xl transition-colors">
+                    <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
+                      <i className="bi bi-arrow-up-circle text-purple-600 text-lg"></i>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold text-gray-800 text-sm">Mudar de perfil</p>
+                      <p className="text-xs text-gray-400">Tornar-te Produtor ou Vendedor</p>
+                    </div>
+                    <i className="bi bi-chevron-right text-gray-400 text-sm"></i>
+                  </button>
+                </div>
+              )}
+
               {/* Tema */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
@@ -967,6 +1064,103 @@ function Profile() {
               </div>
             )
           })()}
+
+          {/* Sub-tab: Mudar de perfil (Bloco B) */}
+          {activeTab === 'settings_upgrade' && isOwnProfile && (
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2 mb-5">
+                <button
+                  onClick={() => (upgradeRoleChoice ? setUpgradeRoleChoice(null) : setActiveTab('settings'))}
+                  className="text-gray-400 hover:text-gray-600">
+                  <i className="bi bi-arrow-left"></i>
+                </button>
+                <h2 className="font-bold text-gray-800">Mudar de perfil</h2>
+              </div>
+
+              {upgradeReq?.status === 'PENDING' ? (
+                <div className="text-center py-6">
+                  <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
+                    <i className="bi bi-hourglass-split text-blue-600 text-2xl"></i>
+                  </div>
+                  <h3 className="font-bold text-gray-800 mb-1">Pedido pendente</h3>
+                  <p className="text-gray-500 text-sm">Já enviaste um pedido de upgrade. Aguarda a aprovação do administrador.</p>
+                </div>
+              ) : !upgradeRoleChoice ? (
+                <div className="space-y-3">
+                  <p className="text-gray-500 text-sm mb-2">Que tipo de conta queres?</p>
+                  <button onClick={() => setUpgradeRoleChoice('producer')}
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 bg-green-50 border-green-200 hover:border-green-500 transition-all text-left">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-green-700 bg-green-100">
+                      <i className="bi bi-tree-fill text-xl"></i>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 text-sm">Produtor</p>
+                      <p className="text-gray-500 text-xs leading-relaxed">Publica técnicas agrícolas, vende e compra produtos no mercado.</p>
+                    </div>
+                    <i className="bi bi-chevron-right text-gray-400 flex-shrink-0"></i>
+                  </button>
+                  <button onClick={() => setUpgradeRoleChoice('seller')}
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 bg-orange-50 border-orange-200 hover:border-orange-400 transition-all text-left">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-orange-600 bg-orange-100">
+                      <i className="bi bi-shop-window text-xl"></i>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 text-sm">Vendedor</p>
+                      <p className="text-gray-500 text-xs leading-relaxed">Cria uma loja, anuncia produtos e gere as suas vendas.</p>
+                    </div>
+                    <i className="bi bi-chevron-right text-gray-400 flex-shrink-0"></i>
+                  </button>
+                </div>
+              ) : upgradeRoleChoice === 'producer' ? (
+                <form onSubmit={handleUpgradeSubmit} className="space-y-3">
+                  {psError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-sm">{psError}</div>}
+                  {editSuccess && <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-xl text-sm">{editSuccess}</div>}
+                  <FieldInput label="Contacto" value={upgradeContact} onChange={e => setUpgradeContact(e.target.value)}
+                    placeholder="Ex: +258841234567" required icon="bi-telephone" />
+                  <FieldInput label="Endereço da exploração agrícola" value={upgradeFarmAddress} onChange={e => setUpgradeFarmAddress(e.target.value)}
+                    placeholder="Ex: Bairro, distrito" required icon="bi-geo-alt" />
+                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                    <i className="bi bi-info-circle"></i> Esta mudança é imediata e definitiva — não é possível voltar a NORMAL depois.
+                  </p>
+                  <button type="submit" disabled={upgradeLoading}
+                    className="w-full btn-primary text-white py-3 rounded-xl font-semibold text-sm disabled:opacity-50">
+                    {upgradeLoading ? 'A mudar de perfil...' : 'Tornar-me Produtor'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleSellerUpgradeSubmit} className="space-y-3">
+                  {sellerUpgradeError && <div className="bg-amber-50 border border-amber-200 text-amber-700 px-3 py-2 rounded-xl text-sm">{sellerUpgradeError}</div>}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1.5 text-sm">Tipo de vendedor</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[{ value: 'INDIVIDUAL', label: 'Individual' }, { value: 'COMPANY', label: 'Empresa' }, { value: 'COOPERATIVE', label: 'Cooperativa' }].map(t => (
+                        <button key={t.value} type="button"
+                          onClick={() => setSellerUpgradeForm(p => ({ ...p, seller_type: t.value }))}
+                          className={`py-2 rounded-xl text-xs font-semibold border-2 transition-all ${sellerUpgradeForm.seller_type === t.value ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <FieldInput label="Nome da loja" value={sellerUpgradeForm.store_name} onChange={e => setSellerUpgradeForm(p => ({ ...p, store_name: e.target.value }))}
+                    placeholder="Ex: Loja da Maria" required icon="bi-shop" />
+                  <FieldInput label="NUIT (opcional)" value={sellerUpgradeForm.nuit} onChange={e => setSellerUpgradeForm(p => ({ ...p, nuit: e.target.value }))}
+                    placeholder="9 dígitos" icon="bi-card-text" />
+                  <FieldInput label="Contacto" value={sellerUpgradeForm.contact} onChange={e => setSellerUpgradeForm(p => ({ ...p, contact: e.target.value }))}
+                    placeholder="Ex: +258841234567" required icon="bi-telephone" />
+                  <FieldInput label="Endereço da loja" value={sellerUpgradeForm.store_address} onChange={e => setSellerUpgradeForm(p => ({ ...p, store_address: e.target.value }))}
+                    placeholder="Ex: Bairro, distrito" required icon="bi-geo-alt" />
+                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                    <i className="bi bi-info-circle"></i> Esta mudança é imediata e definitiva — não é possível voltar a NORMAL depois.
+                  </p>
+                  <button type="submit" disabled={sellerUpgradeLoading}
+                    className="w-full btn-primary text-white py-3 rounded-xl font-semibold text-sm disabled:opacity-50">
+                    {sellerUpgradeLoading ? 'A mudar de perfil...' : 'Tornar-me Vendedor'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
 
           {/* Sub-tab: Editar */}
           {activeTab === 'settings_edit' && isOwnProfile && (

@@ -1,12 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Component, useState, useEffect, lazy, Suspense } from 'react'
 import { ThemeProvider } from './context/ThemeContext'
+import { AuthProvider } from './context/AuthContext'
+import AuthWallModal from './components/AuthWallModal'
 import { ServerLoadingOverlay } from './components/NetworkErrorModal'
 import AdminRouteBlocker from './components/AdminRouteBlocker'
 import ProtectedRoute from './components/ProtectedRoute'
 import { RouteErrorBoundaryWithNav } from './components/RouteErrorBoundary'
 import { captureError } from './utils/errorTracking'
 
+const Landing = lazy(() => import('./pages/Landing'))
 const Login = lazy(() => import('./pages/Login'))
 const CompleteProfile = lazy(() => import('./pages/CompleteProfile'))
 const Register = lazy(() => import('./pages/Register'))
@@ -106,7 +109,9 @@ function App() {
     <ThemeProvider>
       <ErrorBoundary>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthProvider>
           <ServerLoadingOverlay visible={serverLoading} />
+          <AuthWallModal />
           {globalError && (
             <div className="fixed right-4 top-4 z-50 w-full max-w-sm">
               <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-xl">
@@ -127,8 +132,8 @@ function App() {
           )}
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-6 text-gray-700">Carregando...</div>}>
             <Routes>
-          {/* Feed é a página inicial — acessível sem login */}
-          <Route path="/" element={<AdminRouteBlocker><RouteErrorBoundaryWithNav><Feed /></RouteErrorBoundaryWithNav></AdminRouteBlocker>} />
+          {/* Landing pública — só para visitantes sem sessão (redireciona para /feed se já autenticado) */}
+          <Route path="/" element={<AdminRouteBlocker><Landing /></AdminRouteBlocker>} />
           <Route path="/feed" element={<AdminRouteBlocker><RouteErrorBoundaryWithNav><Feed /></RouteErrorBoundaryWithNav></AdminRouteBlocker>} />
           <Route path="/producer" element={<Navigate replace to="/feed" />} />
           <Route path="/producer/*" element={<Navigate replace to="/feed" />} />
@@ -140,13 +145,14 @@ function App() {
           <Route path="/register/producer" element={<AdminRouteBlocker><RegisterProducer /></AdminRouteBlocker>} />
           <Route path="/register/seller" element={<AdminRouteBlocker><RegisterSeller /></AdminRouteBlocker>} />
           <Route path="/post/:id" element={<AdminRouteBlocker><PostDetail /></AdminRouteBlocker>} />
+          {/* Visíveis sem login — a ação em si é bloqueada dentro da própria página (AuthWallModal) */}
+          <Route path="/chat" element={<AdminRouteBlocker><RouteErrorBoundaryWithNav><ChatAI /></RouteErrorBoundaryWithNav></AdminRouteBlocker>} />
+          <Route path="/marketplace" element={<AdminRouteBlocker><RouteErrorBoundaryWithNav><Marketplace /></RouteErrorBoundaryWithNav></AdminRouteBlocker>} />
+          <Route path="/product/:id" element={<AdminRouteBlocker><RouteErrorBoundaryWithNav><ProductDetail /></RouteErrorBoundaryWithNav></AdminRouteBlocker>} />
+          <Route path="/techniques" element={<AdminRouteBlocker><Techniques /></AdminRouteBlocker>} />
+          <Route path="/recommendations" element={<AdminRouteBlocker><Techniques /></AdminRouteBlocker>} />
+          <Route path="/technique/:id" element={<AdminRouteBlocker><TechniqueDetail /></AdminRouteBlocker>} />
           {/* Rotas que requerem login */}
-          <Route path="/chat" element={<AdminRouteBlocker><ProtectedRoute><RouteErrorBoundaryWithNav><ChatAI /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/marketplace" element={<AdminRouteBlocker><ProtectedRoute><RouteErrorBoundaryWithNav><Marketplace /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/product/:id" element={<AdminRouteBlocker><ProtectedRoute><RouteErrorBoundaryWithNav><ProductDetail /></RouteErrorBoundaryWithNav></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/techniques" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><Techniques /></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/recommendations" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><Techniques /></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/technique/:id" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><TechniqueDetail /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/profile" element={<AdminRouteBlocker><ProtectedRoute><Profile /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/profile/:id" element={<AdminRouteBlocker><Profile /></AdminRouteBlocker>} />
           <Route path="/notifications" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Notifications /></ProtectedRoute></AdminRouteBlocker>} />
@@ -186,6 +192,7 @@ function App() {
           <Route path="/admin/*" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
         </Routes>
         </Suspense>
+        </AuthProvider>
       </Router>
     </ErrorBoundary>
     </ThemeProvider>

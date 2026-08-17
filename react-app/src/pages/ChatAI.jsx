@@ -4,7 +4,9 @@ import ChatMessage from "../components/ChatMessage"
 import TypingIndicator from "../components/TypingIndicator"
 import DesktopSidebar from "../components/DesktopSidebar"
 import MobileNav from "../components/MobileNav"
+import LoadingPlant from "../components/LoadingPlant"
 import api from "../services/api"
+import { useAuth } from "../context/AuthContext"
 
 const TIPS = [
   { icon: "bi-flower1", text: "Como plantar milho?" },
@@ -15,6 +17,27 @@ const TIPS = [
 
 function ChatAI() {
   const navigate = useNavigate()
+  const { isLoggedIn, requireAuth } = useAuth()
+  const userRole = localStorage.getItem('userRole') || 'user'
+
+  // Vendedor não tem acesso ao Chat IA — só Início/Mercado/Reserva/Perfil/Notificações.
+  if (userRole === 'seller') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAF8] px-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <i className="bi bi-ban text-3xl text-red-600"></i>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Acesso Restrito</h2>
+          <p className="text-gray-600 mb-6">O Chat IA não está disponível para contas de Vendedor.</p>
+          <button onClick={() => navigate('/marketplace')} className="btn-primary text-white px-6 py-2 rounded-xl font-semibold">
+            Ir ao Mercado
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const [sessions, setSessions] = useState([])
   const [currentSession, setCurrentSession] = useState(null)
   const [messages, setMessages] = useState([])
@@ -27,7 +50,10 @@ function ChatAI() {
   const messagesEndRef = useRef(null)
   const userName = localStorage.getItem("userName") || "Utilizador"
 
-  useEffect(() => { loadSessions() }, [])
+  // Um visitante pode abrir o chat e escrever, mas o histórico é privado —
+  // só carrega sessões quando há sessão iniciada (e também ao entrar sem
+  // sair da página, para retomar o estado depois de autenticar).
+  useEffect(() => { if (isLoggedIn) loadSessions() }, [isLoggedIn])
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isTyping])
@@ -51,6 +77,7 @@ function ChatAI() {
   }
 
   const handleNewChat = async () => {
+    if (!requireAuth(handleNewChat, 'Entra na tua conta para começar uma conversa com o assistente.')) return
     try {
       const s = await api.createChatSession("Nova Conversa")
       setSessions(p => [s, ...p])
@@ -60,6 +87,7 @@ function ChatAI() {
   }
 
   const doSend = async (text) => {
+    if (!requireAuth(() => doSend(text), 'Entra na tua conta para enviar mensagens ao assistente.')) return
     const msg = text || input
     if (!msg.trim() && !selectedImage) return
     let sid = currentSession
@@ -155,9 +183,8 @@ function ChatAI() {
             )}
 
             {loading && (
-              <div className="flex flex-col items-center justify-center py-16 flex-1">
-                <div className="w-10 h-10 rounded-full border-4 border-green-200 border-t-green-600 animate-spin mb-3"></div>
-                <p className="text-gray-400 text-sm">A carregar...</p>
+              <div className="flex-1 flex items-center justify-center">
+                <LoadingPlant />
               </div>
             )}
 

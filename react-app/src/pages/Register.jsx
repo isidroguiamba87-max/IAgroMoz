@@ -1,7 +1,11 @@
 ﻿import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { GoogleLogin } from '@react-oauth/google'
 import api from "../services/api"
+
+// Só aceita caminhos internos (mesma validação do Login.jsx) — evita
+// redireccionamento aberto via ?next=//site-malicioso.com
+const sanitizeNext = (raw) => (raw && raw.startsWith('/') && !raw.startsWith('//') && !raw.includes('://')) ? raw : null
 
 const GOOGLE_ERROR_MESSAGES = {
   invalid_google_token: 'Token Google inválido. Tente novamente.',
@@ -13,6 +17,8 @@ const GOOGLE_ERROR_MESSAGES = {
 
 function Register() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const nextPath = sanitizeNext(new URLSearchParams(location.search).get('next'))
   const [googleError, setGoogleError] = useState('')
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
@@ -25,7 +31,7 @@ function Register() {
         return
       }
       const userRole = localStorage.getItem('userRole')
-      navigate(userRole === 'seller' ? '/seller/dashboard' : '/feed', { replace: true })
+      navigate(nextPath || (userRole === 'seller' ? '/seller/dashboard' : '/feed'), { replace: true })
     } catch (err) {
       setGoogleError(GOOGLE_ERROR_MESSAGES[err?.data?.error] || err?.data?.detail || 'Não foi possível continuar com Google.')
     }
@@ -94,7 +100,7 @@ function Register() {
             {types.map(t => (
               <button
                 key={t.path}
-                onClick={() => navigate(t.path)}
+                onClick={() => navigate(nextPath ? `${t.path}?next=${encodeURIComponent(nextPath)}` : t.path)}
                 className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left ${t.color}`}
               >
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${t.iconColor}`}>
@@ -138,7 +144,7 @@ function Register() {
           <div className="mt-6 text-center">
             <p className="text-gray-500 text-sm">
               Já tem conta?{" "}
-              <Link to="/login" className="font-bold text-green-700 hover:text-green-800">Entrar</Link>
+              <Link to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} className="font-bold text-green-700 hover:text-green-800">Entrar</Link>
             </p>
           </div>
         </div>

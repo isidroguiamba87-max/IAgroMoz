@@ -40,11 +40,35 @@ const saveAllRead = () => {
   }
   window.dispatchEvent(new Event('app-notifications-updated'))
 }
+// Notificações reais do backend só trazem { id, message, is_read, created_at }
+// — sem type/icon/date/time como as locais. Preenche esses campos aqui para o
+// resto do ecrã (ICON_MAP, "{date} · {time}") continuar a funcionar sem saber
+// a origem de cada notificação.
+const formatNotifDate = (createdAt) => {
+  if (!createdAt) return { date: '', time: '' }
+  const d = new Date(createdAt)
+  if (Number.isNaN(d.getTime())) return { date: '', time: '' }
+  return {
+    date: d.toLocaleDateString('pt-PT'),
+    time: d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+  }
+}
+
 const loadNotifications = async (setNotifs) => {
   try {
     const data = await api.getNotifications()
     const list = Array.isArray(data) ? data : data?.results || []
-    setNotifs(list.map(n => ({ ...n, read: n.is_read ?? n.read ?? false })))
+    const local = getSavedNotifications()
+    const remote = list.map(n => ({
+      ...formatNotifDate(n.created_at),
+      ...n,
+      read: n.is_read ?? n.read ?? false,
+    }))
+    // Junta as reais (backend) com as locais (feedback imediato de acções
+    // próprias, ex: "conexão aceite") sem duplicar por id.
+    const seen = new Set(remote.map(n => n.id))
+    const merged = [...remote, ...local.filter(n => !seen.has(n.id))]
+    setNotifs(merged)
   } catch (err) {
     console.warn('Notifications: fallback to saved notifications', err)
     setNotifs(getSavedNotifications())
@@ -73,6 +97,7 @@ const ICON_MAP = {
   role_approved: { icon: 'bi-patch-check-fill', bg: 'bg-green-100', color: 'text-green-700' },
   payment: { icon: 'bi-currency-exchange', bg: 'bg-indigo-100', color: 'text-indigo-700' },
   transaction: { icon: 'bi-receipt-cutoff', bg: 'bg-cyan-100', color: 'text-cyan-700' },
+  default: { icon: 'bi-bell-fill', bg: 'bg-gray-100', color: 'text-gray-500' },
 }
 
 function Notifications() {
@@ -257,7 +282,7 @@ function Notifications() {
 
               {/* Notificações gerais */}
               {filtered.filter(n => !n._type).map(notif => {
-                const style = ICON_MAP[notif.type] || ICON_MAP.like
+                const style = ICON_MAP[notif.type] || ICON_MAP.default
                 return (
                   <div key={notif.id}
                     className={`bg-white rounded-2xl p-4 shadow-sm border transition-all ${notif.read ? 'border-gray-100' : 'border-green-200 bg-green-50/30'}`}>

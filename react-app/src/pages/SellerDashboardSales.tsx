@@ -19,8 +19,6 @@ function SellerDashboardSales() {
   const [rejectLoading, setRejectLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const userId = localStorage.getItem('userId')
-
   useEffect(() => {
     loadTransactions()
   }, [])
@@ -29,17 +27,11 @@ function SellerDashboardSales() {
     setLoading(true)
     setError('')
     try {
-      const [txData, pyData] = await Promise.all([api.getTransactions(), api.getPayments().catch(() => [])])
+      const [txData, pyData] = await Promise.all([api.getTransactions({ role: 'seller' }), api.getPayments().catch(() => [])])
       const list = Array.isArray(txData) ? txData : txData.results || []
       const pyList = Array.isArray(pyData) ? pyData : pyData.results || []
       const normalized = list.map(normTx)
-      // Filtrar vendas: transações onde o utilizador é vendedor.
-      // Fallback: se seller_id não vier da API, mostrar transações onde não é comprador.
-      const sales = normalized.filter(tx => {
-        if (tx.seller_id != null) return String(tx.seller_id) === String(userId)
-        return String(tx.buyer_id) !== String(userId)
-      })
-      setTransactions(sales)
+      setTransactions(normalized)
       setPayments(pyList)
     } catch (err) {
       setError('Não foi possível carregar as vendas.')

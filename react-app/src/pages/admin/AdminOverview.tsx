@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../../services/api'
 import { Sparkline, StatCard } from './AdminComponents'
+import LoadingPlant from '../../components/LoadingPlant'
 
 function AdminOverview() {
   const [dashboard, setDashboard] = useState(null)
@@ -34,7 +35,7 @@ function AdminOverview() {
   if (loading) {
     return (
       <div className="flex justify-center py-24">
-        <div className="w-10 h-10 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+        <LoadingPlant />
       </div>
     )
   }

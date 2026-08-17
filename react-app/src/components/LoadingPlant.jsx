@@ -1,13 +1,25 @@
+// Indicador de carregamento padrão da app — logo + pontos animados.
+// Usado como loader de secção/página (não para spinners pequenos dentro de
+// botões, que continuam com o seu próprio ícone giratório).
 function LoadingPlant() {
   return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <div className="relative w-16 h-16">
-        <div className="loading-plant absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2 h-16 bg-gradient-to-t from-green-700 to-green-400 rounded-t-full"></div>
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 text-3xl">
-          🌱
-        </div>
+    <div className="flex flex-col items-center justify-center gap-4 py-12">
+      <img src="/logo.png" alt="IAgroMOZ" className="w-10 h-10 object-contain opacity-80" />
+      <div className="flex items-center gap-1.5">
+        {[0, 1, 2, 3, 4].map(i => (
+          <span
+            key={i}
+            className="w-2 h-2 rounded-full bg-green-500"
+            style={{ animation: 'iagro-loading-bounce 1.2s infinite', animationDelay: `${i * 0.12}s` }}
+          />
+        ))}
       </div>
-      <p className="mt-4 text-sm text-gray-600 font-medium">Carregando...</p>
+      <style>{`
+        @keyframes iagro-loading-bounce {
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+          40% { transform: translateY(-8px); opacity: 1; }
+        }
+      `}</style>
     </div>
   )
 }

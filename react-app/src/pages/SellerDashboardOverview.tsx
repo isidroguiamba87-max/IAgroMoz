@@ -154,20 +154,18 @@ function SellerDashboardOverview() {
               <span className="text-xs font-normal text-gray-400">({ratings.total_as_seller ?? 0} avaliações)</span>
             </p>
           </div>
-          {userRole === 'producer' && (
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <button onClick={() => navigate(getDashboardPath(''))}
-                className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                <i className="bi bi-grid-3x3-gap text-lg"></i>
-                Visão Geral
-              </button>
-              <button onClick={() => navigate('/feed')}
-                className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
-                <i className="bi bi-arrow-left-short text-lg"></i>
-                Voltar ao Feed
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button onClick={() => navigate(getDashboardPath(''))}
+              className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
+              <i className="bi bi-grid-3x3-gap text-lg"></i>
+              Visão Geral
+            </button>
+            <button onClick={() => navigate('/feed')}
+              className="inline-flex items-center gap-2 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition">
+              <i className="bi bi-arrow-left-short text-lg"></i>
+              Ir ao Feed
+            </button>
+          </div>
         </div>
       </div>
 

@@ -9,10 +9,12 @@ import api from '../services/api'
 
 import { API_BASE } from '../config/api'
 import { resolveMediaUrl, resolveProductPhoto } from '../utils/normalizers'
+import { useAuth } from '../context/AuthContext'
 
 function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { requireAuth } = useAuth()
   const [product, setProduct] = useState(null)
   const [ratings, setRatings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -213,7 +215,7 @@ function ProductDetail() {
 
   const handleSubmitRating = async () => {
     if (userRating === 0) { setRatingError('Selecione uma avaliação de 1 a 5 estrelas'); return }
-    if (!token) { navigate('/login'); return }
+    if (!requireAuth(handleSubmitRating)) return
     // score deve ser float entre 1.0 e 5.0
     const score = parseFloat(userRating)
     if (score < 1.0 || score > 5.0) { setRatingError('A avaliação deve ser entre 1 e 5 estrelas'); return }
@@ -341,7 +343,7 @@ function ProductDetail() {
   }
 
   const handleBuy = async () => {
-    if (!token) { navigate('/login'); return }
+    if (!requireAuth(handleBuy)) return
     setBuyLoading(true)
     setBuyError('')
     setBuySuccess(false)
@@ -652,7 +654,7 @@ function ProductDetail() {
                   </button>
                 )}
                 {!token && (
-                  <button onClick={() => navigate('/login')}
+                  <button onClick={() => requireAuth(handleBuy, 'Entra na tua conta para reservar este produto.')}
                     className="w-full btn-primary text-white py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2">
                     <i className="bi bi-cart3"></i> Entrar para reservar
                   </button>
