@@ -14,7 +14,7 @@ function Cta() {
           <span className="eyebrow">{t.cta.eyebrow}</span>
           <h2>{t.cta.title}</h2>
           <p>{t.cta.lead}</p>
-          <a className="btn btn-light" href="https://www.iagromoz.com">{t.cta.button}</a>
+          <a className="btn btn-light" href="https://www.iagromoz.com/feed">{t.cta.button}</a>
           <div className="team">
             {t.cta.team}<b>Ku_kulaDevz</b> · <a href="mailto:kukuladevz@gmail.com">kukuladevz@gmail.com</a>
           </div>

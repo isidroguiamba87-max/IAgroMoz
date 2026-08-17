@@ -467,7 +467,7 @@ function Feed() {
                 <div className="relative h-32" style={{ background: 'linear-gradient(135deg, #003D20, #006D3F, #00C853)' }}>
                   <img src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=70" alt="Agricultores de Moçambique" className="absolute inset-0 w-full h-full object-cover opacity-20" />
                   <div className="relative z-10 p-5 h-full flex flex-col justify-between">
-                    <h1 className="text-white font-black text-base leading-tight">Bem-vindo à comunidade agrícola de Moçambique 🌿</h1>
+                    <h1 className="text-white font-black text-base leading-tight">Bem-vindo à comunidade agrícola de Inhambane 🌿</h1>
                     <div className="flex gap-2">
                       <button onClick={() => navigate('/register')} className="bg-white text-green-800 px-4 py-1.5 rounded-full text-sm font-bold shadow">Criar conta</button>
                       <button onClick={() => navigate('/login')} className="border-2 border-white text-white px-4 py-1.5 rounded-full text-sm font-semibold">Entrar</button>

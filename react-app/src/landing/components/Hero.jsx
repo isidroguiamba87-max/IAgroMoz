@@ -28,7 +28,7 @@ function Hero() {
         <h1>{t.hero.titlePre}<span className="em">{t.hero.titleEm}</span>{t.hero.titlePost}</h1>
         <p className="lead">{t.hero.lead}</p>
         <div className="hero-cta">
-          <a className="btn btn-light" href="https://www.iagromoz.com">{t.hero.ctaPrimary}</a>
+          <a className="btn btn-light" href="https://www.iagromoz.com/feed">{t.hero.ctaPrimary}</a>
           <a className="btn btn-ghost" href="#tour">{t.hero.ctaGhost}</a>
         </div>
         <div className="chips">

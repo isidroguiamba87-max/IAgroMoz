@@ -81,7 +81,7 @@ export const copy = {
     },
     mission: {
       eyebrow: 'A nossa missão',
-      quote: 'Democratizar o acesso à agricultura em Moçambique. Transformar dados em colheitas, sonhos em realidade.',
+      quote: 'Democratizar o acesso à agricultura em Inhambane. Transformar dados em colheitas, sonhos em realidade.',
     },
     cta: {
       eyebrow: 'Fase de produção',
