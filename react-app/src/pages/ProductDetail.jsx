@@ -9,6 +9,7 @@ import api from '../services/api'
 
 import { API_BASE } from '../config/api'
 import { resolveMediaUrl, resolveProductPhoto } from '../utils/normalizers'
+import { loadDistrictMap, districtLabel } from '../utils/districtCache'
 import { useAuth } from '../context/AuthContext'
 
 function ProductDetail() {
@@ -39,11 +40,16 @@ function ProductDetail() {
   const [buyError, setBuyError] = useState('')
   const [buySuccess, setBuySuccess] = useState(false)
   const [reservationId, setReservationId] = useState(null)
+  const [districtMap, setDistrictMap] = useState({})
 
   const token = localStorage.getItem('access_token')
   const userId = localStorage.getItem('userId')
   const userRole = localStorage.getItem('userRole')
   const isAdmin = userRole === 'admin'
+
+  useEffect(() => {
+    loadDistrictMap().then(setDistrictMap)
+  }, [])
 
   useEffect(() => {
     // Carregar produto primeiro para extrair eventuais avaliações embutidas;
@@ -140,7 +146,7 @@ function ProductDetail() {
   const getSellerLocation = (p) => {
     if (!p) return 'Moçambique'
     const seller = resolveSeller(p)
-    const sellerDistrict = seller.district?.name || seller.district || seller.distrito || seller.district_name
+    const sellerDistrict = districtLabel(seller.district || seller.distrito || seller.district_name, districtMap)
     const sellerProvince = seller.province?.name || seller.province || seller.province_name
     if (sellerDistrict && sellerProvince) return `${sellerDistrict}, ${sellerProvince}`
     if (sellerDistrict) return sellerDistrict
@@ -150,7 +156,7 @@ function ProductDetail() {
     if (seller.address) return seller.address
     if (seller.store_address) return seller.store_address
 
-    const productDistrict = p.district?.name || p.district || p.distrito || p.district_name
+    const productDistrict = districtLabel(p.district || p.distrito || p.district_name, districtMap)
     const productProvince = p.province?.name || p.province || p.province_name
     if (productDistrict && productProvince) return `${productDistrict}, ${productProvince}`
     if (productDistrict) return productDistrict

@@ -8,6 +8,7 @@ import api from "../services/api"
 import { API_BASE } from "../config/api"
 import { normProduct as norm, extractApiErrorMessage, resolveMediaUrl } from "../utils/normalizers"
 import { getDashboardPath } from "../utils/dashboardPaths"
+import { loadDistrictMap, districtLabel } from "../utils/districtCache"
 import { useAuth } from "../context/AuthContext"
 
 // ─── Categorias e subcategorias conforme GET /api/enums/ ─────────────────────
@@ -405,6 +406,7 @@ function Marketplace() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [districtMap, setDistrictMap] = useState({})
 
   const token = localStorage.getItem("access_token")
   const userId = localStorage.getItem("userId")
@@ -420,6 +422,7 @@ function Marketplace() {
     hasMounted.current = true
 
     loadProducts(1)
+    loadDistrictMap().then(setDistrictMap)
     if (token) {
       loadMyProfile()
       loadReservationCount()
@@ -540,7 +543,9 @@ function Marketplace() {
   const destaques = [...filteredProducts].filter(p => p.avg_rating > 0).sort((a, b) => b.avg_rating - a.avg_rating).slice(0, 4)
   const novos = [...filteredProducts].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 4)
 
-  const ProductCard = ({ product, size = "md" }) => (
+  const ProductCard = ({ product, size = "md" }) => {
+    const district = districtLabel(product.district, districtMap)
+    return (
     <div
       className={`bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all relative ${size === "sm" ? "flex gap-3 p-3" : ""}`}
       onClick={() => navigate(`/product/${product.id}`)}>
@@ -559,7 +564,7 @@ function Marketplace() {
             />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-800 text-sm line-clamp-2 leading-tight">{product.name}</p>
-            {product.district && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><i className="bi bi-geo-alt"></i>{product.district}</p>}
+            {district && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><i className="bi bi-geo-alt"></i>{district}</p>}
             <p className="text-green-700 font-black text-sm mt-1">{product.price} MZN</p>
           </div>
         </>
@@ -578,7 +583,7 @@ function Marketplace() {
             />
           <div className="p-3">
             <p className="font-bold text-gray-800 text-sm line-clamp-2 leading-tight mb-1">{product.name}</p>
-            {product.district && <p className="text-xs text-gray-400 flex items-center gap-1 mb-1"><i className="bi bi-geo-alt"></i>{product.district}</p>}
+            {district && <p className="text-xs text-gray-400 flex items-center gap-1 mb-1"><i className="bi bi-geo-alt"></i>{district}</p>}
             <p className="text-green-700 font-black text-base">{product.price} MZN</p>
             {product.seller && (
               <div className="flex items-center gap-1.5 mt-2">
@@ -597,7 +602,8 @@ function Marketplace() {
         </>
       )}
     </div>
-  )
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAF8] flex pb-20 lg:pb-0">

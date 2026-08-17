@@ -72,7 +72,14 @@ function AdminPanel() {
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-6 py-4">
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-6 py-4 flex items-start gap-4">
+          <button
+            type="button"
+            onClick={() => { localStorage.clear(); navigate('/login') }}
+            className="flex-shrink-0 flex items-center gap-2 rounded-3xl border border-red-100 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 transition">
+            <i className="bi bi-box-arrow-right text-lg" />
+            Sair
+          </button>
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.24em] text-gray-500">Admin Panel</p>
             <p className="text-sm text-gray-500 max-w-2xl">Acesso exclusivo de administrador. Todas as secções abaixo usam os endpoints admin da API.</p>
