@@ -2,13 +2,12 @@ import { useMemo } from 'react'
 
 const STEPS = [
   { id: 'RESERVED',         label: 'Reservado',            icon: 'bi-clock-history' },
-  { id: 'AWAITING_PAYMENT', label: 'Aguardando Pagamento', icon: 'bi-hourglass-split' },
-  { id: 'PROCESSING',       label: 'Em Processamento',     icon: 'bi-gear-wide-connected' },
-  { id: 'IN_TRANSIT',       label: 'A Caminho',            icon: 'bi-truck' },
+  { id: 'AWAITING_PAYMENT', label: 'Confirmado — a pagar', icon: 'bi-hourglass-split' },
+  { id: 'PAID',             label: 'Pago',                 icon: 'bi-cash-coin' },
   { id: 'COMPLETED',        label: 'Entregue',             icon: 'bi-bag-check-fill' },
 ]
 
-const RING_COLORS = ['#F59E0B', '#3B82F6', '#06B6D4', '#A855F7', '#10B981']
+const RING_COLORS = ['#F59E0B', '#3B82F6', '#10B981', '#10B981']
 const CANCELLED_COLOR = '#EF4444'
 
 const RADIUS = 42

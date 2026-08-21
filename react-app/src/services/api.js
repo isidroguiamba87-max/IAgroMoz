@@ -832,8 +832,10 @@ class APIService {
   }
 
   // ─── Marketplace — Chat de Negociação ────────────────────────────────────────
-  // Chat criado automaticamente após reserva. Independente do Chat IA
-  // (getChatSessions/sendChatMessage abaixo, que são para /chat/... da IA).
+  // O chat só existe depois do vendedor confirmar a reserva (RESERVED →
+  // AWAITING_PAYMENT via confirmTransaction) — é o backend quem o cria nesse
+  // momento; o frontend nunca cria chats, só os consulta. Independente do
+  // Chat IA (getChatSessions/sendChatMessage abaixo, que são para /chat/... da IA).
 
   // GET /marketplace/chats/ — chats ACTIVE do utilizador
   getNegotiationChats() {

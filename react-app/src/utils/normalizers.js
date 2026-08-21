@@ -30,6 +30,11 @@ export function normTx(tx) {
     delivery_address:       tx.delivery_address || tx.address || tx.location || '',
     note:                   tx.note || tx.observations || tx.comments || '',
     cancel_reason:          tx.cancel_reason || tx.cancellation_reason || tx.rejection_reason || tx.motivo || '',
+    // Só existe depois do vendedor confirmar (RESERVED → AWAITING_PAYMENT) — o
+    // backend cria o chat nesse momento e pode devolvê-lo já embutido na própria
+    // transação, poupando um GET /reservations/{id}/chat/ extra ao abrir o chat.
+    chat_id:                tx.chat_id ?? tx.chat?.id ?? tx.negotiation_chat_id ?? tx.negotiation_chat?.id ?? null,
+    chat_status:            tx.chat?.status ?? tx.chat_status ?? null,
   }
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import api from '../services/api'
-import { normNegotiationMessage, normTx, extractApiErrorMessage } from '../utils/normalizers'
+import { normNegotiationChat, normNegotiationMessage, normTx, extractApiErrorMessage } from '../utils/normalizers'
 import Avatar from './Avatar'
 
 const POLL_MS = 4000
@@ -22,6 +22,7 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
   const [sending, setSending] = useState(false)
   const [reservation, setReservation] = useState<any>(null)
   const [concluding, setConcluding] = useState(false)
+  const [chatStatus, setChatStatus] = useState<string>('ACTIVE')
   const bottomRef = useRef<HTMLDivElement>(null)
   const userId = localStorage.getItem('userId')
 
@@ -49,9 +50,21 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
     }
   }
 
+  // Chat CLOSED (ex.: reserva já concluída) só pode ser consultado — envio de
+  // mensagens é exclusivo de chats ACTIVE.
+  const loadChatStatus = async () => {
+    try {
+      const data = await api.getNegotiationChat(chatId)
+      setChatStatus(normNegotiationChat(data).status)
+    } catch (err) {
+      setChatStatus('ACTIVE')
+    }
+  }
+
   useEffect(() => {
     load()
     loadReservation()
+    loadChatStatus()
     const interval = setInterval(() => load(true), POLL_MS)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,10 +91,12 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
     bottomRef.current?.scrollIntoView({ block: 'end' })
   }, [messages.length])
 
+  const isClosed = chatStatus === 'CLOSED'
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     const content = draft.trim()
-    if (!content) return
+    if (!content || isClosed) return
     setSending(true)
     setDraft('')
     setError('')
@@ -152,15 +167,21 @@ function NegotiationChatThread({ chatId, title, subtitle, onBack }: NegotiationC
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSend} className="flex items-center gap-2 px-4 py-3 border-t border-gray-100 flex-shrink-0">
-        <input type="text" value={draft} onChange={e => setDraft(e.target.value)}
-          placeholder="Escreva uma mensagem..."
-          className="form-input flex-1 px-4 py-2.5 rounded-full text-sm" />
-        <button type="submit" disabled={!draft.trim()}
-          className="w-10 h-10 flex-shrink-0 rounded-full btn-primary text-white flex items-center justify-center disabled:opacity-50">
-          <i className="bi bi-send-fill text-sm"></i>
-        </button>
-      </form>
+      {isClosed ? (
+        <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-100 flex-shrink-0 text-xs text-gray-400 justify-center">
+          <i className="bi bi-lock-fill"></i> Esta conversa está encerrada e já não aceita novas mensagens.
+        </div>
+      ) : (
+        <form onSubmit={handleSend} className="flex items-center gap-2 px-4 py-3 border-t border-gray-100 flex-shrink-0">
+          <input type="text" value={draft} onChange={e => setDraft(e.target.value)}
+            placeholder="Escreva uma mensagem..."
+            className="form-input flex-1 px-4 py-2.5 rounded-full text-sm" />
+          <button type="submit" disabled={!draft.trim() || sending}
+            className="w-10 h-10 flex-shrink-0 rounded-full btn-primary text-white flex items-center justify-center disabled:opacity-50">
+            <i className="bi bi-send-fill text-sm"></i>
+          </button>
+        </form>
+      )}
     </div>
   )
 }

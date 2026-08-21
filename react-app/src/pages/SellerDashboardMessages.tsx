@@ -67,7 +67,7 @@ function SellerDashboardMessages() {
                   <i className="bi bi-chat-dots text-2xl text-green-600"></i>
                 </div>
                 <p className="text-sm font-semibold text-gray-700">Sem conversas por enquanto</p>
-                <p className="text-xs text-gray-400 mt-1">As mensagens dos seus clientes vão aparecer aqui assim que houver uma reserva.</p>
+                <p className="text-xs text-gray-400 mt-1">As mensagens dos seus clientes aparecem aqui assim que confirmar uma reserva.</p>
               </div>
             ) : (
               filtered.map(c => (

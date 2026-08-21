@@ -80,7 +80,7 @@ function Messages() {
                         <i className="bi bi-chat-dots text-2xl text-green-600"></i>
                       </div>
                       <p className="text-sm font-semibold text-gray-700">Sem conversas por enquanto</p>
-                      <p className="text-xs text-gray-400 mt-1">Assim que reservar um produto, a conversa com o vendedor aparece aqui.</p>
+                      <p className="text-xs text-gray-400 mt-1">Assim que o vendedor confirmar a sua reserva, a conversa aparece aqui.</p>
                     </div>
                   ) : (
                     filtered.map(c => (
@@ -119,7 +119,7 @@ function Messages() {
                       <i className="bi bi-chat-square-text text-3xl text-green-600"></i>
                     </div>
                     <p className="text-sm font-semibold text-gray-700">Selecione uma conversa</p>
-                    <p className="text-xs text-gray-400 mt-1 max-w-xs">As conversas são criadas automaticamente quando reserva um produto.</p>
+                    <p className="text-xs text-gray-400 mt-1 max-w-xs">As conversas abrem automaticamente assim que o vendedor confirma a reserva.</p>
                   </div>
                 )}
               </div>

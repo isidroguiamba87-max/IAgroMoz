@@ -18,10 +18,8 @@ const normTx = (tx: any) => ({
 
 const STATUS_LABEL = {
   RESERVED: 'Reservado',
-  AWAITING_PAYMENT: 'Aguardando Pagamento',
-  AWAITING_CONFIRMATION: 'Aguardando Confirmação',
-  PROCESSING: 'Em Processamento',
-  IN_TRANSIT: 'A Caminho',
+  AWAITING_PAYMENT: 'Confirmado — Aguardando Pagamento',
+  PAID: 'Pago',
   COMPLETED: 'Entregue/Finalizado',
   CANCELLED: 'Cancelado',
 }
@@ -42,9 +40,13 @@ function TransactionDetail() {
   const [chatOpen, setChatOpen] = useState(false)
 
   const userId = localStorage.getItem('userId')
+  const isAdmin = localStorage.getItem('userRole') === 'admin'
   const tx = transaction
   const isBuyer = tx && String(tx.buyer_id) === String(userId)
   const isSeller = tx && String(tx.seller_id) === String(userId)
+  // Chat só existe a partir de AWAITING_PAYMENT (criado pelo backend ao confirmar)
+  // e só é oferecido a quem participa da negociação (ou admin).
+  const canChat = tx && (isBuyer || isSeller || isAdmin) && !['RESERVED', 'CANCELLED'].includes(tx.status)
 
   useEffect(() => {
     if (!id) return
@@ -67,25 +69,13 @@ function TransactionDetail() {
     }
   }
 
-  const handleConfirm = async (txId: any) => {
-    setActionLoading(true)
-    setActionError('')
-    try {
-      await api.confirmTransaction(txId)
-      setTransaction((prev: any) => prev ? { ...prev, status: 'AWAITING_CONFIRMATION' } : null)
-    } catch (err) {
-      setActionError(extractApiErrorMessage(err, 'Erro ao confirmar transação.'))
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
   const handleConfirmYes = async (txId: any) => {
     setActionLoading(true)
     setActionError('')
     try {
+      // O estado nunca é simulado localmente — confirma no backend e recarrega
+      // a transação real (RESERVED → AWAITING_PAYMENT só se a API confirmar).
       await api.confirmTransaction(txId)
-      // Refresh transaction from server to pick up any backend changes
       await loadTransaction()
       // Emit a local general notification so buyer clients see it in their app (will be stored in localStorage)
       addNotification({
@@ -123,8 +113,14 @@ function TransactionDetail() {
   }
 
   const handleOpenChat = async () => {
-    setChatLoading(true)
     setActionError('')
+    // Se a confirmação já trouxe o chat embutido na transação, evita um GET extra.
+    if (tx.chat_id) {
+      setChatId(tx.chat_id)
+      setChatOpen(true)
+      return
+    }
+    setChatLoading(true)
     try {
       const chat: any = await api.getReservationChat(tx.id)
       setChatId(chat.id)
@@ -347,22 +343,26 @@ function TransactionDetail() {
             {/* RIGHT: Actions Panel */}
             <div className="space-y-4">
 
-              {/* Chat de negociação — disponível para comprador e vendedor em qualquer estado */}
-              <button onClick={handleOpenChat} disabled={chatLoading}
-                className="w-full flex items-center justify-between gap-3 bg-white rounded-3xl border border-gray-100 shadow-sm px-6 py-4 hover:bg-gray-50 transition disabled:opacity-60">
-                <span className="flex items-center gap-3">
-                  <span className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-700 flex-shrink-0">
-                    <i className="bi bi-chat-dots-fill"></i>
+              {/* Chat de negociação — só existe depois do vendedor confirmar (AWAITING_PAYMENT
+                  em diante). Antes disso (RESERVED) o backend ainda não criou o chat, por
+                  isso o botão nem aparece — evita abrir um chat inexistente. */}
+              {canChat && (
+                <button onClick={handleOpenChat} disabled={chatLoading}
+                  className="w-full flex items-center justify-between gap-3 bg-white rounded-3xl border border-gray-100 shadow-sm px-6 py-4 hover:bg-gray-50 transition disabled:opacity-60">
+                  <span className="flex items-center gap-3">
+                    <span className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-700 flex-shrink-0">
+                      <i className="bi bi-chat-dots-fill"></i>
+                    </span>
+                    <span className="text-left">
+                      <span className="block text-sm font-bold text-gray-900">Abrir chat de negociação</span>
+                      <span className="block text-xs text-gray-400">Fale com {isBuyer ? tx.seller_name : tx.buyer_name}</span>
+                    </span>
                   </span>
-                  <span className="text-left">
-                    <span className="block text-sm font-bold text-gray-900">Chat da reserva</span>
-                    <span className="block text-xs text-gray-400">Fale com {isBuyer ? tx.seller_name : tx.buyer_name}</span>
-                  </span>
-                </span>
-                {chatLoading
-                  ? <i className="bi bi-arrow-repeat animate-spin text-gray-400"></i>
-                  : <i className="bi bi-chevron-right text-gray-300"></i>}
-              </button>
+                  {chatLoading
+                    ? <i className="bi bi-arrow-repeat animate-spin text-gray-400"></i>
+                    : <i className="bi bi-chevron-right text-gray-300"></i>}
+                </button>
+              )}
 
               {/* SELLER ACTIONS */}
               {isSeller && (
@@ -393,7 +393,16 @@ function TransactionDetail() {
                     </div>
                   )}
 
-                  {(tx.status === 'AWAITING_CONFIRMATION' || tx.status === 'PROCESSING' || tx.status === 'IN_TRANSIT') && (
+                  {tx.status === 'AWAITING_PAYMENT' && (
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-3">
+                      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-700">
+                        <i className="bi bi-check-circle mr-2"></i>
+                        <strong>Transação confirmada.</strong> Combine a entrega com o comprador pelo chat, aguardando o pagamento.
+                      </div>
+                    </div>
+                  )}
+
+                  {(tx.status === 'AWAITING_PAYMENT' || tx.status === 'PAID') && (
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-3">
                       <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Ações</h3>
                       <button
@@ -429,11 +438,20 @@ function TransactionDetail() {
                     </div>
                   )}
 
-                  {(tx.status === 'PROCESSING' || tx.status === 'IN_TRANSIT') && (
+                  {tx.status === 'AWAITING_PAYMENT' && (
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-3">
+                      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-700">
+                        <i className="bi bi-check-circle mr-2"></i>
+                        <strong>Transação confirmada.</strong> Já pode falar com o vendedor pelo chat para combinar a entrega e o pagamento.
+                      </div>
+                    </div>
+                  )}
+
+                  {tx.status === 'PAID' && (
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-3">
                       <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm text-green-700">
                         <i className="bi bi-truck mr-2"></i>
-                        Seu pedido está a caminho. Aguarde a entrega.
+                        Pagamento confirmado. Aguarde a entrega do vendedor.
                       </div>
                     </div>
                   )}

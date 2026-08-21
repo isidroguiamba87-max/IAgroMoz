@@ -43,8 +43,15 @@ function SellerDashboardSales() {
   const handleConfirm = async (txId) => {
     setActionLoading(txId)
     try {
-      await api.confirmTransaction(txId)
-      setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, status: 'AWAITING_CONFIRMATION' } : tx))
+      // Nunca simular o estado localmente — usa o que a API devolveu; sem isso,
+      // recarrega a transação para saber o estado real (RESERVED → AWAITING_PAYMENT).
+      const updated = await api.confirmTransaction(txId)
+      if (updated?.status) {
+        const normalized = normTx(updated)
+        setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, ...normalized } : tx))
+      } else {
+        await loadTransactions()
+      }
     } catch (err) {
       setError('Erro ao confirmar reserva.')
     } finally {

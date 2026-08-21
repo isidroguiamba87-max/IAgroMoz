@@ -102,9 +102,16 @@ function Transactions() {
   const handleConfirm = async (txId) => {
     setActionLoading(txId); setActionError('')
     try {
-      await api.confirmTransaction(txId)
-      updateTxStatus(txId, 'AWAITING_PAYMENT')
-      addNotification({ type: 'transaction', message: 'Reserva confirmada com sucesso.', icon: 'bi-check2-circle', transaction_id: txId, transaction_status: 'AWAITING_CONFIRMATION' }, true)
+      // O estado nunca é simulado localmente — usa o que a API devolveu (RESERVED
+      // → AWAITING_PAYMENT só é assumido se foi mesmo isso que o backend confirmou).
+      const updated = await api.confirmTransaction(txId)
+      if (updated?.status) {
+        const normalized = normTx(updated)
+        setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, ...normalized } : tx))
+      } else {
+        await loadTransactions(true)
+      }
+      addNotification({ type: 'transaction', message: 'Reserva confirmada com sucesso.', icon: 'bi-check2-circle', transaction_id: txId, transaction_status: 'AWAITING_PAYMENT' }, true)
     } catch (err) {
       setActionError(extractApiErrorMessage(err, 'Erro ao confirmar.'))
     } finally { setActionLoading(null) }
