@@ -133,9 +133,11 @@ function Login() {
 
       {/* Card de login */}
       <div className="relative z-10 w-full max-w-sm">
-        <div className="bg-white rounded-3xl px-6 pt-8 pb-8 shadow-2xl">
-          <h2 className="text-2xl font-black text-gray-900 mb-1">Bem-vindo de volta <i className="bi bi-hand-wave text-yellow-500"></i></h2>
-          <p className="text-gray-500 text-sm mb-6">Entre na sua conta para continuar</p>
+        <div className="bg-white rounded-[28px] px-7 pt-9 pb-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.03]">
+          <h2 className="text-2xl font-black text-gray-900 mb-1 flex items-center gap-2">
+            Bem-vindo de volta <i className="bi bi-hand-wave text-yellow-500"></i>
+          </h2>
+          <p className="text-gray-500 text-sm mb-7">Entre na sua conta para continuar</p>
 
           {registerSuccess && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl mb-4 text-sm flex items-center gap-2">
@@ -159,12 +161,14 @@ function Login() {
             <div>
               <label className="block text-gray-700 font-semibold mb-1.5 text-sm">Email</label>
               <div className="relative">
-                <i className="bi bi-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                  <i className="bi bi-envelope text-sm"></i>
+                </span>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
-                  className="form-input w-full pl-11 pr-4 py-3.5"
+                  className="form-input w-full pl-14 pr-4 py-3.5"
                   placeholder="seu@email.com"
                   required
                 />
@@ -174,12 +178,14 @@ function Login() {
             <div>
               <label className="block text-gray-700 font-semibold mb-1.5 text-sm">Senha</label>
               <div className="relative">
-                <i className="bi bi-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                  <i className="bi bi-lock text-sm"></i>
+                </span>
                 <input
                   type={showPw ? 'text' : 'password'}
                   value={formData.password}
                   onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
-                  className="form-input w-full pl-11 pr-12 py-3.5"
+                  className="form-input w-full pl-14 pr-12 py-3.5"
                   placeholder="••••••••"
                   required
                 />
@@ -202,17 +208,20 @@ function Login() {
 
           {googleClientId && (
             <>
-              <div className="flex items-center gap-3 my-5">
+              <div className="flex items-center gap-3 my-6">
                 <div className="flex-1 h-px bg-gray-200"></div>
-                <span className="text-xs text-gray-400 font-medium">ou</span>
+                <span className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">ou</span>
                 <div className="flex-1 h-px bg-gray-200"></div>
               </div>
-              <div className="flex justify-center [&>div]:w-full">
+              <div className="flex justify-center [&>div]:!w-full [&_iframe]:!w-full">
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={() => setError('Não foi possível entrar com Google.')}
                   locale="pt"
                   text="signin_with"
+                  logo_alignment="center"
+                  size="large"
+                  shape="pill"
                 />
               </div>
             </>
