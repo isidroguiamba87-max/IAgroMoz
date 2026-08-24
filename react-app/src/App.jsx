@@ -156,7 +156,7 @@ function App() {
           <Route path="/profile" element={<AdminRouteBlocker><ProtectedRoute><Profile /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/profile/:id" element={<AdminRouteBlocker><Profile /></AdminRouteBlocker>} />
           <Route path="/notifications" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><Notifications /></ProtectedRoute></AdminRouteBlocker>} />
-          <Route path="/create-post" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'producer', 'admin']}><CreatePost /></ProtectedRoute></AdminRouteBlocker>} />
+          <Route path="/create-post" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'seller', 'producer', 'admin']}><CreatePost /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/create-product" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['seller', 'producer', 'admin']}><CreateProduct /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/transactions/*" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'seller', 'producer', 'admin']}><Navigate replace to="/minhas-reservas" /></ProtectedRoute></AdminRouteBlocker>} />
           <Route path="/transactions" element={<AdminRouteBlocker><ProtectedRoute allowedRoles={['user', 'seller', 'producer', 'admin']}><Navigate replace to="/minhas-reservas" /></ProtectedRoute></AdminRouteBlocker>} />

@@ -56,7 +56,7 @@ function CreatePost() {
   const [districts, setDistricts] = useState([])
 
   useEffect(() => {
-    if (userRole !== 'producer') return
+    if (userRole !== 'producer' && userRole !== 'seller') return
     api.getMyLinkableProducts().then(data => {
       const list = Array.isArray(data) ? data : (data.results || [])
       setLinkableProducts(list)
@@ -411,8 +411,8 @@ function CreatePost() {
             </p>
           </div>
 
-          {/* ── Vincular produto do marketplace (opcional, produtores) ── */}
-          {userRole === 'producer' && linkableProducts.length > 0 && (
+          {/* ── Vincular produto do marketplace (opcional, produtores e vendedores) ── */}
+          {(userRole === 'producer' || userRole === 'seller') && linkableProducts.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <i className="bi bi-cart3 text-green-600"></i> Vincular ao meu produto (opcional)
