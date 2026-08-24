@@ -5,7 +5,6 @@ import MobileNav from '../components/MobileNav'
 import TransactionCard from '../components/TransactionCard'
 import CancelConfirmModal from '../components/CancelConfirmModal'
 import RejectModal from '../components/RejectModal'
-import RatingModal from '../components/RatingModal'
 import NegotiationChatThread from '../components/NegotiationChatThread'
 import api from '../services/api'
 import { addNotification } from './Notifications'
@@ -25,25 +24,12 @@ function Transactions() {
   const [cancelLoading, setCancelLoading] = useState(false)
   const [rejectTarget, setRejectTarget]   = useState(null)
   const [rejectLoading, setRejectLoading] = useState(false)
-  const [ratingTarget, setRatingTarget]   = useState(null)
   const [chatTarget, setChatTarget]       = useState(null)
   const [chatId, setChatId]               = useState(null)
   const [chatLoading, setChatLoading]     = useState(false)
 
   const userId = localStorage.getItem('userId')
   const prevTransactionsRef = useRef(null)
-
-  // Guarda os IDs de reservas para as quais já mostrámos o popup automático de
-  // avaliação, para não voltar a aparecer sozinho sempre que a página recarrega.
-  const seenRatingKey = `rated_prompt_seen_${userId}`
-  const getSeenRatingIds = () => {
-    try { return new Set(JSON.parse(localStorage.getItem(seenRatingKey) || '[]')) } catch { return new Set() }
-  }
-  const markRatingSeen = (txId) => {
-    const seen = getSeenRatingIds()
-    seen.add(txId)
-    localStorage.setItem(seenRatingKey, JSON.stringify([...seen]))
-  }
 
   useEffect(() => {
     loadTransactions()
@@ -59,21 +45,6 @@ function Transactions() {
       const list   = Array.isArray(txData) ? txData : (txData.results || [])
       const normalized = list.map(normTx)
 
-      // Detecta reservas onde sou comprador e o estado passou a COMPLETED
-      // desde o último load — dispara o popup de avaliação automaticamente.
-      const prev = prevTransactionsRef.current
-      if (prev && !ratingTarget) {
-        const seen = getSeenRatingIds()
-        for (const tx of normalized) {
-          const wasCompleted = prev.find(p => p.id === tx.id)?.status === 'COMPLETED'
-          const isBuyerOfTx = String(tx.buyer_id) === String(userId)
-          if (isBuyerOfTx && tx.status === 'COMPLETED' && !wasCompleted && !seen.has(tx.id)) {
-            markRatingSeen(tx.id)
-            setRatingTarget(tx)
-            break
-          }
-        }
-      }
       prevTransactionsRef.current = normalized
       setTransactions(normalized)
     } catch {
@@ -178,15 +149,6 @@ function Transactions() {
         onConfirm={handleReject}
         onClose={() => setRejectTarget(null)}
       />
-      {ratingTarget && (
-        <RatingModal
-          productId={ratingTarget.product_id}
-          sellerId={ratingTarget.seller_profile_id || ratingTarget.seller_id}
-          productName={ratingTarget.product_name}
-          sellerName={ratingTarget.seller_name}
-          onClose={() => setRatingTarget(null)}
-        />
-      )}
       {chatTarget && chatId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg h-[85dvh] max-h-[640px] relative overflow-hidden">
@@ -291,7 +253,6 @@ function Transactions() {
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
                         onChatRequest={handleOpenChat}
                         chatLoading={chatLoading}
-                        onRateRequest={setRatingTarget}
                       />
                     )
                   })}
@@ -321,7 +282,6 @@ function Transactions() {
                         onViewDetails={(txId) => navigate(`/transactions/${txId}`)}
                         onChatRequest={handleOpenChat}
                         chatLoading={chatLoading}
-                        onRateRequest={setRatingTarget}
                       />
                     )
                   })}

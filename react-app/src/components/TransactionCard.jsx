@@ -75,7 +75,6 @@ function TransactionCard({
   onRejectRequest,
   onViewDetails,
   onChatRequest,
-  onRateRequest,
   chatLoading,
 }) {
   const tx     = transaction
@@ -206,19 +205,11 @@ function TransactionCard({
             </div>
           )}
 
-          {/* COMPLETED — comprador pode avaliar */}
+          {/* COMPLETED — comprador */}
           {isBuyer && tx.status === 'COMPLETED' && (
-            <>
-              <div className="flex-1 py-2.5 rounded-xl bg-gray-50 text-gray-500 text-sm font-semibold flex items-center justify-center gap-1.5">
-                <i className="bi bi-patch-check-fill text-emerald-500"></i> Entrega concluída
-              </div>
-              {onRateRequest && (
-                <button onClick={() => onRateRequest(tx)}
-                  className="flex-1 py-2.5 rounded-xl bg-yellow-50 hover:bg-yellow-100 text-yellow-800 text-sm font-semibold flex items-center justify-center gap-1.5">
-                  <i className="bi bi-star-fill"></i> Avaliar
-                </button>
-              )}
-            </>
+            <div className="flex-1 py-2.5 rounded-xl bg-gray-50 text-gray-500 text-sm font-semibold flex items-center justify-center gap-1.5">
+              <i className="bi bi-patch-check-fill text-emerald-500"></i> Entrega concluída
+            </div>
           )}
 
           {/* COMPLETED — vendedor */}

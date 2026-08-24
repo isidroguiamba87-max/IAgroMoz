@@ -689,36 +689,45 @@ function ProductDetail() {
         </div>
 
         {/* Seller Info */}
-        {(product.seller || product.vendedor) && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4"><i className="bi bi-person-circle text-gray-600 mr-2"></i>Vendedor</h2>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <p className="font-bold text-lg text-gray-800">
-                  {getSellerDisplayName(product)}
-                </p>
-                {getSellerHandle(product) && (
-                  <p className="text-gray-600">{getSellerHandle(product)}</p>
-                )}
-                <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-                  <i className="bi bi-geo-alt text-green-600"></i>
-                  <span>{getSellerLocation(product)}</span>
-                </p>
+        {(product.seller || product.vendedor) && (() => {
+          const sellerUserId = product.seller?.user?.id ?? product.seller?.user_id ?? product.producer?.user?.id ?? product.producer?.user_id ?? null
+          return (
+            <div
+              className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6${sellerUserId ? ' cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+              onClick={sellerUserId ? () => navigate(`/profile/${sellerUserId}`) : undefined}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-800"><i className="bi bi-person-circle text-gray-600 mr-2"></i>Vendedor</h2>
+                {sellerUserId && <span className="text-xs text-green-600 font-semibold flex items-center gap-1"><i className="bi bi-shop"></i> Ver loja</span>}
               </div>
-              <div className="text-right">
-                <StarRating rating={resolveSeller(product).seller_rating || parseFloat(product.media_avaliacao || product.average_rating || 0) || 0} readonly size="md" />
-                <p className="text-xs text-gray-500 mt-1">
-                  {resolveSeller(product).seller_ratings_count || product.total_avaliacoes || product.ratings_count || 0} avaliações
-                </p>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <p className="font-bold text-lg text-gray-800">
+                    {getSellerDisplayName(product)}
+                  </p>
+                  {getSellerHandle(product) && (
+                    <p className="text-gray-600">{getSellerHandle(product)}</p>
+                  )}
+                  <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                    <i className="bi bi-geo-alt text-green-600"></i>
+                    <span>{getSellerLocation(product)}</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <StarRating rating={resolveSeller(product).seller_rating || parseFloat(product.media_avaliacao || product.average_rating || 0) || 0} readonly size="md" />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {resolveSeller(product).seller_ratings_count || product.total_avaliacoes || product.ratings_count || 0} avaliações
+                  </p>
+                </div>
               </div>
+              {resolveSeller(product).store_name && (
+                <div className="mt-4 text-sm text-gray-600">
+                  <span className="font-semibold">Loja:</span> {resolveSeller(product).store_name}
+                </div>
+              )}
             </div>
-            {resolveSeller(product).store_name && (
-              <div className="mt-4 text-sm text-gray-600">
-                <span className="font-semibold">Loja:</span> {resolveSeller(product).store_name}
-              </div>
-            )}
-          </div>
-        )}
+          )
+        })()}
 
         {/* Description */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
